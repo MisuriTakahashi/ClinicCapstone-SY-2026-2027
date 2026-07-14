@@ -1,0 +1,23 @@
+
+# --- NetBeans Specific ---
+/nbproject/private/
+/nbbuild/
+/dist/
+/build/
+nbactions.xml
+nb-configuration.xml
+
+# --- Maven Specific (if using Maven) ---
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.next
+release.properties
+
+# --- Gradle Specific (if using Gradle) ---
+.gradle/
+/build/
+
+# --- OS / System Files ---
+.DS_Store
+Thumbs.db
