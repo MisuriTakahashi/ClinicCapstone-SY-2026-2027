@@ -22,37 +22,6 @@ public class LoginUi extends javax.swing.JFrame {
         setLocationRelativeTo(null);
     }
     
-    /*BTW yun nakakaibang bagay sa libraries hinanda ko lang yon kung gagamit tayo ng sql kaya nilagay ko na doon yon*/
-    
-    private void Systempass(){
-        
-    //System password pretty basic without ai ofc need more security though and implement a sign in button?? idk bro 
-        
-        String Admin = "Admin123";
-        String AdminPass = "Adminpass123";
-        
-        String AdminName = jTextField1.getText();
-        String Adminpass = jPasswordField1.getText();
-        
-        String name = "UserNameExample";
-        String pass = "PassWordExample123456";
-        
-        String UserName = jTextField1.getText();
-        String Password = jPasswordField1.getText();
-        
-        if(UserName.equalsIgnoreCase(name) && Password.equalsIgnoreCase(pass)){
-                new Dashboard().show();
-                this.dispose();
-        }else if(AdminName.equalsIgnoreCase(Admin) && Adminpass.equalsIgnoreCase(AdminPass)){
-            JOptionPane.showMessageDialog(null, "Welcome Admin");
-            new Dashboard().show();
-            this.dispose();
-        }else{
-            JOptionPane.showMessageDialog(null, "Wrong credentials");
-        }
-    }
-    
-    
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -97,7 +66,7 @@ public class LoginUi extends javax.swing.JFrame {
         jButton1.setText("Login");
         jButton1.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
         jButton1.addActionListener(this::jButton1ActionPerformed);
-        jPanel1.add(jButton1, new org.netbeans.lib.awtextra.AbsoluteConstraints(730, 350, 98, -1));
+        jPanel1.add(jButton1, new org.netbeans.lib.awtextra.AbsoluteConstraints(700, 340, 98, -1));
 
         jLabel5.setIcon(new javax.swing.ImageIcon(getClass().getResource("/clinic/CaisenLogo.png"))); // NOI18N
         jPanel1.add(jLabel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(130, 170, -1, 220));
@@ -137,7 +106,30 @@ public class LoginUi extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        Systempass();
+        String Username = jTextField1.getText();
+        String Password = jPasswordField1.getText();
+        
+        String role = SystemLogin.CheckLogin(Username ,  Password );
+        
+        if (Username.isEmpty() || Password.isEmpty()) {
+        JOptionPane.showMessageDialog(null, "Please enter your credentials");
+        return;
+    }
+        
+        if(role.equalsIgnoreCase("admin")){
+            JOptionPane.showMessageDialog(null, "Welcome Admin");
+            new Dashboard().show();
+            this.dispose();
+            
+        }else if (role.equalsIgnoreCase("User")) {
+            JOptionPane.showMessageDialog(null, "Login Successfully");
+            new Dashboard().show();
+            this.dispose();
+        
+        }else{
+             JOptionPane.showMessageDialog(null, "Wrong credentials");
+        }
+        
     }//GEN-LAST:event_jButton1ActionPerformed
 
     /**

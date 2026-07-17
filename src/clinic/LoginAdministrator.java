@@ -21,27 +21,6 @@ public class LoginAdministrator extends javax.swing.JFrame {
         initComponents();
         setLocationRelativeTo(null);
     }
-    
-     private void Systempass(){
-        
-    //System password pretty basic without ai ofc need more security though and implement a sign in button?? idk bro 
-        
-        String Admin = "Admin123";
-        String AdminPass = "Adminpass123";
-        
-        String AdminName = jTextField1.getText();
-        String Adminpass = jPasswordField1.getText();
-        
-         if(AdminName.equalsIgnoreCase(Admin) && Adminpass.equalsIgnoreCase(Adminpass)){
-            JOptionPane.showMessageDialog(null, "Welcome Admin");
-            new Dashboard().show();
-            this.dispose();
-        }else{
-            JOptionPane.showMessageDialog(null, "Wrong credentials");
-        }
-    }
-    
-
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -74,7 +53,8 @@ public class LoginAdministrator extends javax.swing.JFrame {
         jButton1.setForeground(new java.awt.Color(0, 0, 0));
         jButton1.setText("Login");
         jButton1.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        jPanel1.add(jButton1, new org.netbeans.lib.awtextra.AbsoluteConstraints(730, 350, 98, -1));
+        jButton1.addActionListener(this::jButton1ActionPerformed);
+        jPanel1.add(jButton1, new org.netbeans.lib.awtextra.AbsoluteConstraints(710, 340, 98, -1));
 
         jLabel5.setIcon(new javax.swing.ImageIcon(getClass().getResource("/clinic/CaisenLogo.png"))); // NOI18N
         jPanel1.add(jLabel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(130, 170, -1, 220));
@@ -117,6 +97,30 @@ public class LoginAdministrator extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
+
+    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+       String username = jTextField1.getText();
+       String password = jPasswordField1.getText();
+       
+       String role = SystemLogin.CheckLogin(username , password);
+       
+        if (username.isEmpty() || password.isEmpty()) {
+        JOptionPane.showMessageDialog(null, "Please enter your credentials");
+        return;
+        }
+        
+         if(role.equalsIgnoreCase("admin")){
+            JOptionPane.showMessageDialog(null, "Welcome Admin");
+            new UiAdmin().show();
+            this.dispose();
+        }
+        
+         else{
+              JOptionPane.showMessageDialog(null, "Wrong credentials");
+         }
+        
+       
+    }//GEN-LAST:event_jButton1ActionPerformed
 
     /**
      * @param args the command line arguments

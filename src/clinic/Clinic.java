@@ -15,7 +15,7 @@ public class Clinic {
      */
     public static void main(String[] args) {
        // new LoginUi().show();
-       new Inventory().show();
+       new LoginUi().show();
         
     }
     
