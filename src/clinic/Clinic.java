@@ -15,7 +15,20 @@ public class Clinic {
      */
     public static void main(String[] args) {
        // new LoginUi().show();
-       new LoginUi().show();
+       try {
+            // 1. Force FlatLaf globally before ANY frame renders
+            com.formdev.flatlaf.FlatLightLaf.setup();
+        } catch (Exception ex) {
+            System.err.println("Failed to initialize FlatLaf: " + ex.getMessage());
+        }
+
+        // 2. Clear default text components to use sleek placeholders
+        javax.swing.UIManager.put("JTextField.placeholderText", "");
+
+        // 3. Launch your Login Window first
+        java.awt.EventQueue.invokeLater(() -> {
+            new LoginUi().setVisible(true);
+        });
         
     }
     

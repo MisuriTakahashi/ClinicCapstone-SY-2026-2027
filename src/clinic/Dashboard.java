@@ -18,6 +18,45 @@ public class Dashboard extends javax.swing.JFrame {
     public Dashboard() {
         initComponents();
         setLocationRelativeTo(null);
+        
+        java.awt.Color softSlate = new java.awt.Color(245, 247, 250); 
+        CheckInPanel.setBackground(softSlate);
+        CounterPanel.setBackground(softSlate);
+        InventoryPanel.setBackground(softSlate);
+        MainPanel.setBackground(java.awt.Color.WHITE); // Bright, clean backdrop
+
+        // --- 2. Flat UI Unified Table & ScrollPane Fixes ---
+        ReasonTable.setFillsViewportHeight(true); // Keeps entire viewport area uniform white
+        ReasonTable.setBackground(java.awt.Color.WHITE);
+        jScrollPane2.getViewport().setBackground(java.awt.Color.WHITE); 
+        jScrollPane2.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(220, 225, 230)));
+
+        // Clean up text areas and inventory panels
+        InventoryStatusArea.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        jScrollPane3.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(220, 225, 230)));
+        ReasonArea.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 8, 6, 8));
+        jScrollPane1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(220, 225, 230)));
+
+        // --- 3. Sleek Inputs & Smart Placeholders ---
+        // Clear default text values ("Name" / "Grade/Section") so placeholders take over
+        NameCheckIn.setText("");
+        NameCheckIn.putClientProperty("JComponent.roundRect", true);
+        NameCheckIn.putClientProperty("JTextField.placeholderText", "Enter student's full name...");
+        NameCheckIn.putClientProperty("JTextField.showClearButton", true); // Quick clear 'X' icon
+
+        GSCheckIn.setText("");
+        GSCheckIn.putClientProperty("JComponent.roundRect", true);
+        GSCheckIn.putClientProperty("JTextField.placeholderText", "e.g., Grade 12 - ICT");
+
+        // --- 4. Round Modern Component Elements ---
+        CheckInBTN.putClientProperty("JButton.buttonType", "roundRect");
+        PrintBTN.putClientProperty("JButton.buttonType", "roundRect");
+        jButton1.putClientProperty("JButton.buttonType", "roundRect"); // Admin button
+        jComboBox1.putClientProperty("JComponent.roundRect", true);
+        
+        
+        
+        
     }
 
     /**

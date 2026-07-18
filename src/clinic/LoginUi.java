@@ -20,6 +20,20 @@ public class LoginUi extends javax.swing.JFrame {
     public LoginUi() {
         initComponents();
         setLocationRelativeTo(null);
+        
+        jTextField1.setText(""); 
+        jTextField1.putClientProperty("JComponent.roundRect", true);
+        jTextField1.putClientProperty("JTextField.placeholderText", "Enter your username");
+        
+        jPasswordField1.setText("");
+        jPasswordField1.putClientProperty("JComponent.roundRect", true);
+        jPasswordField1.putClientProperty("JTextField.placeholderText", "Enter your password");
+        jPasswordField1.putClientProperty("JTextField.showRevealButton", true); // Adds an eye icon to toggle password visibility!
+        
+        // Make the login button match the flat layout
+        jButton1.putClientProperty("JButton.buttonType", "roundRect");
+        
+        
     }
     
     /**
@@ -98,7 +112,7 @@ public class LoginUi extends javax.swing.JFrame {
         jLabel6.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
         jLabel6.setForeground(new java.awt.Color(0, 102, 255));
         jLabel6.setText("Username:");
-        jPanel1.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(526, 235, -1, -1));
+        jPanel1.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(530, 230, -1, -1));
 
         getContentPane().add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 980, 550));
 
