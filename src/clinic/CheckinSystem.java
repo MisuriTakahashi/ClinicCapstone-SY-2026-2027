@@ -60,4 +60,5 @@ public class CheckinSystem {
        return "\"" + name + "\",\"" + gradeSection + "\",\"" + reason + "\",\""
                + medUsed + "\",\"" + checkInTime + "\",\"" + status + "\"";
    }
+         //nigga 
 }
