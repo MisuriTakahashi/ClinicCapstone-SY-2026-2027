@@ -4,19 +4,281 @@
  */
 package clinic;
 
+import com.formdev.flatlaf.FlatLightLaf;
+import com.formdev.flatlaf.FlatClientProperties;
+import java.awt.Color;
+import java.awt.BorderLayout;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SwingConstants;
+import javax.swing.UIManager;
+
 /**
  *
  * @author PC
  */
-public class Inventory extends javax.swing.JFrame {
+public class AdminPanel extends javax.swing.JFrame {
     
-    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Inventory.class.getName());
+    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(AdminPanel.class.getName());
+    private JPanel statisticsPanel;
 
     /**
-     * Creates new form Inventory
+     * Creates the administrator inventory panel.
      */
-    public Inventory() {
+    public AdminPanel() {
         initComponents();
+        configureFlatLafUi();
+        setLocationRelativeTo(null);
+    }
+
+    /** Applies the FlatLaf treatment after NetBeans creates the form controls. */
+    private void configureFlatLafUi() {
+        Color page = Color.decode("#F8FAFC");
+        Color surface = Color.WHITE;
+        Color border = Color.decode("#E2E8F0");
+        Color primary = Color.decode("#2563EB");
+        Color sidebar = Color.decode("#0F172A");
+
+        getContentPane().setBackground(page);
+        setTitle("Caisen Clinic · Admin Panel");
+        jPanel1.setBackground(page);
+        createHeader(primary);
+        jPanel3.setBackground(sidebar);
+        jPanel3.setBorder(BorderFactory.createEmptyBorder());
+
+        styleCard(jPanel4, surface, border);
+        styleCard(jPanel5, surface, border);
+        styleCard(jPanel6, surface, border);
+        jPanel5.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(border), BorderFactory.createEmptyBorder(18, 18, 18, 18)));
+
+        jLabel6.setText("Stock overview");
+        jLabel6.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        jLabel1.setText("Inventory activity");
+        jLabel1.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        jLabel2.setText("Manage stock");
+        jLabel2.setFont(new Font("Segoe UI", Font.BOLD, 16));
+
+        styleNavigationButton(jButton5, "Inventory", true);
+        styleNavigationButton(jButton6, "Statistics", false);
+        styleNavigationButton(jButton7, "← Back", false);
+
+        stylePrimaryButton(jButton1, "Add item", primary);
+        styleSecondaryButton(jButton2, "Edit");
+        styleDangerButton(jButton3, "Delete");
+        styleSecondaryButton(jButton4, "Clear form");
+
+        for (JComponent field : new JComponent[]{jTextField1, jTextField2, jTextField3}) {
+            field.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT,
+                    field == jTextField1 ? "e.g. Paracetamol" : field == jTextField2 ? "YYYY-MM-DD" : "0");
+            field.putClientProperty(FlatClientProperties.STYLE, "arc: 10; margin: 6,10,6,10");
+        }
+
+        jTable1.setRowHeight(38);
+        jTable1.setShowVerticalLines(false);
+        jTable1.setShowHorizontalLines(true);
+        jTable1.setGridColor(border);
+        jTable1.getTableHeader().putClientProperty(FlatClientProperties.STYLE,
+                "background: #F1F5F9; foreground: #475569; font: +1");
+        jScrollPane1.setBorder(BorderFactory.createEmptyBorder());
+        jScrollPane2.setBorder(BorderFactory.createEmptyBorder());
+        jTextArea1.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Recent stock activity will appear here.");
+        jTextArea1.putClientProperty(FlatClientProperties.STYLE, "border: 0,0,0,0");
+        jTextArea1.setText("No recent activity\n\nChanges to stock levels will be recorded here.");
+        jTextArea1.setEditable(false);
+        jTextArea1.setForeground(Color.decode("#64748B"));
+        jTextArea1.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        jTextArea1.setMargin(new java.awt.Insets(18, 18, 18, 18));
+        jTextArea1.setBackground(surface);
+        jTable1.setToolTipText("Your available medical supplies");
+
+        createStatisticsPanel();
+        jButton5.addActionListener(event -> showInventory());
+        jButton6.addActionListener(event -> showStatistics());
+    }
+
+    private void createStatisticsPanel() {
+        statisticsPanel = new JPanel(new BorderLayout(0, 18));
+        statisticsPanel.setBackground(Color.decode("#F8FAFC"));
+        statisticsPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+
+        JPanel heading = new JPanel(new BorderLayout());
+        heading.setOpaque(false);
+        LocalDate weekStart = LocalDate.now().with(DayOfWeek.MONDAY);
+        LocalDate weekEnd = weekStart.plusDays(6);
+        DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("MMM d");
+
+        JLabel title = new JLabel("Weekly student check-in report");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        JLabel description = new JLabel("Reporting period: " + weekStart.format(dateFormat) + " - " + weekEnd.format(dateFormat));
+        description.setForeground(Color.decode("#64748B"));
+        description.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        JPanel titleStack = new JPanel(new GridLayout(2, 1, 0, 3));
+        titleStack.setOpaque(false);
+        titleStack.add(title);
+        titleStack.add(description);
+        heading.add(titleStack, BorderLayout.WEST);
+
+        JPanel cards = new JPanel(new GridLayout(1, 3, 16, 0));
+        cards.setOpaque(false);
+        cards.add(createStatisticCard("Weekly check-ins", "0", "Students checked in this week"));
+        cards.add(createStatisticCard("Currently in clinic", "0", "Students awaiting release"));
+        cards.add(createStatisticCard("Sent home", "0", "Students sent home this week"));
+
+        JPanel summary = new JPanel(new BorderLayout());
+        styleCard(summary, Color.WHITE, Color.decode("#E2E8F0"));
+        JLabel summaryTitle = new JLabel("Daily check-ins");
+        summaryTitle.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        summaryTitle.setBorder(BorderFactory.createEmptyBorder(20, 22, 10, 22));
+        summary.add(summaryTitle, BorderLayout.NORTH);
+        summary.add(createWeeklyActivity(weekStart), BorderLayout.CENTER);
+
+        statisticsPanel.add(heading, BorderLayout.NORTH);
+        statisticsPanel.add(cards, BorderLayout.CENTER);
+        statisticsPanel.add(summary, BorderLayout.SOUTH);
+        jPanel1.add(statisticsPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 82, 987, 548));
+        statisticsPanel.setVisible(false);
+    }
+
+    private JPanel createWeeklyActivity(LocalDate weekStart) {
+        JPanel activity = new JPanel(new GridLayout(1, 7, 10, 0));
+        activity.setOpaque(false);
+        activity.setBorder(BorderFactory.createEmptyBorder(8, 22, 22, 22));
+        DateTimeFormatter dayFormat = DateTimeFormatter.ofPattern("EEE");
+        DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("d");
+
+        for (int day = 0; day < 7; day++) {
+            LocalDate date = weekStart.plusDays(day);
+            JPanel dayCard = new JPanel(new GridLayout(3, 1, 0, 3));
+            dayCard.setBackground(Color.decode("#F8FAFC"));
+            dayCard.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(Color.decode("#E2E8F0")), BorderFactory.createEmptyBorder(10, 6, 10, 6)));
+            JLabel dayName = new JLabel(date.format(dayFormat), SwingConstants.CENTER);
+            dayName.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            dayName.setForeground(Color.decode("#475569"));
+            JLabel dateNumber = new JLabel(date.format(dateFormat), SwingConstants.CENTER);
+            dateNumber.setFont(new Font("Segoe UI", Font.BOLD, 20));
+            dateNumber.setForeground(Color.decode("#1D4ED8"));
+            JLabel count = new JLabel("0 check-ins", SwingConstants.CENTER);
+            count.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            count.setForeground(Color.decode("#64748B"));
+            dayCard.add(dayName);
+            dayCard.add(dateNumber);
+            dayCard.add(count);
+            activity.add(dayCard);
+        }
+        return activity;
+    }
+
+    private JPanel createStatisticCard(String title, String value, String caption) {
+        JPanel card = new JPanel(new GridLayout(3, 1, 0, 5));
+        styleCard(card, Color.WHITE, Color.decode("#E2E8F0"));
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.decode("#E2E8F0")), BorderFactory.createEmptyBorder(18, 20, 18, 20)));
+        JLabel cardTitle = new JLabel(title);
+        cardTitle.setForeground(Color.decode("#475569"));
+        cardTitle.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        JLabel cardValue = new JLabel(value);
+        cardValue.setForeground(Color.decode("#1D4ED8"));
+        cardValue.setFont(new Font("Segoe UI", Font.BOLD, 30));
+        JLabel cardCaption = new JLabel(caption);
+        cardCaption.setForeground(Color.decode("#94A3B8"));
+        cardCaption.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        card.add(cardTitle);
+        card.add(cardValue);
+        card.add(cardCaption);
+        return card;
+    }
+
+    private void showStatistics() {
+        jPanel4.setVisible(false);
+        jPanel5.setVisible(false);
+        jPanel6.setVisible(false);
+        jLabel1.setVisible(false);
+        jLabel6.setVisible(false);
+        statisticsPanel.setVisible(true);
+        styleNavigationButton(jButton5, "Inventory", false);
+        styleNavigationButton(jButton6, "Statistics", true);
+        jPanel1.revalidate();
+        jPanel1.repaint();
+    }
+
+    private void showInventory() {
+        statisticsPanel.setVisible(false);
+        jPanel4.setVisible(true);
+        jPanel5.setVisible(true);
+        jPanel6.setVisible(true);
+        jLabel1.setVisible(true);
+        jLabel6.setVisible(true);
+        styleNavigationButton(jButton5, "Inventory", true);
+        styleNavigationButton(jButton6, "Statistics", false);
+        jPanel1.revalidate();
+        jPanel1.repaint();
+    }
+
+    private void createHeader(Color primary) {
+        jPanel2.removeAll();
+        jPanel2.setBackground(primary);
+        jPanel2.setLayout(new BorderLayout(18, 0));
+
+        JPanel identity = new JPanel(new FlowLayout(FlowLayout.LEFT, 22, 0));
+        identity.setOpaque(false);
+        JLabel name = new JLabel("CAISEN CLINIC");
+        name.setForeground(Color.WHITE);
+        name.setFont(new Font("Segoe UI", Font.BOLD, 17));
+        JLabel section = new JLabel("ADMIN PANEL");
+        section.setForeground(Color.decode("#DBEAFE"));
+        section.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        identity.add(name);
+        identity.add(section);
+
+        
+        jPanel2.add(identity, BorderLayout.WEST);
+        jPanel2.revalidate();
+        jPanel2.repaint();
+    }
+
+    private void styleCard(JComponent component, Color background, Color border) {
+        component.setBackground(background);
+        component.setBorder(BorderFactory.createLineBorder(border));
+        component.putClientProperty(FlatClientProperties.STYLE, "arc: 16");
+    }
+
+    private void styleNavigationButton(JButton button, String text, boolean selected) {
+        button.setText(text);
+        button.setForeground(Color.BLACK);
+        button.putClientProperty(FlatClientProperties.STYLE, selected
+                ? "arc: 10; background: #E2E8F0; hoverBackground: #CBD5E1; borderWidth: 0; font: bold +1"
+                : "arc: 10; background: #F8FAFC; hoverBackground: #E2E8F0; borderWidth: 0; font: bold +1");
+    }
+
+    private void stylePrimaryButton(JButton button, String text, Color color) {
+        button.setText(text);
+        button.setBackground(color);
+        button.setForeground(Color.WHITE);
+        button.putClientProperty(FlatClientProperties.STYLE,
+                "arc: 10; borderWidth: 0; font: bold; margin: 7,12,7,12");
+    }
+
+    private void styleSecondaryButton(JButton button, String text) {
+        button.setText(text);
+        button.putClientProperty(FlatClientProperties.STYLE,
+                "arc: 10; background: #F1F5F9; foreground: #334155; borderColor: #E2E8F0; font: bold");
+    }
+
+    private void styleDangerButton(JButton button, String text) {
+        button.setText(text);
+        button.putClientProperty(FlatClientProperties.STYLE,
+                "arc: 10; background: #FEF2F2; foreground: #DC2626; borderColor: #FECACA; font: bold");
     }
 
     /**
@@ -79,11 +341,14 @@ public class Inventory extends javax.swing.JFrame {
         jPanel3.setBackground(new java.awt.Color(204, 204, 204));
         jPanel3.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(0, 0, 0), 1, true));
 
+        jButton5.setForeground(new java.awt.Color(0, 0, 0));
         jButton5.setText("Inventory");
 
+        jButton6.setForeground(new java.awt.Color(0, 0, 0));
         jButton6.setText("Statistic");
 
         jButton7.setText("Return");
+        jButton7.addActionListener(this::jButton7ActionPerformed);
 
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
@@ -100,16 +365,16 @@ public class Inventory extends javax.swing.JFrame {
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel3Layout.createSequentialGroup()
-                .addGap(30, 30, 30)
+                .addGap(86, 86, 86)
                 .addComponent(jButton5, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jButton6, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 357, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 361, Short.MAX_VALUE)
                 .addComponent(jButton7, javax.swing.GroupLayout.PREFERRED_SIZE, 48, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(23, 23, 23))
         );
 
-        jPanel1.add(jPanel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(-10, 60, 190, 590));
+        jPanel1.add(jPanel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(-10, 0, 190, 650));
 
         jPanel4.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
 
@@ -142,7 +407,7 @@ public class Inventory extends javax.swing.JFrame {
         jLabel1.setFont(new java.awt.Font("Yu Gothic UI", 1, 24)); // NOI18N
         jLabel1.setForeground(new java.awt.Color(0, 0, 0));
         jLabel1.setText("Inventory Logs");
-        jPanel1.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(880, 70, 170, 40));
+        jPanel1.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(880, 70, 230, 40));
 
         jPanel5.setBackground(new java.awt.Color(180, 180, 180));
         jPanel5.setBorder(javax.swing.BorderFactory.createCompoundBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(180, 180, 180)), javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
@@ -251,7 +516,7 @@ public class Inventory extends javax.swing.JFrame {
         jLabel6.setFont(new java.awt.Font("Yu Gothic UI", 1, 24)); // NOI18N
         jLabel6.setForeground(new java.awt.Color(0, 0, 0));
         jLabel6.setText("Stock");
-        jPanel1.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 70, 150, 40));
+        jPanel1.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 70, 210, 40));
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -267,29 +532,22 @@ public class Inventory extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
+    private void jButton7ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton7ActionPerformed
+        new Dashboard().show();
+        this.dispose();
+    }//GEN-LAST:event_jButton7ActionPerformed
+
     /**
      * @param args the command line arguments
      */
     public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ReflectiveOperationException | javax.swing.UnsupportedLookAndFeelException ex) {
-            logger.log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
+        FlatLightLaf.setup();
+        UIManager.put("Component.arc", 10);
+        UIManager.put("Button.arc", 10);
+        UIManager.put("TextComponent.arc", 10);
 
         /* Create and display the form */
-        java.awt.EventQueue.invokeLater(() -> new Inventory().setVisible(true));
+        java.awt.EventQueue.invokeLater(() -> new AdminPanel().setVisible(true));
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
