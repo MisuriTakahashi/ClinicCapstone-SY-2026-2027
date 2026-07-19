@@ -14,8 +14,8 @@ public class SystemLogin {
     
       public static String CheckLogin(String username, String password){
             
-            String adminUser = "adminUser123";
-            String adminPass = "adminPass123";
+            String adminUser = "admin";
+            String adminPass = "admin123";
             
             String UserNurse = "UserNurse123";
             String UserPass = "PassNurse123";

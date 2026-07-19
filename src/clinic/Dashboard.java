@@ -4,6 +4,8 @@
  */
 package clinic;
 
+import javax.swing.JOptionPane;
+
 /**
  *
  * @author PC
@@ -11,13 +13,19 @@ package clinic;
 public class Dashboard extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Dashboard.class.getName());
-
+    private boolean darkMode = false;
     /**
      * Creates new form Dashboard
      */
     public Dashboard() {
         initComponents();
         setLocationRelativeTo(null);
+        startDateTimeClock();
+        
+        VisitPanel.putClientProperty("JComponent.arc", 25);
+        SentHomePanel.putClientProperty("JComponent.arc", 25);
+        CheckInPanel.putClientProperty("JComponent.arc", 25);
+        InventoryPanel.putClientProperty("JComponent.arc", 25);
         
         java.awt.Color softSlate = new java.awt.Color(245, 247, 250); 
         CheckInPanel.setBackground(softSlate);
@@ -53,11 +61,132 @@ public class Dashboard extends javax.swing.JFrame {
         PrintBTN.putClientProperty("JButton.buttonType", "roundRect");
         jButton1.putClientProperty("JButton.buttonType", "roundRect"); // Admin button
         jComboBox1.putClientProperty("JComponent.roundRect", true);
+        SentHomeBTN.putClientProperty("JButton.buttonType", "roundRect");
         
-        
+        ThemeToggle.setText("Dark mode");
+        ThemeToggle.addActionListener(e -> {
+            darkMode = ThemeToggle.isSelected();
+            applyTheme();
+        });
+
+        // Apply the starting light theme
+        applyTheme();
         
         
     }
+    private void applyTheme() {
+        try {
+            if (darkMode) {
+                com.formdev.flatlaf.FlatDarkLaf.setup();
+            } else {
+                com.formdev.flatlaf.FlatLightLaf.setup();
+            }
+            // Ternary operator
+            java.awt.Color pageBackground = darkMode
+                    ? new java.awt.Color(43, 43, 43)
+                    : java.awt.Color.WHITE;
+            java.awt.Color panelBackground = darkMode
+                    ? new java.awt.Color(60, 63, 65)
+                    : new java.awt.Color(245, 247, 250);
+            java.awt.Color cardBackground = darkMode
+                    ? new java.awt.Color(70, 73, 75)
+                    : java.awt.Color.WHITE;
+            java.awt.Color inputBackground = darkMode
+                    ? new java.awt.Color(48, 50, 52)
+                    : java.awt.Color.WHITE;
+            java.awt.Color textColor = darkMode
+                    ? new java.awt.Color(235, 235, 235)
+                    : new java.awt.Color(25, 25, 25);
+            java.awt.Color headerColor = darkMode
+                    ? new java.awt.Color(30, 76, 120)
+                    : new java.awt.Color(51, 153, 255);
+            java.awt.Color borderColor = darkMode
+                    ? new java.awt.Color(100, 104, 108)
+                    : new java.awt.Color(220, 225, 230);
+
+            ThemeToggle.setText(darkMode ? "Light mode" : "Dark mode");
+            ThemeToggle.setSelected(darkMode);
+
+            HeaderPanel.setBackground(headerColor);
+            MainPanel.setBackground(pageBackground);
+            CounterPanel.setBackground(panelBackground);
+            CheckInPanel.setBackground(panelBackground);
+            CheckInPanel1.setBackground(panelBackground);
+            InventoryPanel.setBackground(panelBackground);
+            VisitPanel.setBackground(cardBackground);
+            SentHomePanel.setBackground(cardBackground);
+
+            // Header and section titles
+            jLabel3.setForeground(java.awt.Color.WHITE);
+            DateTimeLabel.setForeground(java.awt.Color.WHITE);
+            InventoryLabel.setForeground(textColor);
+            OverviewLabel.setForeground(textColor);
+            LogsLabel.setForeground(textColor);
+            StudentCheckinLabel.setForeground(textColor);
+
+            // Summary cards and check-in labels
+            jLabel1.setForeground(textColor);
+            jLabel4.setForeground(textColor);
+            VisitCounter.setForeground(textColor);
+            SentHomeCount.setForeground(textColor);
+            jLabel7.setForeground(textColor);
+            jLabel8.setForeground(textColor);
+            jLabel9.setForeground(textColor);
+            jLabel11.setForeground(textColor);
+
+            // Inputs, text areas, tables, and their scroll panes
+            NameCheckIn.setBackground(inputBackground);
+            NameCheckIn.setForeground(textColor);
+            GSCheckIn.setBackground(inputBackground);
+            GSCheckIn.setForeground(textColor);
+            ReasonArea.setBackground(inputBackground);
+            ReasonArea.setForeground(textColor);
+            InventoryStatusArea.setBackground(inputBackground);
+            InventoryStatusArea.setForeground(textColor);
+            ReasonTable.setBackground(inputBackground);
+            ReasonTable.setForeground(textColor);
+            ReasonTable.getTableHeader().setBackground(cardBackground);
+            ReasonTable.getTableHeader().setForeground(textColor);
+            jComboBox1.setBackground(inputBackground);
+            jComboBox1.setForeground(textColor);
+
+            jScrollPane1.getViewport().setBackground(inputBackground);
+            jScrollPane2.getViewport().setBackground(inputBackground);
+            jScrollPane3.getViewport().setBackground(inputBackground);
+            jScrollPane1.setBorder(javax.swing.BorderFactory.createLineBorder(borderColor));
+            jScrollPane2.setBorder(javax.swing.BorderFactory.createLineBorder(borderColor));
+            jScrollPane3.setBorder(javax.swing.BorderFactory.createLineBorder(borderColor));
+
+            for (java.awt.Window window : java.awt.Window.getWindows()) {
+                javax.swing.SwingUtilities.updateComponentTreeUI(window);
+                window.pack();
+            }
+        } catch (Exception ex) {
+            logger.log(java.util.logging.Level.SEVERE, "Failed to apply theme", ex);
+        }
+    }
+
+    
+    
+    private void startDateTimeClock() {
+    updateDateTimeLabel();
+
+    new javax.swing.Timer(1000, e -> updateDateTimeLabel()).start();
+}
+
+private void updateDateTimeLabel() {
+    java.time.format.DateTimeFormatter format =
+        java.time.format.DateTimeFormatter.ofPattern(
+            "EEEE, MMMM d, yyyy  |  hh:mm:ss a"
+        );
+
+    DateTimeLabel.setText(
+        java.time.LocalDateTime.now().format(format)
+    );
+}
+    
+    
+    
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -72,6 +201,9 @@ public class Dashboard extends javax.swing.JFrame {
         HeaderPanel = new javax.swing.JPanel();
         jLabel3 = new javax.swing.JLabel();
         jButton1 = new javax.swing.JButton();
+        DateTimeLabel = new javax.swing.JLabel();
+        ThemeToggle = new javax.swing.JToggleButton();
+        jButton2 = new javax.swing.JButton();
         CounterPanel = new javax.swing.JPanel();
         VisitPanel = new javax.swing.JPanel();
         jLabel1 = new javax.swing.JLabel();
@@ -89,15 +221,19 @@ public class Dashboard extends javax.swing.JFrame {
         jLabel9 = new javax.swing.JLabel();
         CheckInBTN = new javax.swing.JButton();
         PrintBTN = new javax.swing.JButton();
-        jScrollPane2 = new javax.swing.JScrollPane();
-        ReasonTable = new javax.swing.JTable();
         jLabel11 = new javax.swing.JLabel();
         jComboBox1 = new javax.swing.JComboBox<>();
-        jLabel6 = new javax.swing.JLabel();
+        SentHomeBTN = new javax.swing.JButton();
         InventoryPanel = new javax.swing.JPanel();
         jScrollPane3 = new javax.swing.JScrollPane();
         InventoryStatusArea = new javax.swing.JTextArea();
-        jLabel10 = new javax.swing.JLabel();
+        InventoryLabel = new javax.swing.JLabel();
+        CheckInPanel1 = new javax.swing.JPanel();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        ReasonTable = new javax.swing.JTable();
+        OverviewLabel = new javax.swing.JLabel();
+        LogsLabel = new javax.swing.JLabel();
+        StudentCheckinLabel = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setFocusable(false);
@@ -114,31 +250,57 @@ public class Dashboard extends javax.swing.JFrame {
         jButton1.setBackground(new java.awt.Color(255, 255, 255));
         jButton1.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
         jButton1.setForeground(new java.awt.Color(0, 0, 0));
-        jButton1.setText("Admin");
+        jButton1.setText("Admin Panel");
         jButton1.addActionListener(this::jButton1ActionPerformed);
+
+        DateTimeLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 24)); // NOI18N
+
+        ThemeToggle.setBackground(new java.awt.Color(255, 255, 255));
+        ThemeToggle.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
+        ThemeToggle.setForeground(new java.awt.Color(0, 0, 0));
+        ThemeToggle.setText("Mode");
+
+        jButton2.setBackground(new java.awt.Color(255, 255, 255));
+        jButton2.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        jButton2.setForeground(new java.awt.Color(0, 0, 0));
+        jButton2.setText("Logout");
+        jButton2.addActionListener(this::jButton2ActionPerformed);
 
         javax.swing.GroupLayout HeaderPanelLayout = new javax.swing.GroupLayout(HeaderPanel);
         HeaderPanel.setLayout(HeaderPanelLayout);
         HeaderPanelLayout.setHorizontalGroup(
             HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(HeaderPanelLayout.createSequentialGroup()
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, HeaderPanelLayout.createSequentialGroup()
                 .addGap(19, 19, 19)
-                .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 627, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 405, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 405, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 141, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(25, 25, 25))
+                .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(ThemeToggle, javax.swing.GroupLayout.PREFERRED_SIZE, 141, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(HeaderPanelLayout.createSequentialGroup()
+                        .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 141, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jButton2)))
+                .addGap(17, 17, 17))
         );
         HeaderPanelLayout.setVerticalGroup(
             HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(HeaderPanelLayout.createSequentialGroup()
+                .addContainerGap()
                 .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(HeaderPanelLayout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, 63, Short.MAX_VALUE))
-                    .addGroup(HeaderPanelLayout.createSequentialGroup()
-                        .addGap(18, 18, 18)
-                        .addComponent(jButton1)
-                        .addGap(0, 0, Short.MAX_VALUE)))
+                        .addComponent(jLabel3)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(DateTimeLabel)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, HeaderPanelLayout.createSequentialGroup()
+                        .addGap(0, 3, Short.MAX_VALUE)
+                        .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(jButton2)
+                            .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(ThemeToggle, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap())
         );
 
@@ -277,6 +439,106 @@ public class Dashboard extends javax.swing.JFrame {
         PrintBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
         PrintBTN.setForeground(new java.awt.Color(255, 255, 255));
         PrintBTN.setText("Print");
+        PrintBTN.addActionListener(this::PrintBTNActionPerformed);
+
+        jLabel11.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        jLabel11.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel11.setText("Medicine used");
+
+        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+
+        SentHomeBTN.setBackground(new java.awt.Color(0, 102, 204));
+        SentHomeBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
+        SentHomeBTN.setForeground(new java.awt.Color(255, 255, 255));
+        SentHomeBTN.setText("Sent Home");
+        SentHomeBTN.addActionListener(this::SentHomeBTNActionPerformed);
+
+        javax.swing.GroupLayout CheckInPanelLayout = new javax.swing.GroupLayout(CheckInPanel);
+        CheckInPanel.setLayout(CheckInPanelLayout);
+        CheckInPanelLayout.setHorizontalGroup(
+            CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(CheckInPanelLayout.createSequentialGroup()
+                .addGap(35, 35, 35)
+                .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addGroup(CheckInPanelLayout.createSequentialGroup()
+                        .addGap(3, 3, 3)
+                        .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(CheckInPanelLayout.createSequentialGroup()
+                                .addComponent(jLabel11)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 126, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(jLabel9)
+                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 360, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                    .addGroup(CheckInPanelLayout.createSequentialGroup()
+                        .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(PrintBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(SentHomeBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 123, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jLabel8)
+                    .addComponent(jLabel7)
+                    .addComponent(GSCheckIn)
+                    .addComponent(NameCheckIn))
+                .addContainerGap(43, Short.MAX_VALUE))
+        );
+        CheckInPanelLayout.setVerticalGroup(
+            CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(CheckInPanelLayout.createSequentialGroup()
+                .addGap(18, 18, 18)
+                .addComponent(jLabel7)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(NameCheckIn, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jLabel8)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(GSCheckIn, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jLabel9)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 16, Short.MAX_VALUE)
+                .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel11)
+                    .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(PrintBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(SentHomeBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18))
+        );
+
+        InventoryPanel.setBackground(new java.awt.Color(226, 226, 226));
+        InventoryPanel.setForeground(new java.awt.Color(0, 0, 0));
+
+        InventoryStatusArea.setBackground(new java.awt.Color(255, 255, 255));
+        InventoryStatusArea.setColumns(20);
+        InventoryStatusArea.setForeground(new java.awt.Color(0, 0, 0));
+        InventoryStatusArea.setRows(5);
+        jScrollPane3.setViewportView(InventoryStatusArea);
+
+        javax.swing.GroupLayout InventoryPanelLayout = new javax.swing.GroupLayout(InventoryPanel);
+        InventoryPanel.setLayout(InventoryPanelLayout);
+        InventoryPanelLayout.setHorizontalGroup(
+            InventoryPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(InventoryPanelLayout.createSequentialGroup()
+                .addGap(14, 14, 14)
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 386, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(14, Short.MAX_VALUE))
+        );
+        InventoryPanelLayout.setVerticalGroup(
+            InventoryPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(InventoryPanelLayout.createSequentialGroup()
+                .addGap(17, 17, 17)
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 182, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+
+        InventoryLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
+        InventoryLabel.setForeground(new java.awt.Color(0, 0, 0));
+        InventoryLabel.setText("Inventory Status");
+
+        CheckInPanel1.setBackground(new java.awt.Color(226, 226, 226));
 
         ReasonTable.setBackground(new java.awt.Color(255, 255, 255));
         ReasonTable.setForeground(new java.awt.Color(0, 0, 0));
@@ -305,116 +567,34 @@ public class Dashboard extends javax.swing.JFrame {
             ReasonTable.getColumnModel().getColumn(2).setResizable(false);
         }
 
-        jLabel11.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        jLabel11.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel11.setText("Meds Used");
-
-        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
-
-        javax.swing.GroupLayout CheckInPanelLayout = new javax.swing.GroupLayout(CheckInPanel);
-        CheckInPanel.setLayout(CheckInPanelLayout);
-        CheckInPanelLayout.setHorizontalGroup(
-            CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CheckInPanelLayout.createSequentialGroup()
-                .addGap(32, 32, 32)
-                .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(CheckInPanelLayout.createSequentialGroup()
-                        .addGap(3, 3, 3)
-                        .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(PrintBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                        .addGroup(CheckInPanelLayout.createSequentialGroup()
-                            .addComponent(jLabel7)
-                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                            .addComponent(NameCheckIn, javax.swing.GroupLayout.PREFERRED_SIZE, 238, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGroup(CheckInPanelLayout.createSequentialGroup()
-                            .addComponent(jLabel8)
-                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                            .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addComponent(GSCheckIn, javax.swing.GroupLayout.PREFERRED_SIZE, 238, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CheckInPanelLayout.createSequentialGroup()
-                                    .addComponent(jLabel9)
-                                    .addGap(119, 119, 119))))
-                        .addGroup(javax.swing.GroupLayout.Alignment.LEADING, CheckInPanelLayout.createSequentialGroup()
-                            .addGap(6, 6, 6)
-                            .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addGroup(CheckInPanelLayout.createSequentialGroup()
-                                    .addComponent(jLabel11)
-                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                    .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 126, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addComponent(jScrollPane1)))))
-                .addGap(36, 36, 36)
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(32, Short.MAX_VALUE))
+        javax.swing.GroupLayout CheckInPanel1Layout = new javax.swing.GroupLayout(CheckInPanel1);
+        CheckInPanel1.setLayout(CheckInPanel1Layout);
+        CheckInPanel1Layout.setHorizontalGroup(
+            CheckInPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CheckInPanel1Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 485, Short.MAX_VALUE)
+                .addContainerGap())
         );
-        CheckInPanelLayout.setVerticalGroup(
-            CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(CheckInPanelLayout.createSequentialGroup()
-                .addGap(34, 34, 34)
-                .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(CheckInPanelLayout.createSequentialGroup()
-                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 229, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addGroup(CheckInPanelLayout.createSequentialGroup()
-                        .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(NameCheckIn, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jLabel7))
-                        .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(CheckInPanelLayout.createSequentialGroup()
-                                .addGap(38, 38, 38)
-                                .addComponent(jLabel9)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(CheckInPanelLayout.createSequentialGroup()
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                    .addComponent(GSCheckIn, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(jLabel8))))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
-                        .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(jLabel11)
-                            .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(PrintBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addContainerGap(34, Short.MAX_VALUE))))
+        CheckInPanel1Layout.setVerticalGroup(
+            CheckInPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(CheckInPanel1Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
+                .addContainerGap())
         );
 
-        jLabel6.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
-        jLabel6.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel6.setText("Student Check in");
+        OverviewLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
+        OverviewLabel.setForeground(new java.awt.Color(0, 0, 0));
+        OverviewLabel.setText("Overview");
 
-        InventoryPanel.setBackground(new java.awt.Color(226, 226, 226));
-        InventoryPanel.setForeground(new java.awt.Color(0, 0, 0));
+        LogsLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
+        LogsLabel.setForeground(new java.awt.Color(0, 0, 0));
+        LogsLabel.setText("Check-in Logs");
 
-        InventoryStatusArea.setBackground(new java.awt.Color(255, 255, 255));
-        InventoryStatusArea.setColumns(20);
-        InventoryStatusArea.setForeground(new java.awt.Color(0, 0, 0));
-        InventoryStatusArea.setRows(5);
-        jScrollPane3.setViewportView(InventoryStatusArea);
-
-        javax.swing.GroupLayout InventoryPanelLayout = new javax.swing.GroupLayout(InventoryPanel);
-        InventoryPanel.setLayout(InventoryPanelLayout);
-        InventoryPanelLayout.setHorizontalGroup(
-            InventoryPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(InventoryPanelLayout.createSequentialGroup()
-                .addGap(24, 24, 24)
-                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 261, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(17, Short.MAX_VALUE))
-        );
-        InventoryPanelLayout.setVerticalGroup(
-            InventoryPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(InventoryPanelLayout.createSequentialGroup()
-                .addGap(20, 20, 20)
-                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 425, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(21, Short.MAX_VALUE))
-        );
-
-        jLabel10.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
-        jLabel10.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel10.setText("Inventory Status");
+        StudentCheckinLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
+        StudentCheckinLabel.setForeground(new java.awt.Color(0, 0, 0));
+        StudentCheckinLabel.setText("Student Check-in");
 
         javax.swing.GroupLayout MainPanelLayout = new javax.swing.GroupLayout(MainPanel);
         MainPanel.setLayout(MainPanelLayout);
@@ -422,43 +602,53 @@ public class Dashboard extends javax.swing.JFrame {
             MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addComponent(HeaderPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(MainPanelLayout.createSequentialGroup()
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGap(20, 20, 20)
+                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(MainPanelLayout.createSequentialGroup()
-                        .addGap(27, 27, 27)
+                        .addComponent(CheckInPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(CheckInPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(MainPanelLayout.createSequentialGroup()
+                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(CounterPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainPanelLayout.createSequentialGroup()
+                                .addGap(190, 190, 190)
+                                .addComponent(OverviewLabel)))
+                        .addGap(18, 18, 18)
                         .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(MainPanelLayout.createSequentialGroup()
-                                .addGap(145, 145, 145)
-                                .addComponent(CounterPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 116, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                    .addGroup(MainPanelLayout.createSequentialGroup()
-                        .addGap(14, 14, 14)
-                        .addComponent(CheckInPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 53, Short.MAX_VALUE)
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(InventoryPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MainPanelLayout.createSequentialGroup()
-                        .addComponent(jLabel10)
-                        .addGap(148, 148, 148)))
-                .addGap(21, 21, 21))
+                            .addComponent(InventoryPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MainPanelLayout.createSequentialGroup()
+                                .addComponent(InventoryLabel)
+                                .addGap(160, 160, 160)))))
+                .addContainerGap(24, Short.MAX_VALUE))
+            .addGroup(MainPanelLayout.createSequentialGroup()
+                .addGap(166, 166, 166)
+                .addComponent(StudentCheckinLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(LogsLabel)
+                .addGap(234, 234, 234))
         );
         MainPanelLayout.setVerticalGroup(
             MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(MainPanelLayout.createSequentialGroup()
                 .addComponent(HeaderPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(36, 36, 36)
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(MainPanelLayout.createSequentialGroup()
-                        .addComponent(CounterPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(19, 19, 19)
-                        .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(CheckInPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(MainPanelLayout.createSequentialGroup()
-                        .addGap(6, 6, 6)
-                        .addComponent(jLabel10, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(InventoryPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addGap(0, 34, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 16, Short.MAX_VALUE)
+                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(InventoryLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(OverviewLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(InventoryPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(CounterPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(LogsLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(StudentCheckinLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(CheckInPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(CheckInPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGap(32, 32, 32))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -476,60 +666,70 @@ public class Dashboard extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        new LoginAdministrator().show();
+        new LoginUi().setVisible(true);
         this.dispose();
     }//GEN-LAST:event_jButton1ActionPerformed
 
+    private void PrintBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_PrintBTNActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_PrintBTNActionPerformed
+
+    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+        int choice = JOptionPane.showConfirmDialog(
+        this,
+        "Are you sure you want to log out?",
+        "Confirm logout",
+        JOptionPane.YES_NO_OPTION
+    );
+
+    if (choice == JOptionPane.YES_OPTION) {
+        new LoginUi().setVisible(true);
+        this.dispose();
+    }
+    }//GEN-LAST:event_jButton2ActionPerformed
+    private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {                                         
+        // TODO add your handling code here:
+    }  
     /**
      * @param args the command line arguments
      */
     public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ReflectiveOperationException | javax.swing.UnsupportedLookAndFeelException ex) {
-            logger.log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-
-        /* Create and display the form */
+        com.formdev.flatlaf.FlatLightLaf.setup();
         java.awt.EventQueue.invokeLater(() -> new Dashboard().setVisible(true));
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton CheckInBTN;
     private javax.swing.JPanel CheckInPanel;
+    private javax.swing.JPanel CheckInPanel1;
     private javax.swing.JPanel CounterPanel;
+    private javax.swing.JLabel DateTimeLabel;
     private javax.swing.JTextField GSCheckIn;
     private javax.swing.JPanel HeaderPanel;
+    private javax.swing.JLabel InventoryLabel;
     private javax.swing.JPanel InventoryPanel;
     private javax.swing.JTextArea InventoryStatusArea;
+    private javax.swing.JLabel LogsLabel;
     private javax.swing.JPanel MainPanel;
     private javax.swing.JTextField NameCheckIn;
+    private javax.swing.JLabel OverviewLabel;
     private javax.swing.JButton PrintBTN;
     private javax.swing.JTextArea ReasonArea;
     private javax.swing.JTable ReasonTable;
+    private javax.swing.JButton SentHomeBTN;
     private javax.swing.JLabel SentHomeCount;
     private javax.swing.JPanel SentHomePanel;
+    private javax.swing.JLabel StudentCheckinLabel;
+    private javax.swing.JToggleButton ThemeToggle;
     private javax.swing.JLabel VisitCounter;
     private javax.swing.JPanel VisitPanel;
     private javax.swing.JButton jButton1;
+    private javax.swing.JButton jButton2;
     private javax.swing.JComboBox<String> jComboBox1;
     private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel11;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
-    private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
     private javax.swing.JLabel jLabel8;
     private javax.swing.JLabel jLabel9;
