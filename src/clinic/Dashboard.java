@@ -778,16 +778,18 @@ NOT modify this code. The content of this method is always
         String reason = ReasonArea.getText().trim();
         String medUsed = jComboBox1.getSelectedItem().toString();
         
-            if (!lrn.matches("\\d{12}")) {
+           
+        if(name.isEmpty() || gradeSection.isEmpty() || lrn.isEmpty()){
+            JOptionPane.showMessageDialog(this, "Name, Grade/Section and LRN are NEEDED to get CHECK IN...");
+            return;
+        }
+        
+         if (!lrn.matches("\\d{12}")) {
                 JOptionPane.showMessageDialog( this,"LRN must contain exactly 12 digits.");
                 LRNField.requestFocus();
                 return;
             }
         
-        if(name.isEmpty() || gradeSection.isEmpty() || lrn.isEmpty()){
-            JOptionPane.showMessageDialog(this, "Name, Grade/Section and LRN are NEEDED to get CHECK IN...");
-            return;
-        }
             try {
                  if (visitService.isCurrentlyCheckedIn(lrn)) {
                  JOptionPane.showMessageDialog(this, "This student is already checked in.");
