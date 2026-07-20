@@ -69,3 +69,33 @@ public class CheckinSystem {
    }
         
 }
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons
+// bugs can type letter on names and reasons

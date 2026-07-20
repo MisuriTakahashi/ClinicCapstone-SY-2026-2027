@@ -500,6 +500,12 @@ NOT modify this code. The content of this method is always
         LRNField.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
         LRNField.setForeground(new java.awt.Color(0, 0, 0));
         LRNField.setText("LRN");
+        LRNField.addActionListener(this::LRNFieldActionPerformed);
+        LRNField.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyTyped(java.awt.event.KeyEvent evt) {
+                LRNFieldKeyTyped(evt);
+            }
+        });
 
         javax.swing.GroupLayout CheckInPanelLayout = new javax.swing.GroupLayout(CheckInPanel);
         CheckInPanel.setLayout(CheckInPanelLayout);
@@ -772,6 +778,12 @@ NOT modify this code. The content of this method is always
         String reason = ReasonArea.getText().trim();
         String medUsed = jComboBox1.getSelectedItem().toString();
         
+            if (!lrn.matches("\\d{12}")) {
+                JOptionPane.showMessageDialog( this,"LRN must contain exactly 12 digits.");
+                LRNField.requestFocus();
+                return;
+            }
+        
         if(name.isEmpty() || gradeSection.isEmpty() || lrn.isEmpty()){
             JOptionPane.showMessageDialog(this, "Name, Grade/Section and LRN are NEEDED to get CHECK IN...");
             return;
@@ -795,6 +807,27 @@ NOT modify this code. The content of this method is always
              }
    
     }//GEN-LAST:event_CheckInBTNActionPerformed
+
+    private void LRNFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_LRNFieldActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_LRNFieldActionPerformed
+
+    private void LRNFieldKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_LRNFieldKeyTyped
+        
+             char c = evt.getKeyChar();
+
+            // Allow only numbers
+                if (!Character.isDigit(c)) {
+                  evt.consume();
+                  return;
+                }
+
+             // Limit to 12 digits
+             if (LRNField.getText().length() >= 12) {
+              evt.consume();
+            }
+             
+    }//GEN-LAST:event_LRNFieldKeyTyped
     private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {                                         
             int row = ReasonTable.getSelectedRow();
             
