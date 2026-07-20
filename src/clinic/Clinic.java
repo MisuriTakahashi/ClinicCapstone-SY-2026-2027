@@ -27,7 +27,7 @@ public class Clinic {
 
         // 3. Launch your Login Window first
         java.awt.EventQueue.invokeLater(() -> {
-            new LoginUi().setVisible(true);
+            new Dashboard().setVisible(true);
             //new AdminPanel().setVisible(true);
         });
         

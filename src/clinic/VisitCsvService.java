@@ -34,9 +34,9 @@ public class VisitCsvService {
     }
     
     // this adds one new Check in row to csv 
-    public void checkIn(String name , String gradeSection , String reason , String medUsed){
+    public void checkIn(String name , String gradeSection , String lrn , String reason , String medUsed){
         String now = LocalDateTime.now().format(TIME_FORMAT);
-        CheckinSystem visit = new CheckinSystem(name , gradeSection , reason , medUsed , now , "In clinic ");
+        CheckinSystem visit = new CheckinSystem(name , gradeSection , lrn , reason , medUsed , now , "In Clinic");
         
          try (BufferedWriter bw = new BufferedWriter(new FileWriter(csvFile, true))) {
             bw.write(visit.toCsvLine());
@@ -60,7 +60,7 @@ public class VisitCsvService {
                 String[] data = 
                         line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
                 
-                if (data.length >= 6) {
+                if (data.length >= 7) {
                     for (int i = 0; i < data.length; i++) 
                         data[i] = data[i].replace("\"", "");
                     visits.add(new CheckinSystem(
@@ -69,7 +69,8 @@ public class VisitCsvService {
                             data[2], 
                             data[3], 
                             data[4], 
-                            data[5]));
+                            data[5],
+                            data[6]));
                 }
             }
         } catch (FileNotFoundException ex) {
@@ -80,25 +81,50 @@ public class VisitCsvService {
         return visits;
     }
      
+      // Returns true if this LRN currently has an active ("In Clinic") visit
+    public boolean isCurrentlyCheckedIn(String lrn) throws IOException {
+        for (CheckinSystem v : loadAll()) {
+            if (v.getLrn().equals(lrn) && v.getStatus().equals("In Clinic")) {
+                return true;
+            }
+        }
+        return false;
+    }
+     
      //MARK STUDENT AS SENT HOME
      //finds  a students visit and changes to the status from "in clinic" to "sent home" 
-     public void markSentHome(String name , String checkInTIme){
-         ArrayList<CheckinSystem> visit = loadAll();
-         
-         for(CheckinSystem v : visit){
-             if(v.getName().equals(name) && v.getCheckInTime().equals(checkInTIme)){
-         }
-     }
-             try (BufferedWriter bw = new BufferedWriter(new FileWriter(csvFile))) {
-                for (CheckinSystem v : visit) {
-                bw.write(v.toCsvLine());
-                bw.newLine();
-            }
-        } catch (IOException ex) {
-            System.getLogger(VisitCsvService.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-        }
+      public boolean markSentHome(String lrn) throws IOException {
+             ArrayList<CheckinSystem> visits = loadAll();
+             boolean found = false;
+
+                for (CheckinSystem v : visits) {
+
+                     if (v.getLrn().trim().equals(lrn.trim())
+                     && v.getStatus().trim().equals("In Clinic")) {
+
+                      v.setStatus("Sent Home");
+                      found = true;
+                   }
+                }
+
+    if (!found) {
+        System.out.println("No matching student found.");
+        return false;
     }
-     public int[] getTodayCounts() {
+
+    try (BufferedWriter bw = new BufferedWriter(new FileWriter(csvFile))) {
+        for (CheckinSystem v : visits) {
+            bw.write(v.toCsvLine());
+            bw.newLine();
+        }
+     }
+
+            return true;
+    }
+      
+      
+      
+     public int[] getTodayCounts() throws IOException {
          String today = LocalDate.now().toString();
          int totalToday = 0;
          int sentHomeToday = 0;
@@ -111,6 +137,5 @@ public class VisitCsvService {
          }
           return new int[]{totalToday, sentHomeToday};
      }
-   //nigga 
     
 }
