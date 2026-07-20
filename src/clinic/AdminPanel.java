@@ -49,7 +49,7 @@ public class AdminPanel extends javax.swing.JFrame {
         Color sidebar = Color.decode("#0F172A");
 
         getContentPane().setBackground(page);
-        setTitle("Caisen Clinic · Admin Panel");
+        setTitle("Clinic · Admin Panel");
         jPanel1.setBackground(page);
         createHeader(primary);
         jPanel3.setBackground(sidebar);
@@ -232,7 +232,7 @@ public class AdminPanel extends javax.swing.JFrame {
 
         JPanel identity = new JPanel(new FlowLayout(FlowLayout.LEFT, 22, 0));
         identity.setOpaque(false);
-        JLabel name = new JLabel("CAISEN CLINIC");
+        JLabel name = new JLabel("CLINIC ");
         name.setForeground(Color.WHITE);
         name.setFont(new Font("Segoe UI", Font.BOLD, 17));
         JLabel section = new JLabel("ADMIN PANEL");
@@ -386,7 +386,7 @@ public class AdminPanel extends javax.swing.JFrame {
                 {null, null, null}
             },
             new String [] {
-                "Category", "Product", "Quantity"
+                "Status", "Product", "Quantity"
             }
         ));
         jScrollPane1.setViewportView(jTable1);
@@ -413,7 +413,7 @@ public class AdminPanel extends javax.swing.JFrame {
         jPanel5.setBorder(javax.swing.BorderFactory.createCompoundBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(180, 180, 180)), javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
         jPanel5.setForeground(new java.awt.Color(0, 0, 0));
 
-        jLabel2.setFont(new java.awt.Font("Yu Gothic UI", 0, 12)); // NOI18N
+        jLabel2.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
         jLabel2.setForeground(new java.awt.Color(0, 0, 0));
         jLabel2.setText("Inventory Details");
 
@@ -423,7 +423,7 @@ public class AdminPanel extends javax.swing.JFrame {
 
         jLabel4.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
         jLabel4.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel4.setText("Date");
+        jLabel4.setText("EXP Date");
 
         jLabel5.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
         jLabel5.setForeground(new java.awt.Color(0, 0, 0));
@@ -447,9 +447,9 @@ public class AdminPanel extends javax.swing.JFrame {
             .addGroup(jPanel5Layout.createSequentialGroup()
                 .addGap(0, 0, Short.MAX_VALUE)
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel4, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel5, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel3, javax.swing.GroupLayout.Alignment.TRAILING))
+                    .addComponent(jLabel3, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jLabel4, javax.swing.GroupLayout.Alignment.TRAILING))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jTextField1)
