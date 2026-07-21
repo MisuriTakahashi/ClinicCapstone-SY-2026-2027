@@ -11,16 +11,20 @@ import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.io.IOException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
+import javax.swing.table.DefaultTableModel;
 
 /**
  *
@@ -38,6 +42,7 @@ public class AdminPanel extends javax.swing.JFrame {
         initComponents();
         configureFlatLafUi();
         setLocationRelativeTo(null);
+        refreshInventoryScreen();
     }
 
     /** Applies the FlatLaf treatment after NetBeans creates the form controls. */
@@ -72,22 +77,22 @@ public class AdminPanel extends javax.swing.JFrame {
         styleNavigationButton(jButton6, "Statistics", false);
         styleNavigationButton(jButton7, "← Back", false);
 
-        stylePrimaryButton(jButton1, "Add item", primary);
-        styleSecondaryButton(jButton2, "Edit");
-        styleDangerButton(jButton3, "Delete");
-        styleSecondaryButton(jButton4, "Clear form");
+        stylePrimaryButton(AddBTN, "Add item", primary);
+        styleSecondaryButton(EditBtn, "Edit");
+        styleDangerButton(DeleteBTN, "Delete");
+        styleSecondaryButton(ClearBtn, "Clear form");
 
-        for (JComponent field : new JComponent[]{jTextField1, jTextField2, jTextField3}) {
+        for (JComponent field : new JComponent[]{ProductName, ExpDate, Qty}) {
             field.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT,
-                    field == jTextField1 ? "e.g. Paracetamol" : field == jTextField2 ? "YYYY-MM-DD" : "0");
+                    field == ProductName ? "e.g. Paracetamol" : field == ExpDate ? "YYYY-MM-DD" : "0");
             field.putClientProperty(FlatClientProperties.STYLE, "arc: 10; margin: 6,10,6,10");
         }
 
-        jTable1.setRowHeight(38);
-        jTable1.setShowVerticalLines(false);
-        jTable1.setShowHorizontalLines(true);
-        jTable1.setGridColor(border);
-        jTable1.getTableHeader().putClientProperty(FlatClientProperties.STYLE,
+        stockTable.setRowHeight(38);
+        stockTable.setShowVerticalLines(false);
+        stockTable.setShowHorizontalLines(true);
+        stockTable.setGridColor(border);
+        stockTable.getTableHeader().putClientProperty(FlatClientProperties.STYLE,
                 "background: #F1F5F9; foreground: #475569; font: +1");
         jScrollPane1.setBorder(BorderFactory.createEmptyBorder());
         jScrollPane2.setBorder(BorderFactory.createEmptyBorder());
@@ -99,7 +104,7 @@ public class AdminPanel extends javax.swing.JFrame {
         jTextArea1.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         jTextArea1.setMargin(new java.awt.Insets(18, 18, 18, 18));
         jTextArea1.setBackground(surface);
-        jTable1.setToolTipText("Your available medical supplies");
+        stockTable.setToolTipText("Your available medical supplies");
 
         createStatisticsPanel();
         jButton5.addActionListener(event -> showInventory());
@@ -280,6 +285,30 @@ public class AdminPanel extends javax.swing.JFrame {
         button.putClientProperty(FlatClientProperties.STYLE,
                 "arc: 10; background: #FEF2F2; foreground: #DC2626; borderColor: #FECACA; font: bold");
     }
+    
+    private ProductCsvService productService = new ProductCsvService("products.csv", "inventory_activity.log");
+    private ArrayList<Product> currentProducts = new ArrayList<>();
+    private String selectedProductName = null;
+
+    
+    private void refreshInventoryScreen(){
+        try {
+        ArrayList<Product> currentProducts = productService.loadAll();
+
+        DefaultTableModel model = (DefaultTableModel) stockTable.getModel();
+        model.setRowCount(0);
+
+        for (Product p : currentProducts) {
+            model.addRow(new Object[]{p.getStatus(), p.getname(), p.getquantity()});
+        }
+
+    } catch (IOException ex) {
+        JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage());
+    }
+        
+        
+            
+    }
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -298,20 +327,20 @@ public class AdminPanel extends javax.swing.JFrame {
         jButton7 = new javax.swing.JButton();
         jPanel4 = new javax.swing.JPanel();
         jScrollPane1 = new javax.swing.JScrollPane();
-        jTable1 = new javax.swing.JTable();
+        stockTable = new javax.swing.JTable();
         jLabel1 = new javax.swing.JLabel();
         jPanel5 = new javax.swing.JPanel();
         jLabel2 = new javax.swing.JLabel();
-        jTextField1 = new javax.swing.JTextField();
-        jTextField2 = new javax.swing.JTextField();
-        jTextField3 = new javax.swing.JTextField();
+        ProductName = new javax.swing.JTextField();
+        ExpDate = new javax.swing.JTextField();
+        Qty = new javax.swing.JTextField();
         jLabel3 = new javax.swing.JLabel();
         jLabel4 = new javax.swing.JLabel();
         jLabel5 = new javax.swing.JLabel();
-        jButton1 = new javax.swing.JButton();
-        jButton2 = new javax.swing.JButton();
-        jButton3 = new javax.swing.JButton();
-        jButton4 = new javax.swing.JButton();
+        AddBTN = new javax.swing.JButton();
+        EditBtn = new javax.swing.JButton();
+        DeleteBTN = new javax.swing.JButton();
+        ClearBtn = new javax.swing.JButton();
         jPanel6 = new javax.swing.JPanel();
         jScrollPane2 = new javax.swing.JScrollPane();
         jTextArea1 = new javax.swing.JTextArea();
@@ -378,7 +407,7 @@ public class AdminPanel extends javax.swing.JFrame {
 
         jPanel4.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
 
-        jTable1.setModel(new javax.swing.table.DefaultTableModel(
+        stockTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
                 {null, null, null},
                 {null, null, null},
@@ -389,7 +418,12 @@ public class AdminPanel extends javax.swing.JFrame {
                 "Status", "Product", "Quantity"
             }
         ));
-        jScrollPane1.setViewportView(jTable1);
+        stockTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                stockTableMouseClicked(evt);
+            }
+        });
+        jScrollPane1.setViewportView(stockTable);
 
         javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
         jPanel4.setLayout(jPanel4Layout);
@@ -417,6 +451,13 @@ public class AdminPanel extends javax.swing.JFrame {
         jLabel2.setForeground(new java.awt.Color(0, 0, 0));
         jLabel2.setText("Inventory Details");
 
+        Qty.addActionListener(this::QtyActionPerformed);
+        Qty.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyTyped(java.awt.event.KeyEvent evt) {
+                QtyKeyTyped(evt);
+            }
+        });
+
         jLabel3.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
         jLabel3.setForeground(new java.awt.Color(0, 0, 0));
         jLabel3.setText("Product Name");
@@ -429,13 +470,17 @@ public class AdminPanel extends javax.swing.JFrame {
         jLabel5.setForeground(new java.awt.Color(0, 0, 0));
         jLabel5.setText("Quantity");
 
-        jButton1.setText("Add");
+        AddBTN.setText("Add");
+        AddBTN.addActionListener(this::AddBTNActionPerformed);
 
-        jButton2.setText("Edit");
+        EditBtn.setText("Edit");
+        EditBtn.addActionListener(this::EditBtnActionPerformed);
 
-        jButton3.setText("Delete");
+        DeleteBTN.setText("Delete");
+        DeleteBTN.addActionListener(this::DeleteBTNActionPerformed);
 
-        jButton4.setText("Clear");
+        ClearBtn.setText("Clear");
+        ClearBtn.addActionListener(this::ClearBtnActionPerformed);
 
         javax.swing.GroupLayout jPanel5Layout = new javax.swing.GroupLayout(jPanel5);
         jPanel5.setLayout(jPanel5Layout);
@@ -452,20 +497,20 @@ public class AdminPanel extends javax.swing.JFrame {
                     .addComponent(jLabel4, javax.swing.GroupLayout.Alignment.TRAILING))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jTextField1)
-                    .addComponent(jTextField2)
-                    .addComponent(jTextField3, javax.swing.GroupLayout.DEFAULT_SIZE, 142, Short.MAX_VALUE))
+                    .addComponent(ProductName)
+                    .addComponent(ExpDate)
+                    .addComponent(Qty, javax.swing.GroupLayout.DEFAULT_SIZE, 142, Short.MAX_VALUE))
                 .addContainerGap())
             .addGroup(jPanel5Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jButton4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(ClearBtn, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(jPanel5Layout.createSequentialGroup()
-                        .addComponent(jButton1)
+                        .addComponent(AddBTN)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButton2, javax.swing.GroupLayout.DEFAULT_SIZE, 112, Short.MAX_VALUE)
+                        .addComponent(EditBtn, javax.swing.GroupLayout.DEFAULT_SIZE, 112, Short.MAX_VALUE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 82, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                        .addComponent(DeleteBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 82, javax.swing.GroupLayout.PREFERRED_SIZE))))
         );
         jPanel5Layout.setVerticalGroup(
             jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -474,23 +519,23 @@ public class AdminPanel extends javax.swing.JFrame {
                 .addComponent(jLabel2)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(ProductName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel3))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(ExpDate, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel4))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(Qty, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel5))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 13, Short.MAX_VALUE)
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(AddBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(EditBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(DeleteBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 46, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(ClearBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 46, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
 
@@ -504,7 +549,10 @@ public class AdminPanel extends javax.swing.JFrame {
         jPanel6.setLayout(jPanel6Layout);
         jPanel6Layout.setHorizontalGroup(
             jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 320, Short.MAX_VALUE)
+            .addGroup(jPanel6Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 296, Short.MAX_VALUE)
+                .addGap(18, 18, 18))
         );
         jPanel6Layout.setVerticalGroup(
             jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -537,6 +585,112 @@ public class AdminPanel extends javax.swing.JFrame {
         this.dispose();
     }//GEN-LAST:event_jButton7ActionPerformed
 
+    private void QtyKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_QtyKeyTyped
+        // TODO add your handling code here:
+    }//GEN-LAST:event_QtyKeyTyped
+
+    private void AddBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddBTNActionPerformed
+          String name = ProductName.getText().trim();
+          String expDate = ExpDate.getText().trim();
+          String quantityText = Qty.getText().trim();
+
+          if(name.isEmpty() || expDate.isEmpty() || quantityText.isEmpty()){
+              JOptionPane.showMessageDialog(this, "All Field Are Required.");
+              return;
+          }
+          
+          int quantity;
+          try{
+              quantity = Integer.parseInt(quantityText);
+          }catch(NumberFormatException ex){
+              JOptionPane.showMessageDialog(this, "Quantity must be a whole number nigga.");
+              return;
+          }
+           try {
+              productService.addItem(name, expDate, quantity);
+              refreshInventoryScreen();
+              ClearBtnActionPerformed(null);
+            }catch (IOException ex) {
+                 JOptionPane.showMessageDialog(this, "Error adding item: " + ex.getMessage());
+            }   
+          
+    }//GEN-LAST:event_AddBTNActionPerformed
+
+    private void ClearBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ClearBtnActionPerformed
+          ProductName.setText("");
+          ExpDate.setText("");
+          Qty.setText("");
+          selectedProductName = null;
+          stockTable.clearSelection();
+    }//GEN-LAST:event_ClearBtnActionPerformed
+
+    private void stockTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_stockTableMouseClicked
+         int row = stockTable.getSelectedRow();
+            if (row == -1) return;
+
+            selectedProductName = (String) stockTable.getValueAt(row, 1); // Product column
+            int quantity = (int) stockTable.getValueAt(row, 2);
+
+             ProductName.setText(selectedProductName);
+             Qty.setText(String.valueOf(quantity));
+             // Note: expDate isn't shown in the table columns you have — see note below
+    }//GEN-LAST:event_stockTableMouseClicked
+
+    private void DeleteBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DeleteBTNActionPerformed
+             if (selectedProductName == null) {
+                JOptionPane.showMessageDialog(this, "Select a product from the table first.");
+                 return;
+                 }
+
+                 try {
+                       boolean success = productService.deleteItem(selectedProductName);
+                 if (!success) {
+                         JOptionPane.showMessageDialog(this, "Product not found.");
+                     } else {
+                 refreshInventoryScreen();
+                 ClearBtnActionPerformed(null);
+                     }
+            }catch (IOException ex) {
+                JOptionPane.showMessageDialog(this, "Error deleting item: " + ex.getMessage());
+        }
+    }//GEN-LAST:event_DeleteBTNActionPerformed
+
+    private void EditBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditBtnActionPerformed
+                if (selectedProductName == null) {
+                  JOptionPane.showMessageDialog(this, "Select a product from the table first.");
+                 return;
+             }
+
+             String newName = ProductName.getText().trim();
+             String newExpDate = ExpDate.getText().trim();
+             String quantityText = Qty.getText().trim();
+
+            int newQuantity;
+            try {
+               newQuantity = Integer.parseInt(quantityText);
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(this, "Quantity must be a whole number.");
+                  return;
+                 }
+
+            
+             try {
+                  boolean success = productService.editItem(selectedProductName, newName, newExpDate, newQuantity);
+                      if (!success) {
+                         JOptionPane.showMessageDialog(this, "Product not found.");
+                      } else {
+                    refreshInventoryScreen();
+                    ClearBtnActionPerformed(null);
+                     }
+             }catch (IOException ex) {
+                 JOptionPane.showMessageDialog(this, "Error editing item: " + ex.getMessage());
+        }
+    }//GEN-LAST:event_EditBtnActionPerformed
+
+    private void QtyActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_QtyActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_QtyActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -551,10 +705,13 @@ public class AdminPanel extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton2;
-    private javax.swing.JButton jButton3;
-    private javax.swing.JButton jButton4;
+    private javax.swing.JButton AddBTN;
+    private javax.swing.JButton ClearBtn;
+    private javax.swing.JButton DeleteBTN;
+    private javax.swing.JButton EditBtn;
+    private javax.swing.JTextField ExpDate;
+    private javax.swing.JTextField ProductName;
+    private javax.swing.JTextField Qty;
     private javax.swing.JButton jButton5;
     private javax.swing.JButton jButton6;
     private javax.swing.JButton jButton7;
@@ -572,10 +729,7 @@ public class AdminPanel extends javax.swing.JFrame {
     private javax.swing.JPanel jPanel6;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
-    private javax.swing.JTable jTable1;
     private javax.swing.JTextArea jTextArea1;
-    private javax.swing.JTextField jTextField1;
-    private javax.swing.JTextField jTextField2;
-    private javax.swing.JTextField jTextField3;
+    private javax.swing.JTable stockTable;
     // End of variables declaration//GEN-END:variables
 }
