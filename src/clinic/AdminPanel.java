@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -25,6 +26,7 @@ import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.text.AbstractDocument;
 
 /**
  *
@@ -41,9 +43,12 @@ public class AdminPanel extends javax.swing.JFrame {
     public AdminPanel() {
         initComponents();
         configureFlatLafUi();
+        ((AbstractDocument) ExpDate.getDocument()).setDocumentFilter(new DateInputFilter());
         setLocationRelativeTo(null);
         refreshInventoryScreen();
     }
+    
+    
 
     /** Applies the FlatLaf treatment after NetBeans creates the form controls. */
     private void configureFlatLafUi() {
@@ -96,14 +101,14 @@ public class AdminPanel extends javax.swing.JFrame {
                 "background: #F1F5F9; foreground: #475569; font: +1");
         jScrollPane1.setBorder(BorderFactory.createEmptyBorder());
         jScrollPane2.setBorder(BorderFactory.createEmptyBorder());
-        jTextArea1.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Recent stock activity will appear here.");
-        jTextArea1.putClientProperty(FlatClientProperties.STYLE, "border: 0,0,0,0");
-        jTextArea1.setText("No recent activity\n\nChanges to stock levels will be recorded here.");
-        jTextArea1.setEditable(false);
-        jTextArea1.setForeground(Color.decode("#64748B"));
-        jTextArea1.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        jTextArea1.setMargin(new java.awt.Insets(18, 18, 18, 18));
-        jTextArea1.setBackground(surface);
+        InventoryLogs.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Recent stock activity will appear here.");
+        InventoryLogs.putClientProperty(FlatClientProperties.STYLE, "border: 0,0,0,0");
+        InventoryLogs.setText("No recent activity\n\nChanges to stock levels will be recorded here.");
+        InventoryLogs.setEditable(false);
+        InventoryLogs.setForeground(Color.decode("#64748B"));
+        InventoryLogs.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        InventoryLogs.setMargin(new java.awt.Insets(18, 18, 18, 18));
+        InventoryLogs.setBackground(surface);
         stockTable.setToolTipText("Your available medical supplies");
 
         createStatisticsPanel();
@@ -286,6 +291,12 @@ public class AdminPanel extends javax.swing.JFrame {
                 "arc: 10; background: #FEF2F2; foreground: #DC2626; borderColor: #FECACA; font: bold");
     }
     
+    private String normalizeDate(String input) throws DateTimeParseException {
+            DateTimeFormatter looseFormat = DateTimeFormatter.ofPattern("yyyy-M-d");
+                 LocalDate date = LocalDate.parse(input, looseFormat); // accepts "2028-1-9" or "2028-01-09"
+            return date.format(DateTimeFormatter.ISO_LOCAL_DATE);  // always outputs "2028-01-09"
+    }
+    
     private ProductCsvService productService = new ProductCsvService("products.csv", "inventory_activity.log");
     private ArrayList<Product> currentProducts = new ArrayList<>();
     private String selectedProductName = null;
@@ -343,7 +354,7 @@ public class AdminPanel extends javax.swing.JFrame {
         ClearBtn = new javax.swing.JButton();
         jPanel6 = new javax.swing.JPanel();
         jScrollPane2 = new javax.swing.JScrollPane();
-        jTextArea1 = new javax.swing.JTextArea();
+        InventoryLogs = new javax.swing.JTextArea();
         jLabel6 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -451,6 +462,15 @@ public class AdminPanel extends javax.swing.JFrame {
         jLabel2.setForeground(new java.awt.Color(0, 0, 0));
         jLabel2.setText("Inventory Details");
 
+        ProductName.addActionListener(this::ProductNameActionPerformed);
+        ProductName.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyTyped(java.awt.event.KeyEvent evt) {
+                ProductNameKeyTyped(evt);
+            }
+        });
+
+        ExpDate.addActionListener(this::ExpDateActionPerformed);
+
         Qty.addActionListener(this::QtyActionPerformed);
         Qty.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyTyped(java.awt.event.KeyEvent evt) {
@@ -541,9 +561,9 @@ public class AdminPanel extends javax.swing.JFrame {
 
         jPanel1.add(jPanel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(870, 360, 320, 270));
 
-        jTextArea1.setColumns(20);
-        jTextArea1.setRows(5);
-        jScrollPane2.setViewportView(jTextArea1);
+        InventoryLogs.setColumns(20);
+        InventoryLogs.setRows(5);
+        jScrollPane2.setViewportView(InventoryLogs);
 
         javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
         jPanel6.setLayout(jPanel6Layout);
@@ -586,13 +606,26 @@ public class AdminPanel extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton7ActionPerformed
 
     private void QtyKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_QtyKeyTyped
-        // TODO add your handling code here:
+         char c = evt.getKeyChar();
+
+            // Allow only numbers
+                if (!Character.isDigit(c)) {
+                  evt.consume();
+                  return;
+                }
     }//GEN-LAST:event_QtyKeyTyped
 
     private void AddBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddBTNActionPerformed
           String name = ProductName.getText().trim();
           String expDate = ExpDate.getText().trim();
           String quantityText = Qty.getText().trim();
+          
+            try {
+                 expDate = normalizeDate(ExpDate.getText().trim());
+             } catch (DateTimeParseException ex) {
+                 JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2028-1-9 or 2028-01-09).");
+              return;
+             }
 
           if(name.isEmpty() || expDate.isEmpty() || quantityText.isEmpty()){
               JOptionPane.showMessageDialog(this, "All Field Are Required.");
@@ -662,9 +695,17 @@ public class AdminPanel extends javax.swing.JFrame {
              }
 
              String newName = ProductName.getText().trim();
-             String newExpDate = ExpDate.getText().trim();
              String quantityText = Qty.getText().trim();
-
+             String newExpDate;
+            
+            try {
+                 newExpDate = normalizeDate(ExpDate.getText().trim());
+             } catch (DateTimeParseException ex) {
+                 JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2028-1-9 or 2028-01-09).");
+              return;
+             }
+             
+             
             int newQuantity;
             try {
                newQuantity = Integer.parseInt(quantityText);
@@ -691,6 +732,25 @@ public class AdminPanel extends javax.swing.JFrame {
         // TODO add your handling code here:
     }//GEN-LAST:event_QtyActionPerformed
 
+    private void ExpDateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ExpDateActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_ExpDateActionPerformed
+
+    private void ProductNameKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_ProductNameKeyTyped
+          char c = evt.getKeyChar();
+
+        // Allow letters, spaces, and backspace
+        if (!Character.isLetter(c)
+            && !Character.isWhitespace(c)
+            && c != '\b') {
+            evt.consume();
+         }
+    }//GEN-LAST:event_ProductNameKeyTyped
+
+    private void ProductNameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ProductNameActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_ProductNameActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -710,6 +770,7 @@ public class AdminPanel extends javax.swing.JFrame {
     private javax.swing.JButton DeleteBTN;
     private javax.swing.JButton EditBtn;
     private javax.swing.JTextField ExpDate;
+    private javax.swing.JTextArea InventoryLogs;
     private javax.swing.JTextField ProductName;
     private javax.swing.JTextField Qty;
     private javax.swing.JButton jButton5;
@@ -729,7 +790,6 @@ public class AdminPanel extends javax.swing.JFrame {
     private javax.swing.JPanel jPanel6;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
-    private javax.swing.JTextArea jTextArea1;
     private javax.swing.JTable stockTable;
     // End of variables declaration//GEN-END:variables
 }

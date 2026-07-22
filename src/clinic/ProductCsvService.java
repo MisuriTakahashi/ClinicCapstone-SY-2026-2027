@@ -29,6 +29,7 @@ public class ProductCsvService {
         this.activityLogFile = new File(activityLogFile);
     }
     
+        //this loads all of the product is the table
        public ArrayList<Product> loadAll() throws IOException  {
         ArrayList<Product> products = new ArrayList<>();
         if(!csvFile.exists()) return products;
@@ -48,7 +49,8 @@ public class ProductCsvService {
             return products;
     }
     
-   
+       
+       //this add the new items
        public void addItem(String name, String expDate, int quantity) throws IOException {
         Product product = new Product(name, expDate, quantity);
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(csvFile, true))) {
@@ -58,7 +60,7 @@ public class ProductCsvService {
         logActivity("Added " + quantity + "x " + name);
     }
     
-    
+       
        private void logActivity(String message) throws IOException {
         String timestamp = LocalDateTime.now().format(Time_Format);
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(activityLogFile, true))) {

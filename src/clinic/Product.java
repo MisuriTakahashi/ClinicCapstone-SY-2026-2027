@@ -68,7 +68,7 @@ public class Product {
        public String getStatus(){
             if(isExpired())
                 return "Expired";
-            return ExpDate;
+                return ExpDate;
         }    
        
        public String toCsvLine(){
