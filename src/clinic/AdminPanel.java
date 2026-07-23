@@ -45,6 +45,7 @@ public class AdminPanel extends javax.swing.JFrame {
         ((AbstractDocument) ExpDate.getDocument()).setDocumentFilter(new DateInputFilter());
         setLocationRelativeTo(null);
         refreshInventoryScreen();
+        refreshActivityLogDisplay();
     }
     
     
@@ -217,24 +218,43 @@ public class AdminPanel extends javax.swing.JFrame {
     private ArrayList<Product> currentProducts = new ArrayList<>();
     private String selectedProductName = null;
 
-    
-    private void refreshInventoryScreen(){
-        try {
-        ArrayList<Product> currentProducts = productService.loadAll();
-
-        DefaultTableModel model = (DefaultTableModel) stockTable.getModel();
-        model.setRowCount(0);
-
-        for (Product p : currentProducts) {
-            model.addRow(new Object[]{p.getStatus(), p.getname(), p.getquantity()});
+    private void refreshActivityLogDisplay(){
+        try{
+             ArrayList<String> log = productService.loadActivityLog();
+             StringBuilder sb = new StringBuilder();
+        
+                if (log.isEmpty()) {
+                      sb.append("No recent activity.\n\nChanges to stock levels will be recorded here.");
+                } else {
+                      for (String line : log) {
+                      sb.append(line).append("\n");
+            }
         }
 
-    } catch (IOException ex) {
-        JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage());
+        InventoryLogs.setText(sb.toString());
+        
+        }catch(IOException ex){
+            JOptionPane.showMessageDialog(this, "Error loading activity log: " + ex.getMessage());
+        }
     }
-        
-        
-            
+    
+    
+    //eto yun nagpapakita ng mga shis sa table and inupdate
+    private void refreshInventoryScreen(){
+        try {
+             ArrayList<Product> currentProducts = productService.loadAll();
+
+                DefaultTableModel model = (DefaultTableModel) stockTable.getModel();
+                model.setRowCount(0);
+
+            for (Product p : currentProducts) {
+                 model.addRow(new Object[]{p.getStatus(), p.getname(), p.getquantity()});
+             }
+                 refreshActivityLogDisplay();
+                 
+             } catch (IOException ex) {
+                 JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage());
+             }  
     }
 
     /**
@@ -336,6 +356,7 @@ public class AdminPanel extends javax.swing.JFrame {
 
         jButton5.setForeground(new java.awt.Color(0, 0, 0));
         jButton5.setText("Inventory");
+        jButton5.addActionListener(this::jButton5ActionPerformed);
 
         jButton6.setForeground(new java.awt.Color(0, 0, 0));
         jButton6.setText("Statistic");
@@ -640,6 +661,11 @@ public class AdminPanel extends javax.swing.JFrame {
         });
 
         ExpDate.addActionListener(this::ExpDateActionPerformed);
+        ExpDate.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyTyped(java.awt.event.KeyEvent evt) {
+                ExpDateKeyTyped(evt);
+            }
+        });
 
         Qty.addActionListener(this::QtyActionPerformed);
         Qty.addKeyListener(new java.awt.event.KeyAdapter() {
@@ -739,10 +765,7 @@ public class AdminPanel extends javax.swing.JFrame {
         jPanel6.setLayout(jPanel6Layout);
         jPanel6Layout.setHorizontalGroup(
             jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel6Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 296, Short.MAX_VALUE)
-                .addGap(18, 18, 18))
+            .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 320, Short.MAX_VALUE)
         );
         jPanel6Layout.setVerticalGroup(
             jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -776,13 +799,13 @@ public class AdminPanel extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton7ActionPerformed
 
     private void QtyKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_QtyKeyTyped
-         char c = evt.getKeyChar();
+         //char c = evt.getKeyChar();
 
             // Allow only numbers
-                if (!Character.isDigit(c)) {
-                  evt.consume();
-                  return;
-                }
+                //if (!Character.isDigit(c)) {
+                  //evt.consume();
+                  //return;
+                //}
     }//GEN-LAST:event_QtyKeyTyped
 
     private void AddBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddBTNActionPerformed
@@ -907,19 +930,27 @@ public class AdminPanel extends javax.swing.JFrame {
     }//GEN-LAST:event_ExpDateActionPerformed
 
     private void ProductNameKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_ProductNameKeyTyped
-          char c = evt.getKeyChar();
+          //char c = evt.getKeyChar();
 
         // Allow letters, spaces, and backspace
-        if (!Character.isLetter(c)
+        /*if (!Character.isLetter(c)
             && !Character.isWhitespace(c)
             && c != '\b') {
             evt.consume();
-         }
+         }*/
     }//GEN-LAST:event_ProductNameKeyTyped
 
     private void ProductNameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ProductNameActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_ProductNameActionPerformed
+
+    private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton5ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jButton5ActionPerformed
+
+    private void ExpDateKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_ExpDateKeyTyped
+        // TODO add your handling code here:
+    }//GEN-LAST:event_ExpDateKeyTyped
 
     /**
      * @param args the command line arguments

@@ -10,6 +10,7 @@ import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
 import java.io.IOException;
+import java.util.ArrayList;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 
@@ -29,6 +30,7 @@ public class Dashboard extends javax.swing.JFrame {
         setLocationRelativeTo(null);
         startDateTimeClock();
         refreshTableAndCounters();
+        refreshInventoryStatusDisplay();
         
         VisitPanel.putClientProperty("JComponent.arc", 25);
         SentHomePanel.putClientProperty("JComponent.arc", 25);
@@ -201,7 +203,34 @@ private void updateDateTimeLabel() {
 }
     
     private VisitCsvService visitService = new VisitCsvService("visits.csv");
+    private ProductCsvService productService = new ProductCsvService("products.csv", "inventory_activity.log");
     
+    private void refreshInventoryStatusDisplay(){
+        try{
+             ArrayList<Product> products = productService.loadAll();
+                 StringBuilder sb = new StringBuilder();
+
+                 if (products.isEmpty()) {
+                     sb.append("No items in inventory yet.");
+                 } else {
+                     for (Product p : products) {
+                      sb.append(p.getname())
+                          .append(" — ")
+                          .append(p.getquantity())
+                          .append(" pcs — ")
+                          .append(p.getStatus())
+                          .append("\n");
+            }
+        }
+                 
+             InventoryStatusArea.setText(sb.toString());
+        
+        }catch(IOException ex){
+               JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage());
+        }
+    }
+    
+    //pinapakita yun table and counters and inaupdate
     private void refreshTableAndCounters(){
         try{
             DefaultTableModel model = (DefaultTableModel) ReasonTable.getModel();
