@@ -10,12 +10,9 @@ import java.awt.Color;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.io.IOException;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -23,15 +20,15 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.UIManager;
-import javax.swing.table.DefaultTableModel;
 import javax.swing.text.AbstractDocument;
-
+   import java.sql.*;
+import javax.swing.table.DefaultTableModel;
 /**
  *
  * @author PC
  */
 public class AdminPanel extends javax.swing.JFrame {
-    
+    private String selectedProductName = null;
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(AdminPanel.class.getName());
     
 
@@ -44,12 +41,52 @@ public class AdminPanel extends javax.swing.JFrame {
         statisticsContainer.setVisible(false);
         ((AbstractDocument) ExpDate.getDocument()).setDocumentFilter(new DateInputFilter());
         setLocationRelativeTo(null);
+
         refreshInventoryScreen();
         refreshActivityLogDisplay();
+        
+    }
+private void refreshInventoryFromDatabase() {
+    String sql = "SELECT status, product_name, quantity FROM products";
+
+    try (Connection conn = DatabaseConnection.getConnection();
+         PreparedStatement pstmt = conn.prepareStatement(sql);
+         ResultSet rs = pstmt.executeQuery()) {
+
+        DefaultTableModel model = (DefaultTableModel) stockTable.getModel();
+        model.setRowCount(0); // Clear current visual table rows
+
+        while (rs.next()) {
+            String status = rs.getString("status");
+            String name = rs.getString("product_name");
+            int qty = rs.getInt("quantity");
+
+            model.addRow(new Object[]{status, name, qty});
+        }
+    } catch (SQLException ex) {
+        JOptionPane.showMessageDialog(this, "Database error: " + ex.getMessage());
+    }
+}
+    private void addProductToDatabase(String name, String expDate, int quantity) {
+    String sql = "INSERT INTO products (status, product_name, quantity, exp_date) VALUES (?, ?, ?, ?)";
+
+    try (Connection conn = DatabaseConnection.getConnection();
+         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+        pstmt.setString(1, "Available");
+        pstmt.setString(2, name);
+        pstmt.setInt(3, quantity);
+        pstmt.setString(4, expDate); // Formatted as YYYY-MM-DD
+
+        pstmt.executeUpdate();
+        refreshInventoryFromDatabase();
+        ClearBtnActionPerformed(null);
+        
+    } catch (SQLException ex) {
+        JOptionPane.showMessageDialog(this, "Error adding item: " + ex.getMessage());
     }
     
-    
-
+    }
     /** Applies the FlatLaf treatment after NetBeans creates the form controls. */
     private void configureFlatLafUi() {
         Color page = Color.decode("#F8FAFC");
@@ -214,48 +251,69 @@ public class AdminPanel extends javax.swing.JFrame {
             return date.format(DateTimeFormatter.ISO_LOCAL_DATE);  // always outputs "2028-01-09"
     }
     
-    private ProductCsvService productService = new ProductCsvService("products.csv", "inventory_activity.log");
-    private ArrayList<Product> currentProducts = new ArrayList<>();
-    private String selectedProductName = null;
-
-    private void refreshActivityLogDisplay(){
-        try{
-             ArrayList<String> log = productService.loadActivityLog();
-             StringBuilder sb = new StringBuilder();
-        
-                if (log.isEmpty()) {
-                      sb.append("No recent activity.\n\nChanges to stock levels will be recorded here.");
-                } else {
-                      for (String line : log) {
-                      sb.append(line).append("\n");
-            }
+   private void logActivity(String actionMessage) {
+        String sql = "INSERT INTO activity_logs (log_message) VALUES (?)";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, "[" + LocalDate.now() + "] " + actionMessage);
+            pstmt.executeUpdate();
+            
+        } catch (SQLException ex) {
+            System.err.println("Failed to log activity: " + ex.getMessage());
         }
+    }
+private void refreshActivityLogDisplay() {
+        String sql = "SELECT log_message FROM activity_logs ORDER BY id DESC LIMIT 50";
+        StringBuilder sb = new StringBuilder();
 
-        InventoryLogs.setText(sb.toString());
-        
-        }catch(IOException ex){
-            JOptionPane.showMessageDialog(this, "Error loading activity log: " + ex.getMessage());
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                sb.append(rs.getString("log_message")).append("\n");
+            }
+
+            if (sb.length() == 0) {
+                InventoryLogs.setText("No recent activity.\n\nChanges to stock levels will be recorded here.");
+            } else {
+                InventoryLogs.setText(sb.toString());
+            }
+
+        } catch (SQLException ex) {
+            InventoryLogs.setText("Error loading activity log: " + ex.getMessage());
+        }
+    }
+    private void refreshInventoryScreen() {
+        String sql = "SELECT status, product_name, quantity FROM products";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            DefaultTableModel model = (DefaultTableModel) stockTable.getModel();
+            model.setRowCount(0);
+
+            while (rs.next()) {
+                String status = rs.getString("status");
+                String name = rs.getString("product_name");
+                int qty = rs.getInt("quantity");
+
+                model.addRow(new Object[]{status, name, qty});
+            }
+
+            refreshActivityLogDisplay();
+
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Database Error: " + ex.getMessage());
         }
     }
     
     
     //eto yun nagpapakita ng mga shis sa table and inupdate
-    private void refreshInventoryScreen(){
-        try {
-             ArrayList<Product> currentProducts = productService.loadAll();
-
-                DefaultTableModel model = (DefaultTableModel) stockTable.getModel();
-                model.setRowCount(0);
-
-            for (Product p : currentProducts) {
-                 model.addRow(new Object[]{p.getStatus(), p.getname(), p.getquantity()});
-             }
-                 refreshActivityLogDisplay();
-                 
-             } catch (IOException ex) {
-                 JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage());
-             }  
-    }
+    
+    
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -272,6 +330,26 @@ public class AdminPanel extends javax.swing.JFrame {
         jButton5 = new javax.swing.JButton();
         jButton6 = new javax.swing.JButton();
         jButton7 = new javax.swing.JButton();
+        jPanel4 = new javax.swing.JPanel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        stockTable = new javax.swing.JTable();
+        jLabel1 = new javax.swing.JLabel();
+        jPanel5 = new javax.swing.JPanel();
+        jLabel2 = new javax.swing.JLabel();
+        ProductName = new javax.swing.JTextField();
+        ExpDate = new javax.swing.JTextField();
+        Qty = new javax.swing.JTextField();
+        jLabel3 = new javax.swing.JLabel();
+        jLabel4 = new javax.swing.JLabel();
+        jLabel5 = new javax.swing.JLabel();
+        AddBTN = new javax.swing.JButton();
+        EditBtn = new javax.swing.JButton();
+        DeleteBTN = new javax.swing.JButton();
+        ClearBtn = new javax.swing.JButton();
+        jPanel6 = new javax.swing.JPanel();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        InventoryLogs = new javax.swing.JTextArea();
+        jLabel6 = new javax.swing.JLabel();
         statisticsContainer = new javax.swing.JPanel();
         jLabel7 = new javax.swing.JLabel();
         lblReportingPeriod = new javax.swing.JLabel();
@@ -309,26 +387,6 @@ public class AdminPanel extends javax.swing.JFrame {
         lblFridayDate = new javax.swing.JLabel();
         lblFridayCount = new javax.swing.JLabel();
         lblFridayDay = new javax.swing.JLabel();
-        jPanel4 = new javax.swing.JPanel();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        stockTable = new javax.swing.JTable();
-        jLabel1 = new javax.swing.JLabel();
-        jPanel5 = new javax.swing.JPanel();
-        jLabel2 = new javax.swing.JLabel();
-        ProductName = new javax.swing.JTextField();
-        ExpDate = new javax.swing.JTextField();
-        Qty = new javax.swing.JTextField();
-        jLabel3 = new javax.swing.JLabel();
-        jLabel4 = new javax.swing.JLabel();
-        jLabel5 = new javax.swing.JLabel();
-        AddBTN = new javax.swing.JButton();
-        EditBtn = new javax.swing.JButton();
-        DeleteBTN = new javax.swing.JButton();
-        ClearBtn = new javax.swing.JButton();
-        jPanel6 = new javax.swing.JPanel();
-        jScrollPane2 = new javax.swing.JScrollPane();
-        InventoryLogs = new javax.swing.JTextArea();
-        jLabel6 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setResizable(false);
@@ -389,6 +447,178 @@ public class AdminPanel extends javax.swing.JFrame {
         );
 
         jPanel1.add(jPanel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(-10, 0, 190, 650));
+
+        jPanel4.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+
+        stockTable.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null},
+                {null, null, null},
+                {null, null, null},
+                {null, null, null}
+            },
+            new String [] {
+                "Status", "Product", "Quantity"
+            }
+        ));
+        stockTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                stockTableMouseClicked(evt);
+            }
+        });
+        jScrollPane1.setViewportView(stockTable);
+
+        javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
+        jPanel4.setLayout(jPanel4Layout);
+        jPanel4Layout.setHorizontalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 646, Short.MAX_VALUE)
+        );
+        jPanel4Layout.setVerticalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 466, Short.MAX_VALUE)
+        );
+
+        jPanel1.add(jPanel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 110, 650, 470));
+
+        jLabel1.setFont(new java.awt.Font("Yu Gothic UI", 1, 24)); // NOI18N
+        jLabel1.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel1.setText("Inventory Logs");
+        jPanel1.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(880, 70, 230, 40));
+
+        jPanel5.setBackground(new java.awt.Color(180, 180, 180));
+        jPanel5.setBorder(javax.swing.BorderFactory.createCompoundBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(180, 180, 180)), javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
+        jPanel5.setForeground(new java.awt.Color(0, 0, 0));
+
+        jLabel2.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        jLabel2.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel2.setText("Inventory Details");
+
+        ProductName.addActionListener(this::ProductNameActionPerformed);
+        ProductName.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyTyped(java.awt.event.KeyEvent evt) {
+                ProductNameKeyTyped(evt);
+            }
+        });
+
+        ExpDate.addActionListener(this::ExpDateActionPerformed);
+        ExpDate.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyTyped(java.awt.event.KeyEvent evt) {
+                ExpDateKeyTyped(evt);
+            }
+        });
+
+        Qty.addActionListener(this::QtyActionPerformed);
+        Qty.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyTyped(java.awt.event.KeyEvent evt) {
+                QtyKeyTyped(evt);
+            }
+        });
+
+        jLabel3.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        jLabel3.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel3.setText("Product Name");
+
+        jLabel4.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        jLabel4.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel4.setText("EXP Date");
+
+        jLabel5.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        jLabel5.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel5.setText("Quantity");
+
+        AddBTN.setText("Add");
+        AddBTN.addActionListener(this::AddBTNActionPerformed);
+
+        EditBtn.setText("Edit");
+        EditBtn.addActionListener(this::EditBtnActionPerformed);
+
+        DeleteBTN.setText("Delete");
+        DeleteBTN.addActionListener(this::DeleteBTNActionPerformed);
+
+        ClearBtn.setText("Clear");
+        ClearBtn.addActionListener(this::ClearBtnActionPerformed);
+
+        javax.swing.GroupLayout jPanel5Layout = new javax.swing.GroupLayout(jPanel5);
+        jPanel5.setLayout(jPanel5Layout);
+        jPanel5Layout.setHorizontalGroup(
+            jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel5Layout.createSequentialGroup()
+                .addComponent(jLabel2)
+                .addGap(0, 0, Short.MAX_VALUE))
+            .addGroup(jPanel5Layout.createSequentialGroup()
+                .addGap(0, 0, Short.MAX_VALUE)
+                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel5, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel3, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jLabel4, javax.swing.GroupLayout.Alignment.TRAILING))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(ProductName)
+                    .addComponent(ExpDate)
+                    .addComponent(Qty, javax.swing.GroupLayout.DEFAULT_SIZE, 142, Short.MAX_VALUE))
+                .addContainerGap())
+            .addGroup(jPanel5Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(ClearBtn, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(jPanel5Layout.createSequentialGroup()
+                        .addComponent(AddBTN)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(EditBtn, javax.swing.GroupLayout.DEFAULT_SIZE, 112, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(DeleteBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 82, javax.swing.GroupLayout.PREFERRED_SIZE))))
+        );
+        jPanel5Layout.setVerticalGroup(
+            jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel5Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel2)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(ProductName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel3))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(ExpDate, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel4))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(Qty, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel5))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 13, Short.MAX_VALUE)
+                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(AddBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(EditBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(DeleteBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(ClearBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 46, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
+        );
+
+        jPanel1.add(jPanel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(870, 360, 320, 270));
+
+        InventoryLogs.setColumns(20);
+        InventoryLogs.setRows(5);
+        jScrollPane2.setViewportView(InventoryLogs);
+
+        javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
+        jPanel6.setLayout(jPanel6Layout);
+        jPanel6Layout.setHorizontalGroup(
+            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 320, Short.MAX_VALUE)
+        );
+        jPanel6Layout.setVerticalGroup(
+            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jScrollPane2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 240, Short.MAX_VALUE)
+        );
+
+        jPanel1.add(jPanel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(870, 110, 320, 240));
+
+        jLabel6.setFont(new java.awt.Font("Yu Gothic UI", 1, 24)); // NOI18N
+        jLabel6.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel6.setText("Stock");
+        jPanel1.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 70, 210, 40));
 
         statisticsContainer.setBackground(new java.awt.Color(248, 250, 252));
         statisticsContainer.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
@@ -607,178 +837,6 @@ public class AdminPanel extends javax.swing.JFrame {
 
         jPanel1.add(statisticsContainer, new org.netbeans.lib.awtextra.AbsoluteConstraints(180, 30, 1020, 620));
 
-        jPanel4.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
-
-        stockTable.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null, null},
-                {null, null, null},
-                {null, null, null},
-                {null, null, null}
-            },
-            new String [] {
-                "Status", "Product", "Quantity"
-            }
-        ));
-        stockTable.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                stockTableMouseClicked(evt);
-            }
-        });
-        jScrollPane1.setViewportView(stockTable);
-
-        javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
-        jPanel4.setLayout(jPanel4Layout);
-        jPanel4Layout.setHorizontalGroup(
-            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 646, Short.MAX_VALUE)
-        );
-        jPanel4Layout.setVerticalGroup(
-            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 466, Short.MAX_VALUE)
-        );
-
-        jPanel1.add(jPanel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 110, 650, 470));
-
-        jLabel1.setFont(new java.awt.Font("Yu Gothic UI", 1, 24)); // NOI18N
-        jLabel1.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel1.setText("Inventory Logs");
-        jPanel1.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(880, 70, 230, 40));
-
-        jPanel5.setBackground(new java.awt.Color(180, 180, 180));
-        jPanel5.setBorder(javax.swing.BorderFactory.createCompoundBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(180, 180, 180)), javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
-        jPanel5.setForeground(new java.awt.Color(0, 0, 0));
-
-        jLabel2.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        jLabel2.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel2.setText("Inventory Details");
-
-        ProductName.addActionListener(this::ProductNameActionPerformed);
-        ProductName.addKeyListener(new java.awt.event.KeyAdapter() {
-            public void keyTyped(java.awt.event.KeyEvent evt) {
-                ProductNameKeyTyped(evt);
-            }
-        });
-
-        ExpDate.addActionListener(this::ExpDateActionPerformed);
-        ExpDate.addKeyListener(new java.awt.event.KeyAdapter() {
-            public void keyTyped(java.awt.event.KeyEvent evt) {
-                ExpDateKeyTyped(evt);
-            }
-        });
-
-        Qty.addActionListener(this::QtyActionPerformed);
-        Qty.addKeyListener(new java.awt.event.KeyAdapter() {
-            public void keyTyped(java.awt.event.KeyEvent evt) {
-                QtyKeyTyped(evt);
-            }
-        });
-
-        jLabel3.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        jLabel3.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel3.setText("Product Name");
-
-        jLabel4.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        jLabel4.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel4.setText("EXP Date");
-
-        jLabel5.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        jLabel5.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel5.setText("Quantity");
-
-        AddBTN.setText("Add");
-        AddBTN.addActionListener(this::AddBTNActionPerformed);
-
-        EditBtn.setText("Edit");
-        EditBtn.addActionListener(this::EditBtnActionPerformed);
-
-        DeleteBTN.setText("Delete");
-        DeleteBTN.addActionListener(this::DeleteBTNActionPerformed);
-
-        ClearBtn.setText("Clear");
-        ClearBtn.addActionListener(this::ClearBtnActionPerformed);
-
-        javax.swing.GroupLayout jPanel5Layout = new javax.swing.GroupLayout(jPanel5);
-        jPanel5.setLayout(jPanel5Layout);
-        jPanel5Layout.setHorizontalGroup(
-            jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel5Layout.createSequentialGroup()
-                .addComponent(jLabel2)
-                .addGap(0, 0, Short.MAX_VALUE))
-            .addGroup(jPanel5Layout.createSequentialGroup()
-                .addGap(0, 0, Short.MAX_VALUE)
-                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel5, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel3, javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(jLabel4, javax.swing.GroupLayout.Alignment.TRAILING))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(ProductName)
-                    .addComponent(ExpDate)
-                    .addComponent(Qty, javax.swing.GroupLayout.DEFAULT_SIZE, 142, Short.MAX_VALUE))
-                .addContainerGap())
-            .addGroup(jPanel5Layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(ClearBtn, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addGroup(jPanel5Layout.createSequentialGroup()
-                        .addComponent(AddBTN)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(EditBtn, javax.swing.GroupLayout.DEFAULT_SIZE, 112, Short.MAX_VALUE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(DeleteBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 82, javax.swing.GroupLayout.PREFERRED_SIZE))))
-        );
-        jPanel5Layout.setVerticalGroup(
-            jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel5Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jLabel2)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(ProductName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel3))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(ExpDate, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel4))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(Qty, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel5))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 13, Short.MAX_VALUE)
-                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(AddBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(EditBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(DeleteBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(ClearBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 46, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap())
-        );
-
-        jPanel1.add(jPanel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(870, 360, 320, 270));
-
-        InventoryLogs.setColumns(20);
-        InventoryLogs.setRows(5);
-        jScrollPane2.setViewportView(InventoryLogs);
-
-        javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
-        jPanel6.setLayout(jPanel6Layout);
-        jPanel6Layout.setHorizontalGroup(
-            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 320, Short.MAX_VALUE)
-        );
-        jPanel6Layout.setVerticalGroup(
-            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 240, Short.MAX_VALUE)
-        );
-
-        jPanel1.add(jPanel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(870, 110, 320, 240));
-
-        jLabel6.setFont(new java.awt.Font("Yu Gothic UI", 1, 24)); // NOI18N
-        jLabel6.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel6.setText("Stock");
-        jPanel1.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 70, 210, 40));
-
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -810,114 +868,142 @@ public class AdminPanel extends javax.swing.JFrame {
 
     private void AddBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddBTNActionPerformed
           String name = ProductName.getText().trim();
-          String expDate = ExpDate.getText().trim();
-          String quantityText = Qty.getText().trim();
-          
-            try {
-                 expDate = normalizeDate(ExpDate.getText().trim());
-             } catch (DateTimeParseException ex) {
-                 JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2028-1-9 or 2028-01-09).");
-              return;
-             }
+        String expDateInput = ExpDate.getText().trim();
+        String quantityText = Qty.getText().trim();
+        String expDate;
 
-          if(name.isEmpty() || expDate.isEmpty() || quantityText.isEmpty()){
-              JOptionPane.showMessageDialog(this, "All Field Are Required.");
-              return;
-          }
-          
-          int quantity;
-          try{
-              quantity = Integer.parseInt(quantityText);
-          }catch(NumberFormatException ex){
-              JOptionPane.showMessageDialog(this, "Quantity must be a whole number nigga.");
-              return;
-          }
-           try {
-              productService.addItem(name, expDate, quantity);
-              refreshInventoryScreen();
-              ClearBtnActionPerformed(null);
-            }catch (IOException ex) {
-                 JOptionPane.showMessageDialog(this, "Error adding item: " + ex.getMessage());
-            }   
-          
+        try {
+            expDate = normalizeDate(expDateInput);
+        } catch (DateTimeParseException ex) {
+            JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2028-1-9 or 2028-01-09).");
+            return;
+        }
+
+        if (name.isEmpty() || expDate.isEmpty() || quantityText.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "All fields are required.");
+            return;
+        }
+
+        int quantity;
+        try {
+            quantity = Integer.parseInt(quantityText);
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Quantity must be a whole number.");
+            return;
+        }
+
+        String sql = "INSERT INTO products (status, product_name, quantity, exp_date) VALUES (?, ?, ?, ?)";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, "Available");
+            pstmt.setString(2, name);
+            pstmt.setInt(3, quantity);
+            pstmt.setString(4, expDate);
+
+            pstmt.executeUpdate();
+            
+            logActivity("ADDED: " + name + " (Qty: " + quantity + ", Exp: " + expDate + ")");
+            refreshInventoryScreen();
+            ClearBtnActionPerformed(null);
+
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error adding item to database: " + ex.getMessage());
+        }
+        
     }//GEN-LAST:event_AddBTNActionPerformed
 
     private void ClearBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ClearBtnActionPerformed
-          ProductName.setText("");
-          ExpDate.setText("");
-          Qty.setText("");
-          selectedProductName = null;
-          stockTable.clearSelection();
+         ProductName.setText("");
+        ExpDate.setText("");
+        Qty.setText("");
+        selectedProductName = null;
+        stockTable.clearSelection();
     }//GEN-LAST:event_ClearBtnActionPerformed
 
     private void stockTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_stockTableMouseClicked
-         int row = stockTable.getSelectedRow();
-            if (row == -1) return;
+        int row = stockTable.getSelectedRow();
+        if (row == -1) return;
 
-            selectedProductName = (String) stockTable.getValueAt(row, 1); // Product column
-            int quantity = (int) stockTable.getValueAt(row, 2);
+        selectedProductName = (String) stockTable.getValueAt(row, 1);
+        int quantity = (int) stockTable.getValueAt(row, 2);
 
-             ProductName.setText(selectedProductName);
-             Qty.setText(String.valueOf(quantity));
+        ProductName.setText(selectedProductName);
+        Qty.setText(String.valueOf(quantity));
              // Note: expDate isn't shown in the table columns you have — see note below
     }//GEN-LAST:event_stockTableMouseClicked
 
     private void DeleteBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DeleteBTNActionPerformed
              if (selectedProductName == null) {
-                JOptionPane.showMessageDialog(this, "Select a product from the table first.");
-                 return;
-                 }
+            JOptionPane.showMessageDialog(this, "Select a product from the table first.");
+            return;
+        }
 
-                 try {
-                       boolean success = productService.deleteItem(selectedProductName);
-                 if (!success) {
-                         JOptionPane.showMessageDialog(this, "Product not found.");
-                     } else {
-                 refreshInventoryScreen();
-                 ClearBtnActionPerformed(null);
-                     }
-            }catch (IOException ex) {
-                JOptionPane.showMessageDialog(this, "Error deleting item: " + ex.getMessage());
+        String sql = "DELETE FROM products WHERE product_name = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, selectedProductName);
+
+            int rows = pstmt.executeUpdate();
+            if (rows > 0) {
+                logActivity("DELETED: " + selectedProductName);
+                refreshInventoryScreen();
+                ClearBtnActionPerformed(null);
+            } else {
+                JOptionPane.showMessageDialog(this, "Product not found.");
+            }
+
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error deleting item: " + ex.getMessage());
         }
     }//GEN-LAST:event_DeleteBTNActionPerformed
 
     private void EditBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditBtnActionPerformed
-                if (selectedProductName == null) {
-                  JOptionPane.showMessageDialog(this, "Select a product from the table first.");
-                 return;
-             }
+              if (selectedProductName == null) {
+            JOptionPane.showMessageDialog(this, "Select a product from the table first.");
+            return;
+        }
 
-             String newName = ProductName.getText().trim();
-             String quantityText = Qty.getText().trim();
-             String newExpDate;
-            
-            try {
-                 newExpDate = normalizeDate(ExpDate.getText().trim());
-             } catch (DateTimeParseException ex) {
-                 JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2028-1-9 or 2028-01-09).");
-              return;
-             }
-             
-             
-            int newQuantity;
-            try {
-               newQuantity = Integer.parseInt(quantityText);
-                } catch (NumberFormatException ex) {
-                    JOptionPane.showMessageDialog(this, "Quantity must be a whole number.");
-                  return;
-                 }
+        String newName = ProductName.getText().trim();
+        String quantityText = Qty.getText().trim();
+        String newExpDate;
 
-            
-             try {
-                  boolean success = productService.editItem(selectedProductName, newName, newExpDate, newQuantity);
-                      if (!success) {
-                         JOptionPane.showMessageDialog(this, "Product not found.");
-                      } else {
-                    refreshInventoryScreen();
-                    ClearBtnActionPerformed(null);
-                     }
-             }catch (IOException ex) {
-                 JOptionPane.showMessageDialog(this, "Error editing item: " + ex.getMessage());
+        try {
+            newExpDate = normalizeDate(ExpDate.getText().trim());
+        } catch (DateTimeParseException ex) {
+            JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2028-1-9 or 2028-01-09).");
+            return;
+        }
+
+        int newQuantity;
+        try {
+            newQuantity = Integer.parseInt(quantityText);
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Quantity must be a whole number.");
+            return;
+        }
+
+        String sql = "UPDATE products SET product_name = ?, exp_date = ?, quantity = ? WHERE product_name = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, newName);
+            pstmt.setString(2, newExpDate);
+            pstmt.setInt(3, newQuantity);
+            pstmt.setString(4, selectedProductName);
+
+            int rows = pstmt.executeUpdate();
+            if (rows > 0) {
+                logActivity("EDITED: " + selectedProductName + " -> " + newName + " (Qty: " + newQuantity + ")");
+                refreshInventoryScreen();
+                ClearBtnActionPerformed(null);
+            } else {
+                JOptionPane.showMessageDialog(this, "Product not found.");
+            }
+
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error updating item: " + ex.getMessage());
         }
     }//GEN-LAST:event_EditBtnActionPerformed
 
