@@ -46,6 +46,7 @@ public class VisitCsvService {
         }
     }
     
+    
     //LOADS ALL THE Visits
     //reads every record fon the csv file 
     
@@ -81,6 +82,7 @@ public class VisitCsvService {
         return visits;
     }
      
+     
       // Returns true if this LRN currently has an active ("In Clinic") visit
     public boolean isCurrentlyCheckedIn(String lrn) throws IOException {
         for (CheckinSystem v : loadAll()) {
@@ -91,6 +93,7 @@ public class VisitCsvService {
         return false;
     }
      
+    
      //MARK STUDENT AS SENT HOME
      //finds  a students visit and changes to the status from "in clinic" to "sent home" 
       public boolean markSentHome(String lrn) throws IOException {
@@ -122,8 +125,7 @@ public class VisitCsvService {
             return true;
     }
       
-      
-      
+ 
      public int[] getTodayCounts() throws IOException {
          String today = LocalDate.now().toString();
          int totalToday = 0;
@@ -138,4 +140,14 @@ public class VisitCsvService {
           return new int[]{totalToday, sentHomeToday};
      }
     
+     
+     public CheckinSystem findActiveVisit(String lrn) throws IOException {
+            for (CheckinSystem v : loadAll()) {
+            if (v.getLrn().equals(lrn) && v.getStatus().equals("In Clinic")) 
+            {
+            return v;
+          }
+       }
+        return null;
+    }
 }

@@ -11,7 +11,9 @@ import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
 import java.io.IOException;
 import java.util.ArrayList;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.JOptionPane;
+import javax.swing.JTextArea;
 import javax.swing.table.DefaultTableModel;
 
 /**
@@ -31,6 +33,7 @@ public class Dashboard extends javax.swing.JFrame {
         startDateTimeClock();
         refreshTableAndCounters();
         refreshInventoryStatusDisplay();
+        medicineBox();
         
         VisitPanel.putClientProperty("JComponent.arc", 25);
         SentHomePanel.putClientProperty("JComponent.arc", 25);
@@ -201,7 +204,26 @@ private void updateDateTimeLabel() {
         java.time.LocalDateTime.now().format(format)
     );
 }
-    
+ 
+   //ComboBox problem 
+    private void medicineBox(){
+        try{
+            ArrayList<Product> products = productService.loadAll();
+            DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
+            
+            for(Product p : products){
+                model.addElement(p.getname());
+            }
+            
+            jComboBox1.setModel(model);
+            
+        }catch(IOException ex){
+            JOptionPane.showMessageDialog(this, "Error Laoding message" + ex.getMessage());
+        }
+    }
+
+
+    //ps this will help display the inventory on the "inventory status"
     private VisitCsvService visitService = new VisitCsvService("visits.csv");
     private ProductCsvService productService = new ProductCsvService("products.csv", "inventory_activity.log");
     
@@ -859,6 +881,7 @@ NOT modify this code. The content of this method is always
             }
              
     }//GEN-LAST:event_LRNFieldKeyTyped
+   
     private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {                                         
             int row = ReasonTable.getSelectedRow();
             
@@ -866,22 +889,46 @@ NOT modify this code. The content of this method is always
                 JOptionPane.showMessageDialog(this, "Select a Student in the Table First...");
                 return;
                 }
+            
             String lrn = (String) ReasonTable.getValueAt(row, 2);
             
             try{
-                boolean success = visitService.markSentHome(lrn);
+                CheckinSystem record = visitService.findActiveVisit(lrn);
                 
-                if(!success){
+                if(record == null){
                     JOptionPane.showMessageDialog(this, "This Student has Already been sent");
                 }else{
                     refreshTableAndCounters();
+                    printSentHomeSlip(record);
                 }
                 
             }catch(IOException ex){
                  JOptionPane.showMessageDialog(this, "Error updating status: " + ex.getMessage());
-            }
+            } 
             
     }  
+    private void printSentHomeSlip(CheckinSystem record) {
+            String slipText =
+            "CLINIC — SENT HOME SLIP\n" +
+        "====================================\n" +
+        "Name: " + record.getName() + "\n" +
+        "Grade/Section: " + record.getGradeSection() + "\n" +
+        "LRN: " + record.getLrn() + "\n" +
+        "Reason for Visit: " + record.getReason() + "\n" +
+        "Medicine Used: " + record.getMedUsed() + "\n" +
+        "Checked In: " + record.getCheckInTime() + "\n" +
+        "Sent Home: " + java.time.LocalDateTime.now().format(
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) + "\n";
+
+             JTextArea slip = new JTextArea(slipText);
+            try {
+                 slip.print();
+            } catch (java.awt.print.PrinterException ex) {
+                 JOptionPane.showMessageDialog(this, "Printing failed: " + ex.getMessage());
+    }   
+}
+    
+    
     /**
      * @param args the command line arguments
      */
