@@ -808,6 +808,7 @@ NOT modify this code. The content of this method is always
     }//GEN-LAST:event_PrintBTNActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+       
         int choice = JOptionPane.showConfirmDialog(
         this,
         "Are you sure you want to log out?",
@@ -818,7 +819,8 @@ NOT modify this code. The content of this method is always
     if (choice == JOptionPane.YES_OPTION) {
         new LoginUi().setVisible(true);
         this.dispose();
-    }
+        }
+    
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void CheckInBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CheckInBTNActionPerformed
@@ -907,6 +909,7 @@ NOT modify this code. The content of this method is always
             } 
             
     }  
+   
     private void printSentHomeSlip(CheckinSystem record) {
             String slipText =
             "CLINIC — SENT HOME SLIP\n" +
@@ -914,7 +917,7 @@ NOT modify this code. The content of this method is always
         "Name: " + record.getName() + "\n" +
         "Grade/Section: " + record.getGradeSection() + "\n" +
         "LRN: " + record.getLrn() + "\n" +
-        "Reason for Visit: " + record.getReason() + "\n" +
+        "Reason for V record.gisit: " + record.getReason() + "\n" +
         "Medicine Used: " + record.getMedUsed() + "\n" +
         "Checked In: " + record.getCheckInTime() + "\n" +
         "Sent Home: " + java.time.LocalDateTime.now().format(

@@ -13,9 +13,12 @@ import java.awt.Font;
 import java.io.IOException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -46,6 +49,7 @@ public class AdminPanel extends javax.swing.JFrame {
         setLocationRelativeTo(null);
         refreshInventoryScreen();
         refreshActivityLogDisplay();
+        loadStatistics();
     }
     
     
@@ -256,7 +260,110 @@ public class AdminPanel extends javax.swing.JFrame {
                  JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage());
              }  
     }
+    
+    
+    //this is the statistics part which show the history of the check in's 
+  private void loadStatistics() {
+    try {
+        ArrayList<CheckinSystem> visits = new VisitCsvService("visits.csv").loadAll();
 
+        int weeklyCheckins = 0;
+        int inClinic = 0;
+        int sentHome = 0;
+
+        int monday = 0;
+        int tuesday = 0;
+        int wednesday = 0;
+        int thursday = 0;
+        int friday = 0;
+
+        Map<String, Integer> reasonCount = new HashMap<>();
+        Map<String, Integer> medicineCount = new HashMap<>();
+
+        LocalDate today = LocalDate.now();
+        LocalDate mondayOfWeek = today.with(DayOfWeek.MONDAY);
+        LocalDate fridayOfWeek = today.with(DayOfWeek.FRIDAY);
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+        for (CheckinSystem v : visits) {
+            LocalDate visitDate = LocalDateTime.parse(v.getCheckInTime(), formatter).toLocalDate();
+
+            // Weekly check-ins
+            if (!visitDate.isBefore(mondayOfWeek) && !visitDate.isAfter(fridayOfWeek)) {
+                weeklyCheckins++;
+
+                switch (visitDate.getDayOfWeek()) {
+                    case MONDAY -> monday++;
+                    case TUESDAY -> tuesday++;
+                    case WEDNESDAY -> wednesday++;
+                    case THURSDAY -> thursday++;
+                    case FRIDAY -> friday++;
+                }
+            }
+
+            // Status counts
+            if (v.getStatus().equalsIgnoreCase("In Clinic")) {
+                inClinic++;
+            }
+
+            if (v.getStatus().equalsIgnoreCase("Sent Home")) {
+                sentHome++;
+            }
+
+            // Reason frequency
+            reasonCount.put(v.getReason(),
+                    reasonCount.getOrDefault(v.getReason(), 0) + 1);
+
+            // Medicine frequency
+            if (!v.getMedUsed().isBlank()) {
+                medicineCount.put(v.getMedUsed(),
+                        medicineCount.getOrDefault(v.getMedUsed(), 0) + 1);
+            }
+        }
+
+        // Update labels
+        lblWeeklyCheckInsValue.setText(String.valueOf(weeklyCheckins));
+        lblInClinicValue.setText(String.valueOf(inClinic));
+        lblSentHomeValue.setText(String.valueOf(sentHome));
+
+        lblMondayCount.setText(String.valueOf(monday));
+        lblTuesdayCount.setText(String.valueOf(tuesday));
+        lblWednesdayCount.setText(String.valueOf(wednesday));
+        lblThursdayCount.setText(String.valueOf(thursday));
+        lblFridayCount.setText(String.valueOf(friday));
+
+        // Reporting period label
+        lblReportingPeriod.setText("Reporting period: "
+                + mondayOfWeek + " to " + fridayOfWeek);
+
+        // Optional: show most common reason & medicine in console
+        String topReason = "None";
+        int topReasonCount = 0;
+        for (Map.Entry<String, Integer> e : reasonCount.entrySet()) {
+            if (e.getValue() > topReasonCount) {
+                topReason = e.getKey();
+                topReasonCount = e.getValue();
+            }
+        }
+
+        String topMedicine = "None";
+        int topMedicineCount = 0;
+        for (Map.Entry<String, Integer> e : medicineCount.entrySet()) {
+            if (e.getValue() > topMedicineCount) {
+                topMedicine = e.getKey();
+                topMedicineCount = e.getValue();
+            }
+        }
+
+        System.out.println("Most common reason: " + topReason);
+        System.out.println("Most used medicine: " + topMedicine);
+
+    } catch (Exception ex) {
+        JOptionPane.showMessageDialog(this,
+                "Error loading statistics: " + ex.getMessage());
+    }
+}
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always

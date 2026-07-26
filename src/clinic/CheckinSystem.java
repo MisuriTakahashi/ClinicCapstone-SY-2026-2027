@@ -25,7 +25,7 @@ public class CheckinSystem {
              String medUsed , 
              String checkInTime , 
              String status ){
-      
+    
         this.name = name;
         this.gradeSection = gradeSection;
         this.lrn = lrn;
