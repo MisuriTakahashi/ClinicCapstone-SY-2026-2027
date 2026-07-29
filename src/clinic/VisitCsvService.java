@@ -125,7 +125,7 @@ public class VisitCsvService {
     return true;
 }
       
- 
+     //this the counting function, when a students get check in it will getc counted 
      public int[] getTodayCounts() throws IOException {
          String today = LocalDate.now().toString();
          int totalToday = 0;
@@ -152,4 +152,34 @@ public class VisitCsvService {
     }
     return null;
     }
+     
+     //this the Edit Function
+     public boolean editVisit(String lrn , String newName , String newGradeSection , 
+             String newReason ,String newMedUsed ) throws IOException {
+            ArrayList<CheckinSystem> visits = loadAll();
+            boolean found = false;
+         
+            for (CheckinSystem v : visits) {
+            if (v.getLrn().equals(lrn)) {
+              v.setName(newName);
+              v.setGradeSection(newGradeSection);
+              v.setReason(newReason);
+              v.setMedUsed(newMedUsed);
+                found = true;
+              }
+           }
+            if (!found) return false;
+         
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(csvFile))) {
+                for (CheckinSystem v : visits) {
+                bw.write(v.toCsvLine());
+                bw.newLine();
+        
+     }
+                
+}
+        return true;
+      
+    }
+     
 }

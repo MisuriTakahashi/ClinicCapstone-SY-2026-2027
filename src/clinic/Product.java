@@ -23,6 +23,8 @@ public class Product {
             this.quantity = quantity;
         }
         
+        //getters
+        
         public String getname(){
             return name;
         }
@@ -33,6 +35,9 @@ public class Product {
         public int getquantity(){
             return quantity;
         }
+        
+        
+        //setters
         
         public void setname(String name)
         { 

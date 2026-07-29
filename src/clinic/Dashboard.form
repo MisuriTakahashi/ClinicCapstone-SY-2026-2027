@@ -441,7 +441,7 @@
                               <Group type="102" alignment="0" attributes="0">
                                   <Component id="CheckInBTN" min="-2" pref="100" max="-2" attributes="0"/>
                                   <EmptySpace max="-2" attributes="0"/>
-                                  <Component id="PrintBTN" min="-2" pref="100" max="-2" attributes="0"/>
+                                  <Component id="EditBTN" min="-2" pref="100" max="-2" attributes="0"/>
                                   <EmptySpace max="-2" attributes="0"/>
                                   <Component id="SentHomeBTN" min="-2" pref="123" max="-2" attributes="0"/>
                               </Group>
@@ -482,7 +482,7 @@
                       </Group>
                       <EmptySpace max="-2" attributes="0"/>
                       <Group type="103" groupAlignment="3" attributes="0">
-                          <Component id="PrintBTN" alignment="3" min="-2" pref="37" max="-2" attributes="0"/>
+                          <Component id="EditBTN" alignment="3" min="-2" pref="37" max="-2" attributes="0"/>
                           <Component id="CheckInBTN" alignment="3" min="-2" pref="37" max="-2" attributes="0"/>
                           <Component id="SentHomeBTN" alignment="3" min="-2" pref="37" max="-2" attributes="0"/>
                       </Group>
@@ -594,7 +594,7 @@
                 <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="CheckInBTNActionPerformed"/>
               </Events>
             </Component>
-            <Component class="javax.swing.JButton" name="PrintBTN">
+            <Component class="javax.swing.JButton" name="EditBTN">
               <Properties>
                 <Property name="background" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
                   <Color blue="cc" green="66" red="0" type="rgb"/>
@@ -605,10 +605,10 @@
                 <Property name="foreground" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
                   <Color blue="ff" green="ff" red="ff" type="rgb"/>
                 </Property>
-                <Property name="text" type="java.lang.String" value="Print"/>
+                <Property name="text" type="java.lang.String" value="Edit"/>
               </Properties>
               <Events>
-                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="PrintBTNActionPerformed"/>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="EditBTNActionPerformed"/>
               </Events>
             </Component>
             <Component class="javax.swing.JLabel" name="jLabel11">
@@ -839,6 +839,9 @@
                       <TableHeader reorderingAllowed="true" resizingAllowed="true"/>
                     </Property>
                   </Properties>
+                  <Events>
+                    <EventHandler event="mouseClicked" listener="java.awt.event.MouseListener" parameters="java.awt.event.MouseEvent" handler="ReasonTableMouseClicked"/>
+                  </Events>
                 </Component>
               </SubComponents>
             </Container>

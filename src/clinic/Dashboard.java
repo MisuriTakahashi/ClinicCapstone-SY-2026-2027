@@ -75,7 +75,7 @@ public class Dashboard extends javax.swing.JFrame {
 
         // --- 4. Round Modern Component Elements ---
         CheckInBTN.putClientProperty("JButton.buttonType", "roundRect");
-        PrintBTN.putClientProperty("JButton.buttonType", "roundRect");
+        EditBTN.putClientProperty("JButton.buttonType", "roundRect");
         jButton1.putClientProperty("JButton.buttonType", "roundRect"); // Admin button
         jComboBox1.putClientProperty("JComponent.roundRect", true);
         SentHomeBTN.putClientProperty("JButton.buttonType", "roundRect");
@@ -253,11 +253,15 @@ private void updateDateTimeLabel() {
     }
     
         
+    private ArrayList<CheckinSystem> currentVisits = new ArrayList<>();
+    private String selectedVisitLrn = null;
     
     //pinapakita yun table and counters and inaupdate
     private void refreshTableAndCounters(){
          try {
-
+                
+             currentVisits = visitService.loadAll();
+             
         DefaultTableModel model = (DefaultTableModel) ReasonTable.getModel();
 
         model.setRowCount(0);
@@ -318,7 +322,7 @@ NOT modify this code. The content of this method is always
         jLabel8 = new javax.swing.JLabel();
         jLabel9 = new javax.swing.JLabel();
         CheckInBTN = new javax.swing.JButton();
-        PrintBTN = new javax.swing.JButton();
+        EditBTN = new javax.swing.JButton();
         jLabel11 = new javax.swing.JLabel();
         jComboBox1 = new javax.swing.JComboBox<>();
         SentHomeBTN = new javax.swing.JButton();
@@ -531,11 +535,11 @@ NOT modify this code. The content of this method is always
         CheckInBTN.setText("Check In");
         CheckInBTN.addActionListener(this::CheckInBTNActionPerformed);
 
-        PrintBTN.setBackground(new java.awt.Color(0, 102, 204));
-        PrintBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
-        PrintBTN.setForeground(new java.awt.Color(255, 255, 255));
-        PrintBTN.setText("Print");
-        PrintBTN.addActionListener(this::PrintBTNActionPerformed);
+        EditBTN.setBackground(new java.awt.Color(0, 102, 204));
+        EditBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
+        EditBTN.setForeground(new java.awt.Color(255, 255, 255));
+        EditBTN.setText("Edit");
+        EditBTN.addActionListener(this::EditBTNActionPerformed);
 
         jLabel11.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
         jLabel11.setForeground(new java.awt.Color(0, 0, 0));
@@ -585,7 +589,7 @@ NOT modify this code. The content of this method is always
                         .addGroup(CheckInPanelLayout.createSequentialGroup()
                             .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                            .addComponent(PrintBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(EditBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                             .addComponent(SentHomeBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 123, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addComponent(jLabel8)
@@ -620,7 +624,7 @@ NOT modify this code. The content of this method is always
                     .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(PrintBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(EditBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(SentHomeBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(16, Short.MAX_VALUE))
@@ -679,6 +683,11 @@ NOT modify this code. The content of this method is always
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
                 return canEdit [columnIndex];
+            }
+        });
+        ReasonTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                ReasonTableMouseClicked(evt);
             }
         });
         jScrollPane2.setViewportView(ReasonTable);
@@ -810,26 +819,61 @@ NOT modify this code. The content of this method is always
         this.dispose();
     }//GEN-LAST:event_jButton1ActionPerformed
 
-    private void PrintBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_PrintBTNActionPerformed
-             PrinterJob job = PrinterJob.getPrinterJob();
-                job.setPrintable((graphics, pageFormat, pageIndex) -> {
-                    if (pageIndex > 0) return Printable.NO_SUCH_PAGE;
+    private void EditBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditBTNActionPerformed
+            
+        if (selectedVisitLrn == null) {
+    
+               JOptionPane.showMessageDialog(this, "Select a student from the table first.");
+               return;
+        }
 
-                 Graphics2D g2 = (Graphics2D) graphics;
-                 g2.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
-                 ReasonTable.printAll(g2);
-                 return Printable.PAGE_EXISTS;
-    });
+          String newName = NameCheckIn.getText().trim();
+          String newGradeSection = GSCheckIn.getText().trim();
+          String newReason = ReasonArea.getText().trim();
+          Object selectedMed = jComboBox1.getSelectedItem();
 
-             boolean ok = job.printDialog();
-                     if (ok) {
-                          try {
-                              job.print();
-                } catch (PrinterException ex) {
-                     JOptionPane.showMessageDialog(this, "Printing Failed:\n" + ex.getMessage());
-                }
+        if (newName.isEmpty() || newGradeSection.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Name and Grade/Section cannot be empty.");
+            return;
+        }
+
+        if (selectedMed == null) {
+            
+            JOptionPane.showMessageDialog(this, "Your inventory of medicine might be empty, please check first.");
+            return;
+        }
+        
+        String newMedUsed = selectedMed.toString();
+
+        try {
+            boolean success = visitService.editVisit(selectedVisitLrn, newName, newGradeSection, newReason, newMedUsed);
+
+            if (!success) {
+                
+               JOptionPane.showMessageDialog(this, "Could not find that student's record.");
+            
+            } else {
+                
+                refreshTableAndCounters();
+                clearCheckInForm();
+                JOptionPane.showMessageDialog(this, "Student record updated.");
             }
-    }//GEN-LAST:event_PrintBTNActionPerformed
+
+        } catch (IOException ex) {
+            
+            JOptionPane.showMessageDialog(this, "Error editing record: " + ex.getMessage());
+          
+         }
+    }
+
+    private void clearCheckInForm() {
+            NameCheckIn.setText("");
+            GSCheckIn.setText("");
+            LRNField.setText("");
+            ReasonArea.setText("");
+            selectedVisitLrn = null;
+            ReasonTable.clearSelection();
+    }//GEN-LAST:event_EditBTNActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
        
@@ -882,9 +926,13 @@ NOT modify this code. The content of this method is always
 
              visitService.checkIn(name, gradeSection, lrn, reason, medUsed);
              
-             productService.useMedicine(medUsed, name);
+            boolean medicineDeducted = productService.useMedicine(medUsed, name);
+            if (!medicineDeducted) {
+                JOptionPane.showMessageDialog(this, "Warning: " + medUsed + " is out of stock. Check-in was saved, but stock was not deducted.");
+            }
 
              refreshTableAndCounters();
+             refreshInventoryStatusDisplay();
           
             NameCheckIn.setText("");
             GSCheckIn.setText("");
@@ -917,6 +965,21 @@ NOT modify this code. The content of this method is always
             }
              
     }//GEN-LAST:event_LRNFieldKeyTyped
+
+    private void ReasonTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_ReasonTableMouseClicked
+        int row = ReasonTable.getSelectedRow();
+        if (row == -1) return;
+
+        CheckinSystem selected = currentVisits.get(row);
+
+        selectedVisitLrn = selected.getLrn();
+        NameCheckIn.setText(selected.getName());
+        GSCheckIn.setText(selected.getGradeSection());
+        LRNField.setText(selected.getLrn());
+        ReasonArea.setText(selected.getReason());
+        jComboBox1.setSelectedItem(selected.getMedUsed());
+    
+    }//GEN-LAST:event_ReasonTableMouseClicked
    
     private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {                                         
             
@@ -966,7 +1029,7 @@ NOT modify this code. The content of this method is always
         "Name: " + record.getName() + "\n" +
         "Grade/Section: " + record.getGradeSection() + "\n" +
         "LRN: " + record.getLrn() + "\n" +
-        "Reason for V record.gisit: " + record.getReason() + "\n" +
+        "Reason for record visit: " + record.getReason() + "\n" +
         "Medicine Used: " + record.getMedUsed() + "\n" +
         "Checked In: " + record.getCheckInTime() + "\n" +
         "Sent Home: " + java.time.LocalDateTime.now().format(
@@ -995,6 +1058,7 @@ NOT modify this code. The content of this method is always
     private javax.swing.JPanel CheckInPanel1;
     private javax.swing.JPanel CounterPanel;
     private javax.swing.JLabel DateTimeLabel;
+    private javax.swing.JButton EditBTN;
     private javax.swing.JTextField GSCheckIn;
     private javax.swing.JPanel HeaderPanel;
     private javax.swing.JLabel InventoryLabel;
@@ -1006,7 +1070,6 @@ NOT modify this code. The content of this method is always
     private javax.swing.JPanel MainPanel;
     private javax.swing.JTextField NameCheckIn;
     private javax.swing.JLabel OverviewLabel;
-    private javax.swing.JButton PrintBTN;
     private javax.swing.JTextArea ReasonArea;
     private javax.swing.JTable ReasonTable;
     private javax.swing.JButton SentHomeBTN;

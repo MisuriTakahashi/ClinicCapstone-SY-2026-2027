@@ -35,6 +35,7 @@ public class CheckinSystem {
         this.status = status;
   }
     
+     //getters
          public String getName(){
          return name;
      }
@@ -56,6 +57,21 @@ public class CheckinSystem {
          public String getStatus(){
          return status;
      }
+          
+        
+        //setters
+       public void setName(String name){ 
+           this.name = name;
+        }
+       public void setGradeSection(String gradeSection){ 
+           this.gradeSection = gradeSection;
+       }
+       public void setReason(String reason){ 
+           this.reason = reason;
+       }
+       public void setMedUsed(String medUsed){ 
+           this.medUsed = medUsed;
+       }
          
      //this makes the sent home display change bitch ass nigger    
          public void setStatus(String status){
@@ -67,35 +83,7 @@ public class CheckinSystem {
        return "\"" + name + "\",\"" + gradeSection + "\",\"" + lrn + "\",\"" + reason + "\",\""
                + medUsed + "\",\"" + checkInTime + "\",\"" + status + "\"";
    }
+       
+     
         
 }
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
-// bugs can type letter on names and reasons
