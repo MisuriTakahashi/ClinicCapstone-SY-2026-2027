@@ -252,23 +252,36 @@ private void updateDateTimeLabel() {
         }
     }
     
+        
+    
     //pinapakita yun table and counters and inaupdate
     private void refreshTableAndCounters(){
-        try{
-            DefaultTableModel model = (DefaultTableModel) ReasonTable.getModel();
-            model.setRowCount(0);
+         try {
 
-             for (CheckinSystem v : visitService.loadAll()) {
-            model.addRow(new Object[]{v.getName(), v.getGradeSection(), v.getLrn(), v.getReason()});
+        DefaultTableModel model = (DefaultTableModel) ReasonTable.getModel();
+
+        model.setRowCount(0);
+
+        for (CheckinSystem v : visitService.loadAll()) {
+
+                  model.addRow(new Object[]{
+                    v.getName(),
+                    v.getGradeSection(),
+                    v.getLrn(),
+                    v.getReason()
+            });
+
         }
 
-        int[] counts = visitService.getTodayCounts();
-        VisitCounter.setText(String.valueOf(counts[0]));
-        SentHomeCount.setText(String.valueOf(counts[1]));
+             int[] counts = visitService.getTodayCounts();
         
-        }catch(IOException ex){
-            JOptionPane.showMessageDialog(this, "Error loading visits: " + ex.getMessage());
-        }
+            VisitCounter.setText(String.valueOf(counts[0]));
+            SentHomeCount.setText(String.valueOf(counts[1]));
+
+              } catch (IOException ex) {
+
+                 JOptionPane.showMessageDialog(this, ex.getMessage());
+         }
     }
     
     
@@ -840,9 +853,16 @@ NOT modify this code. The content of this method is always
         String gradeSection = GSCheckIn.getText().trim();
         String lrn = LRNField.getText().trim();
         String reason = ReasonArea.getText().trim();
-        String medUsed = jComboBox1.getSelectedItem().toString();
+        Object selectedMed = jComboBox1.getSelectedItem();
         
-           
+  
+              if(selectedMed == null){
+                 JOptionPane.showMessageDialog(this, "Your inventory of medecine might be empty please check first");
+                    return;
+                }
+   
+            String medUsed = selectedMed.toString();
+        
         if(name.isEmpty() || gradeSection.isEmpty() || lrn.isEmpty()){
             JOptionPane.showMessageDialog(this, "Name, Grade/Section and LRN are NEEDED to get CHECK IN...");
             return;
@@ -861,16 +881,19 @@ NOT modify this code. The content of this method is always
              }
 
              visitService.checkIn(name, gradeSection, lrn, reason, medUsed);
-          refreshTableAndCounters();
+             
+             productService.useMedicine(medUsed, name);
 
+             refreshTableAndCounters();
+          
             NameCheckIn.setText("");
             GSCheckIn.setText("");
             LRNField.setText("");
             ReasonArea.setText("");
 
          } catch (IOException ex) {
-            JOptionPane.showMessageDialog(this, "Error saving check-in: " + ex.getMessage());
-             }
+          JOptionPane.showMessageDialog(this, "Error saving check-in: " + ex.getMessage());
+         }
    
     }//GEN-LAST:event_CheckInBTNActionPerformed
 
@@ -896,23 +919,38 @@ NOT modify this code. The content of this method is always
     }//GEN-LAST:event_LRNFieldKeyTyped
    
     private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {                                         
+            
             int row = ReasonTable.getSelectedRow();
             
             if(row == -1){
                 JOptionPane.showMessageDialog(this, "Select a Student in the Table First...");
+                
                 return;
-                }
+              
+            }
             
             String lrn = (String) ReasonTable.getValueAt(row, 2);
             
             try{
+                
                 CheckinSystem record = visitService.findActiveVisit(lrn);
                 
                 if(record == null){
                     JOptionPane.showMessageDialog(this, "This Student has Already been sent");
-                }else{
+                    return;
+                }
+                
+                boolean success =  visitService.markSentHome(lrn);
+                
+                if(success){
+                    
                     refreshTableAndCounters();
+                    
                     printSentHomeSlip(record);
+
+                    JOptionPane.showMessageDialog(this, "Student successfully sent home.");
+                }else{
+                    JOptionPane.showMessageDialog(this, "Error... Unable to update the Student's Status");
                 }
                 
             }catch(IOException ex){

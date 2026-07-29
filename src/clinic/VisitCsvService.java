@@ -96,34 +96,34 @@ public class VisitCsvService {
     
      //MARK STUDENT AS SENT HOME
      //finds  a students visit and changes to the status from "in clinic" to "sent home" 
-      public boolean markSentHome(String lrn) throws IOException {
-             ArrayList<CheckinSystem> visits = loadAll();
-             boolean found = false;
+     public boolean markSentHome(String lrn) throws IOException {
 
-                for (CheckinSystem v : visits) {
+        ArrayList<CheckinSystem> visits = loadAll();
+            boolean updated = false;
+    
+            for (CheckinSystem v : visits) {
 
-                     if (v.getLrn().trim().equals(lrn.trim())
-                     && v.getStatus().trim().equals("In Clinic")) {
+                 if (v.getLrn().equals(lrn) && v.getStatus().equals("In Clinic")) {
 
-                      v.setStatus("Sent Home");
-                      found = true;
-                   }
+                  v.setStatus("Sent Home");
+                    updated = true;
+                    break;
                 }
+            }
 
-    if (!found) {
-        System.out.println("No matching student found.");
+    if (!updated) {
         return false;
     }
 
     try (BufferedWriter bw = new BufferedWriter(new FileWriter(csvFile))) {
+
         for (CheckinSystem v : visits) {
             bw.write(v.toCsvLine());
             bw.newLine();
         }
-     }
-
-            return true;
     }
+    return true;
+}
       
  
      public int[] getTodayCounts() throws IOException {
@@ -142,12 +142,14 @@ public class VisitCsvService {
     
      
      public CheckinSystem findActiveVisit(String lrn) throws IOException {
-            for (CheckinSystem v : loadAll()) {
-            if (v.getLrn().equals(lrn) && v.getStatus().equals("In Clinic")) 
-            {
+        for (CheckinSystem v : loadAll()) {
+
+        if (v.getLrn().equals(lrn)
+                && v.getStatus().equals("In Clinic")) {
+
             return v;
-          }
-       }
-        return null;
+        }
+    }
+    return null;
     }
 }

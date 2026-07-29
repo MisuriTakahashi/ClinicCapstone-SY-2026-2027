@@ -125,6 +125,33 @@ public class ProductCsvService {
         }
         return lines;
     }
-       
-    
+     
+        public boolean useMedicine(String productName , String studentName) throws IOException{
+                
+            ArrayList<Product> products = loadAll();
+            boolean found = false;
+            
+            for(Product p : products){
+            
+                if(p.getname().equalsIgnoreCase(productName)){
+            
+                if(p.getquantity () <= 0){
+                    return false; // no stocks
+                }
+                
+                p.setquantity(p.getquantity () - 1);
+                found = true;
+                break;
+            }
+        }
+            if(!found){
+                return false;
+            }
+            
+            rewriteFile(products);
+            
+            logActivity("Student " + studentName + " Used 1x " + productName);
+            
+            return true; 
+    }    
 }

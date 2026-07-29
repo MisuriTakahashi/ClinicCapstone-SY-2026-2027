@@ -49,6 +49,7 @@ public class AdminPanel extends javax.swing.JFrame {
         setLocationRelativeTo(null);
         refreshInventoryScreen();
         refreshActivityLogDisplay();
+        refreshInventoryTable();
         loadStatistics();
     }
     
@@ -125,7 +126,7 @@ public class AdminPanel extends javax.swing.JFrame {
     
 
     private void showStatistics() {
-        jPanel4.setVisible(false);
+    jPanel4.setVisible(false);
     jPanel5.setVisible(false);
     jPanel6.setVisible(false);
     jLabel1.setVisible(false);
@@ -240,6 +241,31 @@ public class AdminPanel extends javax.swing.JFrame {
         }catch(IOException ex){
             JOptionPane.showMessageDialog(this, "Error loading activity log: " + ex.getMessage());
         }
+    }
+    
+ 
+     private void refreshInventoryTable() {
+
+        try {
+
+            DefaultTableModel model = (DefaultTableModel) stockTable.getModel();
+
+            model.setRowCount(0);
+
+            for (Product p : productService.loadAll()) {
+
+                model.addRow(new Object[]{
+                    p.getStatus(),
+                    p.getname(),
+                    p.getquantity()
+                });
+
+            }
+
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage());
+        }
+
     }
     
     
@@ -906,13 +932,13 @@ public class AdminPanel extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton7ActionPerformed
 
     private void QtyKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_QtyKeyTyped
-         //char c = evt.getKeyChar();
+         char c = evt.getKeyChar();
 
-            // Allow only numbers
-                //if (!Character.isDigit(c)) {
-                  //evt.consume();
-                  //return;
-                //}
+                //Allow only numbers
+                if (!Character.isDigit(c)) {
+                  evt.consume();
+                  return;
+                }
     }//GEN-LAST:event_QtyKeyTyped
 
     private void AddBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddBTNActionPerformed
@@ -1037,14 +1063,14 @@ public class AdminPanel extends javax.swing.JFrame {
     }//GEN-LAST:event_ExpDateActionPerformed
 
     private void ProductNameKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_ProductNameKeyTyped
-          //char c = evt.getKeyChar();
+          char c = evt.getKeyChar();
 
-        // Allow letters, spaces, and backspace
-        /*if (!Character.isLetter(c)
+         //Allow letters, spaces, and backspace
+        if (!Character.isLetter(c)
             && !Character.isWhitespace(c)
             && c != '\b') {
             evt.consume();
-         }*/
+         }
     }//GEN-LAST:event_ProductNameKeyTyped
 
     private void ProductNameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ProductNameActionPerformed
