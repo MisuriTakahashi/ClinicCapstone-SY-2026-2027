@@ -37,6 +37,7 @@ public class Product {
         }
         
         
+        
         //setters
         
         public void setname(String name)
