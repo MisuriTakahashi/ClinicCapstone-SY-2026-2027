@@ -35,7 +35,7 @@ public class CheckinSystem {
         this.status = status;
   }
     
-     //getters
+     //gettersssssss
          public String getName(){
          return name;
      }
@@ -59,7 +59,7 @@ public class CheckinSystem {
      }
           
         
-        //setters
+        //settersssss
        public void setName(String name){ 
            this.name = name;
         }

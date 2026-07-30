@@ -819,6 +819,8 @@ NOT modify this code. The content of this method is always
         this.dispose();
     }//GEN-LAST:event_jButton1ActionPerformed
 
+    
+    //edit btn
     private void EditBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditBTNActionPerformed
             
         if (selectedVisitLrn == null) {
