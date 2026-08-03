@@ -17,6 +17,7 @@ import javax.swing.DefaultComboBoxModel;
 import javax.swing.JOptionPane;
 import javax.swing.JTextArea;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.text.AbstractDocument;
 
 /**
  *
@@ -31,6 +32,7 @@ public class Dashboard extends javax.swing.JFrame {
      */
     public Dashboard() {
         initComponents();
+        ((AbstractDocument) NameCheckIn.getDocument()).setDocumentFilter(new NameInputFilter());
         setLocationRelativeTo(null);
         startDateTimeClock();
         refreshTableAndCounters();
@@ -466,17 +468,18 @@ NOT modify this code. The content of this method is always
         HeaderPanelLayout.setVerticalGroup(
             HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(HeaderPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jLabel3)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(HeaderPanelLayout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jLabel3)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(HeaderPanelLayout.createSequentialGroup()
+                        .addGap(26, 26, 26)
+                        .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE))))
                 .addGap(0, 16, Short.MAX_VALUE))
-            .addGroup(HeaderPanelLayout.createSequentialGroup()
-                .addGap(26, 26, 26)
-                .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(0, 0, Short.MAX_VALUE))
         );
 
         CounterPanel.setBackground(new java.awt.Color(229, 226, 226));
@@ -859,7 +862,7 @@ NOT modify this code. The content of this method is always
                     .addComponent(InventoryPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(CounterPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(StudentCheckinLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(LogsLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -967,62 +970,69 @@ NOT modify this code. The content of this method is always
 
     private void CheckInBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CheckInBTNActionPerformed
      String name = NameCheckIn.getText().trim();
-String gradeSection = GSCheckIn.getText().trim();
-String lrn = LRNField.getText().trim();
-String reason = ReasonArea.getText().trim();
-Object selectedMed = jComboBox1.getSelectedItem();
-
-// 1. Medicine Null Check
-if (selectedMed == null) {
-    showToast(CheckInPanel, "Inventory error: Medicine list is empty!", false);
-    return;
-}
-
-String medUsed = selectedMed.toString();
-
-// 2. Required Fields Validation
-if (name.isEmpty() || gradeSection.isEmpty() || lrn.isEmpty()) {
-    showToast(CheckInPanel, "Name, Grade/Section, and LRN are required!", false);
-    return;
-}
-
-// 3. LRN Format Validation
-if (!lrn.matches("\\d{12}")) {
-    showToast(CheckInPanel, "LRN must contain exactly 12 digits.", false);
-    LRNField.requestFocus();
-    return;
-}
-
-try {
-    // 4. Duplicate Check-in Check
-    if (visitService.isCurrentlyCheckedIn(lrn)) {
-        showToast(CheckInPanel, "Student is already checked in!", false);
+     String gradeSection = GSCheckIn.getText().trim();
+     String lrn = LRNField.getText().trim();
+     String reason = ReasonArea.getText().trim();
+     Object selectedMed = jComboBox1.getSelectedItem();
+        
+    // 1. Medicine Null Check
+    if (selectedMed == null) {
+        showToast(CheckInPanel, "Inventory error: Medicine list is empty!", false);
         return;
     }
 
-    // 5. Process Check-in
-    visitService.checkIn(name, gradeSection, lrn, reason, medUsed);
+    String medUsed = selectedMed.toString();
 
-    boolean medicineDeducted = productService.useMedicine(medUsed, name);
-    if (!medicineDeducted) {
-        // Red warning toast if medicine stock is out
-        showToast(CheckInPanel, "Warning: " + medUsed + " is out of stock!", false);
-    } else {
-        // Green success toast on clean check-in
-        showToast(CheckInPanel, "Student checked in successfully!", true);
+    // 2. Required Fields Validation
+    if (name.isEmpty() || gradeSection.isEmpty() || lrn.isEmpty()) {
+        showToast(CheckInPanel, "Name, Grade/Section, and LRN are required!", false);
+        return;
     }
 
-    // 6. Refresh Displays and Clear Form
-    refreshTableAndCounters();
-    refreshInventoryStatusDisplay();
+    // 3. LRN Format Validation
+    if (!lrn.matches("\\d{12}")) {
+        showToast(CheckInPanel, "LRN must contain exactly 12 digits.", false);
+        LRNField.requestFocus();
+        return;
+    }
 
-    NameCheckIn.setText("");
-    GSCheckIn.setText("");
-    LRNField.setText("");
-    ReasonArea.setText("");
+    try {
+        String existingName = visitService.findNameForLrn(lrn);
+        
+        if (existingName != null && !existingName.equalsIgnoreCase(name)) {
+        JOptionPane.showMessageDialog(this,
+            "This LRN is already registered under the name \"" + existingName + "\". Please verify the LRN or name.");
+        return;
+    }
+        // 4. Duplicate Check-in Check
+         if (visitService.isCurrentlyCheckedIn(lrn)) {
+        JOptionPane.showMessageDialog(this, "This student is already checked in.");
+        return;
+    }
 
-} catch (IOException ex) {
-    showToast(CheckInPanel, "Error saving check-in: " + ex.getMessage(), false);
+        // 5. Process Check-in
+        visitService.checkIn(name, gradeSection, lrn, reason, medUsed);
+
+        boolean medicineDeducted = productService.useMedicine(medUsed, name);
+        if (!medicineDeducted) {
+            // Red warning toast if medicine stock is out
+            showToast(CheckInPanel, "Warning: " + medUsed + " is out of stock!", false);
+        } else {
+            // Green success toast on clean check-in
+            showToast(CheckInPanel, "Student checked in successfully!", true);
+        }
+
+        // 6. Refresh Displays and Clear Form
+        refreshTableAndCounters();
+        refreshInventoryStatusDisplay();
+
+        NameCheckIn.setText("");
+        GSCheckIn.setText("");
+        LRNField.setText("");
+        ReasonArea.setText("");
+
+    } catch (IOException ex) {
+        showToast(CheckInPanel, "Error saving check-in: " + ex.getMessage(), false);
 }
     }//GEN-LAST:event_CheckInBTNActionPerformed
 

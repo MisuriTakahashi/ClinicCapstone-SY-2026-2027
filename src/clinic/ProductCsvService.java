@@ -154,5 +154,15 @@ public class ProductCsvService {
             logActivity("Student " + studentName + " Used 1x " + productName);
             
             return true; 
-    }    
+    }
+ 
+        public boolean nameExists(String name) throws IOException {
+        
+            for (Product p : loadAll()) {
+            if (p.getname().equalsIgnoreCase(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

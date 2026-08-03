@@ -182,4 +182,12 @@ public class VisitCsvService {
       
     }
      
+     public String findNameForLrn(String lrn) throws IOException {
+               for (CheckinSystem v : loadAll()) {
+               if (v.getLrn().equals(lrn)) {
+               return v.getName();
+                   }
+               }
+           return null;
+        }  
 }

@@ -1002,11 +1002,26 @@ public class AdminPanel extends javax.swing.JFrame {
             return;
         }
         
+        //this checks if the medicine is already existed or not
+        try {
+            if (productService.nameExists(name)) {
+                JOptionPane.showMessageDialog(this, "A product with this name already exists. Use Edit to update its stock instead.");
+                return;
+            }       } catch (IOException ex) {
+            System.getLogger(AdminPanel.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+        }
+        
         int quantity;
+        
         try {
             quantity = Integer.parseInt(quantityText);
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "Quantity must be a valid whole number.");
+            return;
+        }
+        //this not allows -1 on the Quantity i think
+        if (quantity < 0) {
+            JOptionPane.showMessageDialog(this, "Quantity cannot be negative.");
             return;
         }
 
@@ -1030,14 +1045,16 @@ public class AdminPanel extends javax.swing.JFrame {
     }//GEN-LAST:event_ClearBtnActionPerformed
 
     private void stockTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_stockTableMouseClicked
-         int row = stockTable.getSelectedRow();
-        if (row == -1) return;
+       int row = stockTable.getSelectedRow();
+       if (row == -1) return;
 
-        selectedProductName = (String) stockTable.getValueAt(row, 1);
-        int quantity = (int) stockTable.getValueAt(row, 2);
+        Product selected = currentProducts.get(row); // real object, correct types guaranteed - DJJ - ps I DON'T KNOW WHAT THIS DO BUT DO NOT REMOVE IT
 
-        ProductName.setText(selectedProductName);
-        Qty.setText(String.valueOf(quantity));
+        selectedProductName = selected.getname();
+        ProductName.setText(selected.getname());
+        ExpDate.setText(selected.getExpDate());
+        Qty.setText(String.valueOf(selected.getquantity()));
+        
     }//GEN-LAST:event_stockTableMouseClicked
 
     private void DeleteBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DeleteBTNActionPerformed
