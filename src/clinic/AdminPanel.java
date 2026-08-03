@@ -25,6 +25,7 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.text.AbstractDocument;
@@ -36,7 +37,9 @@ import javax.swing.text.AbstractDocument;
 public class AdminPanel extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(AdminPanel.class.getName());
-    
+    private final ProductCsvService productService = new ProductCsvService("products.csv", "inventory_activity.log");
+    private final ArrayList<Product> currentProducts = new ArrayList<>();
+    private String selectedProductName = null;
 
     /**
      * Creates the administrator inventory panel.
@@ -44,6 +47,8 @@ public class AdminPanel extends javax.swing.JFrame {
     public AdminPanel() {
         initComponents();
         configureFlatLafUi();
+        jButton5.setEnabled(false);
+        jButton6.setEnabled(true);
         statisticsContainer.setVisible(false);
         ((AbstractDocument) ExpDate.getDocument()).setDocumentFilter(new DateInputFilter());
         setLocationRelativeTo(null);
@@ -52,8 +57,6 @@ public class AdminPanel extends javax.swing.JFrame {
         refreshInventoryTable();
         loadStatistics();
     }
-    
-    
 
     /** Applies the FlatLaf treatment after NetBeans creates the form controls. */
     private void configureFlatLafUi() {
@@ -77,7 +80,7 @@ public class AdminPanel extends javax.swing.JFrame {
                 BorderFactory.createLineBorder(border), BorderFactory.createEmptyBorder(18, 18, 18, 18)));
 
         jLabel6.setText("Stock overview");
-        jLabel6.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        styleNavigationButton(jButton7, "\u2190 Back", false);
         jLabel1.setText("Inventory activity");
         jLabel1.setFont(new Font("Segoe UI", Font.BOLD, 22));
         jLabel2.setText("Manage stock");
@@ -116,45 +119,146 @@ public class AdminPanel extends javax.swing.JFrame {
         InventoryLogs.setBackground(surface);
         stockTable.setToolTipText("Your available medical supplies");
 
-        
         jButton5.addActionListener(event -> showInventory());
         jButton6.addActionListener(event -> showStatistics());
     }
 
-   
+    private void showToastNotification(String actionText, String itemName, int count, Color backgroundColor) {
+        String countText = (count > 1) ? count + " products" : "1 product";
+        String fullMessage = (count > 1) 
+                ? actionText + " " + countText + " (" + itemName + " + " + (count - 1) + " more)"
+                : actionText + " " + itemName;
 
-    
+        JLabel toast = new JLabel(fullMessage, SwingConstants.CENTER);
+        toast.setOpaque(true);
+        toast.setBackground(backgroundColor);
+        toast.setForeground(Color.WHITE);
+        toast.setFont(new Font("Segoe UI", Font.BOLD, 13));
+
+        toast.putClientProperty(FlatClientProperties.STYLE, "arc: 12;");
+        toast.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+
+        int toastWidth = Math.max(350, toast.getPreferredSize().width + 40);
+        int toastHeight = 40;
+        int targetX = (this.getWidth() - toastWidth) / 2;
+        int startY = this.getHeight();
+        int targetY = this.getHeight() - 80;
+
+        toast.setBounds(targetX, startY, toastWidth, toastHeight);
+
+        javax.swing.JLayeredPane layeredPane = this.getLayeredPane();
+        layeredPane.add(toast, javax.swing.JLayeredPane.DRAG_LAYER);
+        layeredPane.revalidate();
+
+        javax.swing.Timer slideUp = new javax.swing.Timer(10, null);
+        slideUp.addActionListener(new java.awt.event.ActionListener() {
+            int currentY = startY;
+
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (currentY > targetY) {
+                    currentY -= 4;
+                    toast.setLocation(targetX, currentY);
+                    layeredPane.repaint();
+                } else {
+                    slideUp.stop();
+
+                    javax.swing.Timer delay = new javax.swing.Timer(3000, evt -> {
+                        javax.swing.Timer slideDown = new javax.swing.Timer(10, null);
+                        slideDown.addActionListener(new java.awt.event.ActionListener() {
+                            int returnY = targetY;
+
+                            @Override
+                            public void actionPerformed(java.awt.event.ActionEvent e) {
+                                if (returnY < startY) {
+                                    returnY += 4;
+                                    toast.setLocation(targetX, returnY);
+                                    layeredPane.repaint();
+                                } else {
+                                    slideDown.stop();
+                                    layeredPane.remove(toast);
+                                    layeredPane.repaint();
+                                }
+                            }
+                        });
+                        slideDown.start();
+                    });
+                    delay.setRepeats(false);
+                    delay.start();
+                }
+            }
+        });
+        slideUp.start();
+    }
 
     private void showStatistics() {
-    jPanel4.setVisible(false);
-    jPanel5.setVisible(false);
-    jPanel6.setVisible(false);
-    jLabel1.setVisible(false);
-    jLabel6.setVisible(false);
+        jPanel4.setVisible(false);
+        jPanel5.setVisible(false);
+        jPanel6.setVisible(false);
+        jLabel1.setVisible(false);
+        jLabel6.setVisible(false);
 
-    statisticsContainer.setVisible(true);
+        statisticsContainer.setLocation(1020, 30); 
+        statisticsContainer.setVisible(true);
 
-    styleNavigationButton(jButton5, "Inventory", false);
-    styleNavigationButton(jButton6, "Statistics", true);
+        jButton5.setEnabled(true);   
+        jButton6.setEnabled(false);  
+        
+        styleNavigationButton(jButton5, "Inventory", false);
+        styleNavigationButton(jButton6, "Statistics", true);
 
-    jPanel1.revalidate();
-    jPanel1.repaint();
+        javax.swing.Timer timer = new javax.swing.Timer(10, null);
+        timer.addActionListener(new java.awt.event.ActionListener() {
+            int currentX = 1020;
+            int targetX = 180;
+
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (currentX > targetX) {
+                    currentX = Math.max(targetX, currentX - 35);
+                    statisticsContainer.setLocation(currentX, 30);
+                    jPanel1.repaint();
+                } else {
+                    timer.stop();
+                }
+            }
+        });
+        timer.start();
     }
 
     private void showInventory() {
-       statisticsContainer.setVisible(false);
+        statisticsContainer.setVisible(false);
 
-    jPanel4.setVisible(true);
-    jPanel5.setVisible(true);
-    jPanel6.setVisible(true);
-    jLabel1.setVisible(true);
-    jLabel6.setVisible(true);
+        jPanel4.setLocation(200, 140); 
+        jPanel4.setVisible(true);
+        jPanel5.setVisible(true);
+        jPanel6.setVisible(true);
+        jLabel1.setVisible(true);
+        jLabel6.setVisible(true);
 
-    styleNavigationButton(jButton5, "Inventory", true);
-    styleNavigationButton(jButton6, "Statistics", false);
+        jButton5.setEnabled(false);  
+        jButton6.setEnabled(true);   
 
-    jPanel1.revalidate();
-    jPanel1.repaint();
+        styleNavigationButton(jButton5, "Inventory", true);
+        styleNavigationButton(jButton6, "Statistics", false);
+
+        javax.swing.Timer timer = new javax.swing.Timer(10, null);
+        timer.addActionListener(new java.awt.event.ActionListener() {
+            int currentY = 140;
+            int targetY = 110;
+
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (currentY > targetY) {
+                    currentY = Math.max(targetY, currentY - 3);
+                    jPanel4.setLocation(200, currentY);
+                    jPanel1.repaint();
+                } else {
+                    timer.stop();
+                }
+            }
+        });
+        timer.start();
     }
 
     private void createHeader(Color primary) {
@@ -173,7 +277,6 @@ public class AdminPanel extends javax.swing.JFrame {
         identity.add(name);
         identity.add(section);
 
-        
         jPanel2.add(identity, BorderLayout.WEST);
         jPanel2.revalidate();
         jPanel2.repaint();
@@ -214,182 +317,122 @@ public class AdminPanel extends javax.swing.JFrame {
     }
     
     private String normalizeDate(String input) throws DateTimeParseException {
-            DateTimeFormatter looseFormat = DateTimeFormatter.ofPattern("yyyy-M-d");
-                 LocalDate date = LocalDate.parse(input, looseFormat); // accepts "2028-1-9" or "2028-01-09"
-            return date.format(DateTimeFormatter.ISO_LOCAL_DATE);  // always outputs "2028-01-09"
+        DateTimeFormatter looseFormat = DateTimeFormatter.ofPattern("yyyy-M-d");
+        LocalDate date = LocalDate.parse(input, looseFormat); 
+        return date.format(DateTimeFormatter.ISO_LOCAL_DATE);  
     }
-    
-    private ProductCsvService productService = new ProductCsvService("products.csv", "inventory_activity.log");
-    private ArrayList<Product> currentProducts = new ArrayList<>();
-    private String selectedProductName = null;
 
-    private void refreshActivityLogDisplay(){
-        try{
-             ArrayList<String> log = productService.loadActivityLog();
-             StringBuilder sb = new StringBuilder();
+    private void refreshActivityLogDisplay() {
+        try {
+            ArrayList<String> log = productService.loadActivityLog();
+            StringBuilder sb = new StringBuilder();
         
-                if (log.isEmpty()) {
-                      sb.append("No recent activity.\n\nChanges to stock levels will be recorded here.");
-                } else {
-                      for (String line : log) {
-                      sb.append(line).append("\n");
+            if (log.isEmpty()) {
+                sb.append("No recent activity.\n\nChanges to stock levels will be recorded here.");
+            } else {
+                for (String line : log) {
+                    sb.append(line).append("\n");
+                }
             }
-        }
 
-        InventoryLogs.setText(sb.toString());
-        
-        }catch(IOException ex){
+            InventoryLogs.setText(sb.toString());
+        } catch (IOException ex) {
             JOptionPane.showMessageDialog(this, "Error loading activity log: " + ex.getMessage());
         }
     }
     
- 
-     private void refreshInventoryTable() {
-
+    private void refreshInventoryTable() {
         try {
-
             DefaultTableModel model = (DefaultTableModel) stockTable.getModel();
-
             model.setRowCount(0);
 
             for (Product p : productService.loadAll()) {
-
                 model.addRow(new Object[]{
                     p.getStatus(),
                     p.getname(),
                     p.getquantity()
                 });
-
             }
-
         } catch (IOException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage());
         }
-
     }
     
-    
-    //eto yun nagpapakita ng mga shis sa table and inupdate
-    private void refreshInventoryScreen(){
+    private void refreshInventoryScreen() {
         try {
-             ArrayList<Product> currentProducts = productService.loadAll();
+            ArrayList<Product> products = productService.loadAll();
+            DefaultTableModel model = (DefaultTableModel) stockTable.getModel();
+            model.setRowCount(0);
 
-                DefaultTableModel model = (DefaultTableModel) stockTable.getModel();
-                model.setRowCount(0);
-
-            for (Product p : currentProducts) {
-                 model.addRow(new Object[]{p.getStatus(), p.getname(), p.getquantity()});
-             }
-                 refreshActivityLogDisplay();
-                 
-             } catch (IOException ex) {
-                 JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage());
-             }  
+            for (Product p : products) {
+                model.addRow(new Object[]{p.getStatus(), p.getname(), p.getquantity()});
+            }
+            refreshActivityLogDisplay();
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage());
+        }  
     }
     
-    
-    //this is the statistics part which show the history of the check in's 
-  private void loadStatistics() {
-    try {
-        ArrayList<CheckinSystem> visits = new VisitCsvService("visits.csv").loadAll();
+    private void loadStatistics() {
+        try {
+            ArrayList<CheckinSystem> visits = new VisitCsvService("visits.csv").loadAll();
 
-        int weeklyCheckins = 0;
-        int inClinic = 0;
-        int sentHome = 0;
+            int weeklyCheckins = 0;
+            int inClinic = 0;
+            int sentHome = 0;
 
-        int monday = 0;
-        int tuesday = 0;
-        int wednesday = 0;
-        int thursday = 0;
-        int friday = 0;
+            int monday = 0, tuesday = 0, wednesday = 0, thursday = 0, friday = 0;
 
-        Map<String, Integer> reasonCount = new HashMap<>();
-        Map<String, Integer> medicineCount = new HashMap<>();
+            Map<String, Integer> reasonCount = new HashMap<>();
+            Map<String, Integer> medicineCount = new HashMap<>();
 
-        LocalDate today = LocalDate.now();
-        LocalDate mondayOfWeek = today.with(DayOfWeek.MONDAY);
-        LocalDate fridayOfWeek = today.with(DayOfWeek.FRIDAY);
+            LocalDate today = LocalDate.now();
+            LocalDate mondayOfWeek = today.with(DayOfWeek.MONDAY);
+            LocalDate fridayOfWeek = today.with(DayOfWeek.FRIDAY);
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-        for (CheckinSystem v : visits) {
-            LocalDate visitDate = LocalDateTime.parse(v.getCheckInTime(), formatter).toLocalDate();
+            for (CheckinSystem v : visits) {
+                LocalDate visitDate = LocalDateTime.parse(v.getCheckInTime(), formatter).toLocalDate();
 
-            // Weekly check-ins
-            if (!visitDate.isBefore(mondayOfWeek) && !visitDate.isAfter(fridayOfWeek)) {
-                weeklyCheckins++;
+                if (!visitDate.isBefore(mondayOfWeek) && !visitDate.isAfter(fridayOfWeek)) {
+                    weeklyCheckins++;
+                    switch (visitDate.getDayOfWeek()) {
+                        case MONDAY -> monday++;
+                        case TUESDAY -> tuesday++;
+                        case WEDNESDAY -> wednesday++;
+                        case THURSDAY -> thursday++;
+                        case FRIDAY -> friday++;
+                    }
+                }
 
-                switch (visitDate.getDayOfWeek()) {
-                    case MONDAY -> monday++;
-                    case TUESDAY -> tuesday++;
-                    case WEDNESDAY -> wednesday++;
-                    case THURSDAY -> thursday++;
-                    case FRIDAY -> friday++;
+                if (v.getStatus().equalsIgnoreCase("In Clinic")) inClinic++;
+                if (v.getStatus().equalsIgnoreCase("Sent Home")) sentHome++;
+
+                reasonCount.put(v.getReason(), reasonCount.getOrDefault(v.getReason(), 0) + 1);
+
+                if (!v.getMedUsed().isBlank()) {
+                    medicineCount.put(v.getMedUsed(), medicineCount.getOrDefault(v.getMedUsed(), 0) + 1);
                 }
             }
 
-            // Status counts
-            if (v.getStatus().equalsIgnoreCase("In Clinic")) {
-                inClinic++;
-            }
+            lblWeeklyCheckInsValue.setText(String.valueOf(weeklyCheckins));
+            lblInClinicValue.setText(String.valueOf(inClinic));
+            lblSentHomeValue.setText(String.valueOf(sentHome));
 
-            if (v.getStatus().equalsIgnoreCase("Sent Home")) {
-                sentHome++;
-            }
+            lblMondayCount.setText(String.valueOf(monday));
+            lblTuesdayCount.setText(String.valueOf(tuesday));
+            lblWednesdayCount.setText(String.valueOf(wednesday));
+            lblThursdayCount.setText(String.valueOf(thursday));
+            lblFridayCount.setText(String.valueOf(friday));
 
-            // Reason frequency
-            reasonCount.put(v.getReason(),
-                    reasonCount.getOrDefault(v.getReason(), 0) + 1);
+            lblReportingPeriod.setText("Reporting period: " + mondayOfWeek + " to " + fridayOfWeek);
 
-            // Medicine frequency
-            if (!v.getMedUsed().isBlank()) {
-                medicineCount.put(v.getMedUsed(),
-                        medicineCount.getOrDefault(v.getMedUsed(), 0) + 1);
-            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error loading statistics: " + ex.getMessage());
         }
-
-        // Update labels
-        lblWeeklyCheckInsValue.setText(String.valueOf(weeklyCheckins));
-        lblInClinicValue.setText(String.valueOf(inClinic));
-        lblSentHomeValue.setText(String.valueOf(sentHome));
-
-        lblMondayCount.setText(String.valueOf(monday));
-        lblTuesdayCount.setText(String.valueOf(tuesday));
-        lblWednesdayCount.setText(String.valueOf(wednesday));
-        lblThursdayCount.setText(String.valueOf(thursday));
-        lblFridayCount.setText(String.valueOf(friday));
-
-        // Reporting period label
-        lblReportingPeriod.setText("Reporting period: "
-                + mondayOfWeek + " to " + fridayOfWeek);
-
-        // Optional: show most common reason & medicine in console
-        String topReason = "None";
-        int topReasonCount = 0;
-        for (Map.Entry<String, Integer> e : reasonCount.entrySet()) {
-            if (e.getValue() > topReasonCount) {
-                topReason = e.getKey();
-                topReasonCount = e.getValue();
-            }
-        }
-
-        String topMedicine = "None";
-        int topMedicineCount = 0;
-        for (Map.Entry<String, Integer> e : medicineCount.entrySet()) {
-            if (e.getValue() > topMedicineCount) {
-                topMedicine = e.getKey();
-                topMedicineCount = e.getValue();
-            }
-        }
-
-        System.out.println("Most common reason: " + topReason);
-        System.out.println("Most used medicine: " + topMedicine);
-
-    } catch (Exception ex) {
-        JOptionPane.showMessageDialog(this,
-                "Error loading statistics: " + ex.getMessage());
     }
-}
+
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -942,36 +985,39 @@ public class AdminPanel extends javax.swing.JFrame {
     }//GEN-LAST:event_QtyKeyTyped
 
     private void AddBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddBTNActionPerformed
-          String name = ProductName.getText().trim();
-          String expDate = ExpDate.getText().trim();
-          String quantityText = Qty.getText().trim();
-          
-            try {
-                 expDate = normalizeDate(ExpDate.getText().trim());
-             } catch (DateTimeParseException ex) {
-                 JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2028-1-9 or 2028-01-09).");
-              return;
-             }
+         String name = ProductName.getText().trim();
+        String expDateInput = ExpDate.getText().trim();
+        String quantityText = Qty.getText().trim();
+        
+        String expDate;
+        try {
+            expDate = normalizeDate(expDateInput);
+        } catch (DateTimeParseException ex) {
+            JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2028-1-9 or 2028-01-09).");
+            return;
+        }
 
-          if(name.isEmpty() || expDate.isEmpty() || quantityText.isEmpty()){
-              JOptionPane.showMessageDialog(this, "All Field Are Required.");
-              return;
-          }
-          
-          int quantity;
-          try{
-              quantity = Integer.parseInt(quantityText);
-          }catch(NumberFormatException ex){
-              JOptionPane.showMessageDialog(this, "Quantity must be a whole number nigga.");
-              return;
-          }
-           try {
-              productService.addItem(name, expDate, quantity);
-              refreshInventoryScreen();
-              ClearBtnActionPerformed(null);
-            }catch (IOException ex) {
-                 JOptionPane.showMessageDialog(this, "Error adding item: " + ex.getMessage());
-            }   
+        if (name.isEmpty() || expDate.isEmpty() || quantityText.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "All fields are required.");
+            return;
+        }
+        
+        int quantity;
+        try {
+            quantity = Integer.parseInt(quantityText);
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Quantity must be a valid whole number.");
+            return;
+        }
+
+        try {
+            productService.addItem(name, expDate, quantity);
+            refreshInventoryScreen();
+            ClearBtnActionPerformed(null);
+            showToastNotification("✓ Added " + name + " (" + quantity + " units) to inventory!", name, quantity, Color.decode("#10B981"));
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, "Error adding item: " + ex.getMessage());
+        }
           
     }//GEN-LAST:event_AddBTNActionPerformed
 
@@ -985,72 +1031,72 @@ public class AdminPanel extends javax.swing.JFrame {
 
     private void stockTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_stockTableMouseClicked
          int row = stockTable.getSelectedRow();
-            if (row == -1) return;
+        if (row == -1) return;
 
-            selectedProductName = (String) stockTable.getValueAt(row, 1); // Product column
-            int quantity = (int) stockTable.getValueAt(row, 2);
+        selectedProductName = (String) stockTable.getValueAt(row, 1);
+        int quantity = (int) stockTable.getValueAt(row, 2);
 
-             ProductName.setText(selectedProductName);
-             Qty.setText(String.valueOf(quantity));
-             // Note: expDate isn't shown in the table columns you have — see note below
+        ProductName.setText(selectedProductName);
+        Qty.setText(String.valueOf(quantity));
     }//GEN-LAST:event_stockTableMouseClicked
 
     private void DeleteBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DeleteBTNActionPerformed
              if (selectedProductName == null) {
-                JOptionPane.showMessageDialog(this, "Select a product from the table first.");
-                 return;
-                 }
+            JOptionPane.showMessageDialog(this, "Select a product from the table first.");
+            return;
+        }
 
-                 try {
-                       boolean success = productService.deleteItem(selectedProductName);
-                 if (!success) {
-                         JOptionPane.showMessageDialog(this, "Product not found.");
-                     } else {
-                 refreshInventoryScreen();
-                 ClearBtnActionPerformed(null);
-                     }
-            }catch (IOException ex) {
-                JOptionPane.showMessageDialog(this, "Error deleting item: " + ex.getMessage());
+        try {
+            String removedItemName = selectedProductName;
+            boolean success = productService.deleteItem(selectedProductName);
+            if (!success) {
+                JOptionPane.showMessageDialog(this, "Product not found.");
+            } else {
+                refreshInventoryScreen();
+                ClearBtnActionPerformed(null);
+                showToastNotification("🗑 Removed " + removedItemName + " from inventory.", removedItemName, 1, Color.decode("#EF4444"));
+            }
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, "Error deleting item: " + ex.getMessage());
         }
     }//GEN-LAST:event_DeleteBTNActionPerformed
 
     private void EditBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditBtnActionPerformed
                 if (selectedProductName == null) {
-                  JOptionPane.showMessageDialog(this, "Select a product from the table first.");
-                 return;
-             }
+            JOptionPane.showMessageDialog(this, "Select a product from the table first.");
+            return;
+        }
 
-             String newName = ProductName.getText().trim();
-             String quantityText = Qty.getText().trim();
-             String newExpDate;
-            
-            try {
-                 newExpDate = normalizeDate(ExpDate.getText().trim());
-             } catch (DateTimeParseException ex) {
-                 JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2028-1-9 or 2028-01-09).");
-              return;
-             }
-             
-             
-            int newQuantity;
-            try {
-               newQuantity = Integer.parseInt(quantityText);
-                } catch (NumberFormatException ex) {
-                    JOptionPane.showMessageDialog(this, "Quantity must be a whole number.");
-                  return;
-                 }
+        String newName = ProductName.getText().trim();
+        String quantityText = Qty.getText().trim();
+        String newExpDate;
+        
+        try {
+            newExpDate = normalizeDate(ExpDate.getText().trim());
+        } catch (DateTimeParseException ex) {
+            JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2028-1-9 or 2028-01-09).");
+            return;
+        }
+        
+        int newQuantity;
+        try {
+            newQuantity = Integer.parseInt(quantityText);
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Quantity must be a whole number.");
+            return;
+        }
 
-            
-             try {
-                  boolean success = productService.editItem(selectedProductName, newName, newExpDate, newQuantity);
-                      if (!success) {
-                         JOptionPane.showMessageDialog(this, "Product not found.");
-                      } else {
-                    refreshInventoryScreen();
-                    ClearBtnActionPerformed(null);
-                     }
-             }catch (IOException ex) {
-                 JOptionPane.showMessageDialog(this, "Error editing item: " + ex.getMessage());
+        try {
+            boolean success = productService.editItem(selectedProductName, newName, newExpDate, newQuantity);
+            if (!success) {
+                JOptionPane.showMessageDialog(this, "Product not found.");
+            } else {
+                refreshInventoryScreen();
+                ClearBtnActionPerformed(null);
+                showToastNotification("✎ Updated " + newName + " stock details successfully!", newName, newQuantity, Color.decode("#2563EB"));
+            }
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, "Error editing item: " + ex.getMessage());
         }
     }//GEN-LAST:event_EditBtnActionPerformed
 

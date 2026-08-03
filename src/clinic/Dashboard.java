@@ -10,6 +10,8 @@ import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JOptionPane;
@@ -34,6 +36,7 @@ public class Dashboard extends javax.swing.JFrame {
         refreshTableAndCounters();
         refreshInventoryStatusDisplay();
         medicineBox();
+        
         
         VisitPanel.putClientProperty("JComponent.arc", 25);
         SentHomePanel.putClientProperty("JComponent.arc", 25);
@@ -88,7 +91,7 @@ public class Dashboard extends javax.swing.JFrame {
 
         // Apply the starting light theme
         applyTheme();
-        
+        checkExpiredProducts();
         
     }
     private void applyTheme() {
@@ -288,7 +291,86 @@ private void updateDateTimeLabel() {
          }
     }
     
+ private void showToast(javax.swing.JPanel parentContainer, String message, boolean isSuccess) {
+    // 1. Create and style the toast label
+    javax.swing.JLabel toast = new javax.swing.JLabel(message, javax.swing.SwingConstants.CENTER);
+    toast.setOpaque(true);
     
+    if (isSuccess) {
+        toast.setBackground(new java.awt.Color(16, 185, 129)); // Success Emerald Green
+        toast.setForeground(java.awt.Color.WHITE);
+    } else {
+        toast.setBackground(new java.awt.Color(239, 68, 68));  // Error Coral Red
+        toast.setForeground(java.awt.Color.WHITE);
+    }
+    
+    toast.setFont(toast.getFont().deriveFont(java.awt.Font.BOLD, 13f));
+    toast.putClientProperty(com.formdev.flatlaf.FlatClientProperties.STYLE, "arc: 12;");
+
+    // 2. Position calculations relative to parent container
+    int toastHeight = 36;
+    int margin = 15;
+    int toastWidth = parentContainer.getWidth() - (margin * 2);
+
+    // Convert coordinates to window root pane layer
+    java.awt.Point locationOnScreen = parentContainer.getLocationOnScreen();
+    java.awt.Point frameLocation = this.getLocationOnScreen();
+    
+    int relativeX = locationOnScreen.x - frameLocation.x + margin;
+    int startY = (locationOnScreen.y - frameLocation.y) + parentContainer.getHeight();
+    int targetY = startY - toastHeight - margin;
+
+    toast.setBounds(relativeX, startY, toastWidth, toastHeight);
+
+    // 3. Add to JFrame's LayeredPane (DRAG_LAYER sits on top of all UI panels)
+    javax.swing.JLayeredPane layeredPane = this.getLayeredPane();
+    layeredPane.add(toast, javax.swing.JLayeredPane.DRAG_LAYER);
+    layeredPane.revalidate();
+    layeredPane.repaint();
+
+    // 4. Slide UP Animation Timer
+    javax.swing.Timer slideUpTimer = new javax.swing.Timer(10, null);
+    slideUpTimer.addActionListener(new java.awt.event.ActionListener() {
+        int currentY = startY;
+
+        @Override
+        public void actionPerformed(java.awt.event.ActionEvent e) {
+            if (currentY > targetY) {
+                currentY = Math.max(targetY, currentY - 4);
+                toast.setLocation(relativeX, currentY);
+                layeredPane.repaint(); // Force refresh every step
+            } else {
+                slideUpTimer.stop();
+
+                // 5. Hold and Slide DOWN
+                javax.swing.Timer delayTimer = new javax.swing.Timer(2500, evt -> {
+                    javax.swing.Timer slideDownTimer = new javax.swing.Timer(10, null);
+                    slideDownTimer.addActionListener(new java.awt.event.ActionListener() {
+                        int returnY = targetY;
+
+                        @Override
+                        public void actionPerformed(java.awt.event.ActionEvent e) {
+                            if (returnY < startY) {
+                                returnY += 4;
+                                toast.setLocation(relativeX, returnY);
+                                layeredPane.repaint();
+                            } else {
+                                slideDownTimer.stop();
+                                layeredPane.remove(toast);
+                                layeredPane.repaint();
+                            }
+                        }
+                    });
+                    slideDownTimer.start();
+                });
+                delayTimer.setRepeats(false);
+                delayTimer.start();
+            }
+        }
+    });
+    
+    slideUpTimer.start();
+}
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -350,7 +432,7 @@ NOT modify this code. The content of this method is always
 
         jLabel3.setFont(new java.awt.Font("Yu Gothic UI", 1, 24)); // NOI18N
         jLabel3.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel3.setText("Clinic DashBoard");
+        jLabel3.setText("Clinic Dashboard");
 
         jButton1.setBackground(new java.awt.Color(255, 255, 255));
         jButton1.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
@@ -370,37 +452,31 @@ NOT modify this code. The content of this method is always
         HeaderPanel.setLayout(HeaderPanelLayout);
         HeaderPanelLayout.setHorizontalGroup(
             HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, HeaderPanelLayout.createSequentialGroup()
+            .addGroup(HeaderPanelLayout.createSequentialGroup()
+                .addGap(17, 17, 17)
                 .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(HeaderPanelLayout.createSequentialGroup()
-                        .addGap(19, 19, 19)
-                        .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 405, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, HeaderPanelLayout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 564, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(159, 159, 159)))
+                    .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 405, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 564, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 141, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jButton2)
-                .addGap(17, 17, 17))
+                .addGap(30, 30, 30))
         );
         HeaderPanelLayout.setVerticalGroup(
             HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(HeaderPanelLayout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(HeaderPanelLayout.createSequentialGroup()
-                        .addComponent(jLabel3)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(DateTimeLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, HeaderPanelLayout.createSequentialGroup()
-                        .addGap(0, 22, Short.MAX_VALUE)
-                        .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGap(19, 19, 19)))
-                .addContainerGap())
+                .addComponent(jLabel3)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(0, 16, Short.MAX_VALUE))
+            .addGroup(HeaderPanelLayout.createSequentialGroup()
+                .addGap(26, 26, 26)
+                .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(0, 0, Short.MAX_VALUE))
         );
 
         CounterPanel.setBackground(new java.awt.Color(229, 226, 226));
@@ -429,7 +505,7 @@ NOT modify this code. The content of this method is always
                     .addGroup(VisitPanelLayout.createSequentialGroup()
                         .addGap(14, 14, 14)
                         .addComponent(VisitCounter, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(79, Short.MAX_VALUE))
+                .addContainerGap(64, Short.MAX_VALUE))
         );
         VisitPanelLayout.setVerticalGroup(
             VisitPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -438,7 +514,7 @@ NOT modify this code. The content of this method is always
                 .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(VisitCounter, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(54, Short.MAX_VALUE))
+                .addContainerGap(34, Short.MAX_VALUE))
         );
 
         SentHomePanel.setBackground(new java.awt.Color(255, 255, 255));
@@ -458,7 +534,7 @@ NOT modify this code. The content of this method is always
         SentHomePanelLayout.setHorizontalGroup(
             SentHomePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, SentHomePanelLayout.createSequentialGroup()
-                .addContainerGap(78, Short.MAX_VALUE)
+                .addContainerGap(58, Short.MAX_VALUE)
                 .addGroup(SentHomePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel4, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 113, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, SentHomePanelLayout.createSequentialGroup()
@@ -483,7 +559,7 @@ NOT modify this code. The content of this method is always
             .addGroup(CounterPanelLayout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(VisitPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(SentHomePanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addContainerGap())
         );
@@ -574,35 +650,34 @@ NOT modify this code. The content of this method is always
             CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(CheckInPanelLayout.createSequentialGroup()
                 .addGap(35, 35, 35)
-                .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(LRNLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                        .addGroup(CheckInPanelLayout.createSequentialGroup()
-                            .addGap(3, 3, 3)
-                            .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addGroup(CheckInPanelLayout.createSequentialGroup()
-                                    .addComponent(jLabel11)
-                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                    .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 126, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addComponent(jLabel9)
-                                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 360, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                        .addGroup(CheckInPanelLayout.createSequentialGroup()
-                            .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                            .addComponent(EditBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                            .addComponent(SentHomeBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 123, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addComponent(jLabel8)
-                        .addComponent(jLabel7)
-                        .addComponent(GSCheckIn)
-                        .addComponent(NameCheckIn)
-                        .addComponent(LRNField)))
-                .addContainerGap(43, Short.MAX_VALUE))
+                .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(GSCheckIn)
+                    .addComponent(NameCheckIn)
+                    .addComponent(LRNField)
+                    .addComponent(jScrollPane1)
+                    .addGroup(CheckInPanelLayout.createSequentialGroup()
+                        .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(CheckInPanelLayout.createSequentialGroup()
+                                .addComponent(jLabel11)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 126, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(jLabel9)
+                            .addComponent(LRNLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel8)
+                            .addComponent(jLabel7)
+                            .addGroup(CheckInPanelLayout.createSequentialGroup()
+                                .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(EditBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(SentHomeBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 123, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addGap(40, 40, 40)))
+                .addContainerGap(15, Short.MAX_VALUE))
         );
         CheckInPanelLayout.setVerticalGroup(
             CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(CheckInPanelLayout.createSequentialGroup()
-                .addGap(18, 18, 18)
+                .addGap(12, 12, 12)
                 .addComponent(jLabel7)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(NameCheckIn, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -618,11 +693,11 @@ NOT modify this code. The content of this method is always
                 .addComponent(jLabel9)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 90, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
-                .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel11)
-                    .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel11))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(EditBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -731,6 +806,7 @@ NOT modify this code. The content of this method is always
         ThemeToggle.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         ThemeToggle.setForeground(new java.awt.Color(0, 0, 0));
         ThemeToggle.setText("Mode");
+        ThemeToggle.addActionListener(this::ThemeToggleActionPerformed);
 
         javax.swing.GroupLayout MainPanelLayout = new javax.swing.GroupLayout(MainPanel);
         MainPanel.setLayout(MainPanelLayout);
@@ -738,41 +814,37 @@ NOT modify this code. The content of this method is always
             MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addComponent(HeaderPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(MainPanelLayout.createSequentialGroup()
-                .addGap(16, 16, 16)
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainPanelLayout.createSequentialGroup()
-                        .addGap(146, 146, 146)
+                .addContainerGap()
+                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(MainPanelLayout.createSequentialGroup()
+                        .addGap(137, 137, 137)
                         .addComponent(StudentCheckinLabel)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(LogsLabel)
-                        .addGap(254, 254, 254))
+                        .addGap(264, 264, 264))
                     .addGroup(MainPanelLayout.createSequentialGroup()
                         .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                             .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainPanelLayout.createSequentialGroup()
-                                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addComponent(CounterPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainPanelLayout.createSequentialGroup()
-                                        .addGap(190, 190, 190)
+                                    .addGroup(MainPanelLayout.createSequentialGroup()
+                                        .addGap(196, 196, 196)
                                         .addComponent(OverviewLabel)))
                                 .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addGroup(MainPanelLayout.createSequentialGroup()
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                         .addComponent(InventoryLabel)
-                                        .addGap(149, 149, 149))
-                                    .addGroup(MainPanelLayout.createSequentialGroup()
-                                        .addGap(18, 18, 18)
-                                        .addComponent(InventoryPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
-                            .addGroup(MainPanelLayout.createSequentialGroup()
-                                .addComponent(CheckInPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addGap(168, 168, 168))
                                     .addGroup(MainPanelLayout.createSequentialGroup()
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                        .addComponent(CheckInPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MainPanelLayout.createSequentialGroup()
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                        .addComponent(ThemeToggle, javax.swing.GroupLayout.PREFERRED_SIZE, 141, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addGap(15, 15, 15)))))
-                        .addGap(30, 30, 30))))
+                                        .addComponent(InventoryPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainPanelLayout.createSequentialGroup()
+                                .addComponent(CheckInPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(18, 18, 18)
+                                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                    .addComponent(CheckInPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(ThemeToggle, javax.swing.GroupLayout.PREFERRED_SIZE, 141, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                        .addGap(39, 39, 39))))
         );
         MainPanelLayout.setVerticalGroup(
             MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -786,29 +858,29 @@ NOT modify this code. The content of this method is always
                 .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(InventoryPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(CounterPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(LogsLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(StudentCheckinLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(StudentCheckinLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(LogsLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addGroup(MainPanelLayout.createSequentialGroup()
                         .addComponent(CheckInPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(18, 18, 18)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(ThemeToggle, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addComponent(CheckInPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(23, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(MainPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(MainPanel, javax.swing.GroupLayout.PREFERRED_SIZE, 1032, javax.swing.GroupLayout.PREFERRED_SIZE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(MainPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(MainPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
         );
 
         pack();
@@ -894,57 +966,64 @@ NOT modify this code. The content of this method is always
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void CheckInBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CheckInBTNActionPerformed
-     
-        String name = NameCheckIn.getText().trim();
-        String gradeSection = GSCheckIn.getText().trim();
-        String lrn = LRNField.getText().trim();
-        String reason = ReasonArea.getText().trim();
-        Object selectedMed = jComboBox1.getSelectedItem();
-        
-  
-              if(selectedMed == null){
-                 JOptionPane.showMessageDialog(this, "Your inventory of medecine might be empty please check first");
-                    return;
-                }
-   
-            String medUsed = selectedMed.toString();
-        
-        if(name.isEmpty() || gradeSection.isEmpty() || lrn.isEmpty()){
-            JOptionPane.showMessageDialog(this, "Name, Grade/Section and LRN are NEEDED to get CHECK IN...");
-            return;
-        }
-        
-         if (!lrn.matches("\\d{12}")) {
-                JOptionPane.showMessageDialog( this,"LRN must contain exactly 12 digits.");
-                LRNField.requestFocus();
-                return;
-            }
-        
-            try {
-                 if (visitService.isCurrentlyCheckedIn(lrn)) {
-                 JOptionPane.showMessageDialog(this, "This student is already checked in.");
-                 return;
-             }
+     String name = NameCheckIn.getText().trim();
+String gradeSection = GSCheckIn.getText().trim();
+String lrn = LRNField.getText().trim();
+String reason = ReasonArea.getText().trim();
+Object selectedMed = jComboBox1.getSelectedItem();
 
-             visitService.checkIn(name, gradeSection, lrn, reason, medUsed);
-             
-            boolean medicineDeducted = productService.useMedicine(medUsed, name);
-            if (!medicineDeducted) {
-                JOptionPane.showMessageDialog(this, "Warning: " + medUsed + " is out of stock. Check-in was saved, but stock was not deducted.");
-            }
+// 1. Medicine Null Check
+if (selectedMed == null) {
+    showToast(CheckInPanel, "Inventory error: Medicine list is empty!", false);
+    return;
+}
 
-             refreshTableAndCounters();
-             refreshInventoryStatusDisplay();
-          
-            NameCheckIn.setText("");
-            GSCheckIn.setText("");
-            LRNField.setText("");
-            ReasonArea.setText("");
+String medUsed = selectedMed.toString();
 
-         } catch (IOException ex) {
-          JOptionPane.showMessageDialog(this, "Error saving check-in: " + ex.getMessage());
-         }
-   
+// 2. Required Fields Validation
+if (name.isEmpty() || gradeSection.isEmpty() || lrn.isEmpty()) {
+    showToast(CheckInPanel, "Name, Grade/Section, and LRN are required!", false);
+    return;
+}
+
+// 3. LRN Format Validation
+if (!lrn.matches("\\d{12}")) {
+    showToast(CheckInPanel, "LRN must contain exactly 12 digits.", false);
+    LRNField.requestFocus();
+    return;
+}
+
+try {
+    // 4. Duplicate Check-in Check
+    if (visitService.isCurrentlyCheckedIn(lrn)) {
+        showToast(CheckInPanel, "Student is already checked in!", false);
+        return;
+    }
+
+    // 5. Process Check-in
+    visitService.checkIn(name, gradeSection, lrn, reason, medUsed);
+
+    boolean medicineDeducted = productService.useMedicine(medUsed, name);
+    if (!medicineDeducted) {
+        // Red warning toast if medicine stock is out
+        showToast(CheckInPanel, "Warning: " + medUsed + " is out of stock!", false);
+    } else {
+        // Green success toast on clean check-in
+        showToast(CheckInPanel, "Student checked in successfully!", true);
+    }
+
+    // 6. Refresh Displays and Clear Form
+    refreshTableAndCounters();
+    refreshInventoryStatusDisplay();
+
+    NameCheckIn.setText("");
+    GSCheckIn.setText("");
+    LRNField.setText("");
+    ReasonArea.setText("");
+
+} catch (IOException ex) {
+    showToast(CheckInPanel, "Error saving check-in: " + ex.getMessage(), false);
+}
     }//GEN-LAST:event_CheckInBTNActionPerformed
 
     private void LRNFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_LRNFieldActionPerformed
@@ -982,6 +1061,10 @@ NOT modify this code. The content of this method is always
         jComboBox1.setSelectedItem(selected.getMedUsed());
     
     }//GEN-LAST:event_ReasonTableMouseClicked
+
+    private void ThemeToggleActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ThemeToggleActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_ThemeToggleActionPerformed
    
     private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {                                         
             
@@ -1044,7 +1127,107 @@ NOT modify this code. The content of this method is always
                  JOptionPane.showMessageDialog(this, "Printing failed: " + ex.getMessage());
     }   
 }
+    private void showTopAlertBanner(String message) {
+    javax.swing.JLabel alert = new javax.swing.JLabel(message, javax.swing.SwingConstants.CENTER);
+    alert.setOpaque(true);
+    alert.setBackground(new java.awt.Color(225, 29, 72)); // Modern Crimson/Coral Warning
+    alert.setForeground(java.awt.Color.WHITE);
+    alert.setFont(alert.getFont().deriveFont(java.awt.Font.BOLD, 13f));
     
+    // Modern FlatLaf pill shape
+    alert.putClientProperty(com.formdev.flatlaf.FlatClientProperties.STYLE, "arc: 12;");
+
+    int bannerHeight = 40;
+    int bannerWidth = this.getWidth() - 100;
+    int startY = -bannerHeight; // Hidden above the frame
+    int targetY = 15;           // Slides down right over the header area
+    int relativeX = 50;
+
+    alert.setBounds(relativeX, startY, bannerWidth, bannerHeight);
+
+    javax.swing.JLayeredPane layeredPane = this.getLayeredPane();
+    layeredPane.add(alert, javax.swing.JLayeredPane.DRAG_LAYER);
+    layeredPane.revalidate();
+
+    // Slide DOWN Animation
+    javax.swing.Timer slideTimer = new javax.swing.Timer(10, null);
+    slideTimer.addActionListener(new java.awt.event.ActionListener() {
+        int currentY = startY;
+
+        @Override
+        public void actionPerformed(java.awt.event.ActionEvent e) {
+            if (currentY < targetY) {
+                currentY += 3;
+                alert.setLocation(relativeX, currentY);
+                layeredPane.repaint();
+            } else {
+                slideTimer.stop();
+
+                // Stay visible for 5 seconds so staff can read all expired items
+                javax.swing.Timer delayTimer = new javax.swing.Timer(5000, evt -> {
+                    javax.swing.Timer slideUpTimer = new javax.swing.Timer(10, null);
+                    slideUpTimer.addActionListener(new java.awt.event.ActionListener() {
+                        int returnY = targetY;
+
+                        @Override
+                        public void actionPerformed(java.awt.event.ActionEvent e) {
+                            if (returnY > startY) {
+                                returnY -= 3;
+                                alert.setLocation(relativeX, returnY);
+                                layeredPane.repaint();
+                            } else {
+                                slideUpTimer.stop();
+                                layeredPane.remove(alert);
+                                layeredPane.repaint();
+                            }
+                        }
+                    });
+                    slideUpTimer.start();
+                });
+                delayTimer.setRepeats(false);
+                delayTimer.start();
+            }
+        }
+    });
+    
+    slideTimer.start();
+}
+    private void checkExpiredProducts() {
+    try {
+        ArrayList<Product> products = productService.loadAll();
+        ArrayList<String> expiredItems = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        
+        // Try multiple date formatters if needed (e.g. yyyy-MM-dd or MM/dd/yyyy)
+        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        for (Product p : products) {
+            // Option A: If status itself is marked as "Expired" or "OutOfStock"
+            if (p.getStatus() != null && p.getStatus().equalsIgnoreCase("Expired")) {
+                expiredItems.add(p.getname());
+                continue;
+            }
+
+            // Option B: If status stores a date string like "2026-08-01"
+            try {
+                LocalDate expDate = LocalDate.parse(p.getStatus().trim(), formatter);
+                if (expDate.isBefore(today) || expDate.isEqual(today)) {
+                    expiredItems.add(p.getname() + " (Exp: " + p.getStatus() + ")");
+                }
+            } catch (Exception ignored) {
+                // Skips items where getStatus() isn't a date string
+            }
+        }
+
+        if (!expiredItems.isEmpty()) {
+            String alertMsg = "⚠️ EXPIRED INVENTORY DETECTED: " + String.join(", ", expiredItems);
+            showTopAlertBanner(alertMsg);
+        }
+
+    } catch (Exception ex) {
+        logger.log(java.util.logging.Level.SEVERE, "Error checking product expiration", ex);
+    }
+}
     
     /**
      * @param args the command line arguments

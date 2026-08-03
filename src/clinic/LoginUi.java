@@ -4,6 +4,10 @@
  */
 package clinic;
 
+import com.formdev.flatlaf.FlatClientProperties;
+import com.formdev.flatlaf.FlatLightLaf;
+import java.awt.Color;
+import java.awt.Font;
 import javax.swing.JOptionPane;
 
 /**
@@ -18,22 +22,114 @@ public class LoginUi extends javax.swing.JFrame {
      * Creates new form LoginUi
      */
     public LoginUi() {
+       setUndecorated(true);
         initComponents();
         setLocationRelativeTo(null);
-        
+    
+        // Panels
+        jPanel3.setBackground(new Color(240, 244, 248)); 
+        jPanel1.setBackground(Color.WHITE);
+        jPanel1.putClientProperty(FlatClientProperties.STYLE, "arc: 20;");
+
+        // Typography
+        jLabel3.setForeground(new Color(0x1E, 0x29, 0x3B)); 
+        jLabel3.setFont(jLabel3.getFont().deriveFont(Font.BOLD, 32f));
+
+        Color labelColor = new Color(0x47, 0x55, 0x69);
+        jLabel6.setForeground(labelColor);
+        jLabel4.setForeground(labelColor);
+        jLabel6.setFont(jLabel6.getFont().deriveFont(Font.BOLD, 16f));
+        jLabel4.setFont(jLabel4.getFont().deriveFont(Font.BOLD, 16f));
+
+        // Text Fields
         jTextField1.setText(""); 
-        jTextField1.putClientProperty("JComponent.roundRect", true);
-        jTextField1.putClientProperty("JTextField.placeholderText", "Enter your username");
+        jTextField1.setBackground(null);
+        jTextField1.setForeground(null);
+        jTextField1.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Enter your username...");
+        jTextField1.putClientProperty(FlatClientProperties.TEXT_FIELD_SHOW_CLEAR_BUTTON, true);
+        jTextField1.putClientProperty(FlatClientProperties.STYLE, ""
+            + "arc: 12;"
+            + "margin: 4,10,4,10;"
+            + "focusWidth: 2"
+        );
         
         jPasswordField1.setText("");
-        jPasswordField1.putClientProperty("JComponent.roundRect", true);
-        jPasswordField1.putClientProperty("JTextField.placeholderText", "Enter your password");
-        jPasswordField1.putClientProperty("JTextField.showRevealButton", true); // Adds an eye icon to toggle password visibility!
+        jPasswordField1.setBackground(null);
+        jPasswordField1.setForeground(null);
+        jPasswordField1.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Enter your password...");
+        jPasswordField1.putClientProperty(FlatClientProperties.STYLE, ""
+            + "arc: 12;"
+            + "margin: 4,10,4,10;"
+            + "showRevealButton: true;"
+            + "focusWidth: 2"
+        );
+
+        // Login Button
+        jButton1.setBackground(null);
+        jButton1.setForeground(null);
+        jButton1.setFont(jButton1.getFont().deriveFont(Font.BOLD, 16f));
+        jButton1.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_ROUND_RECT);
+        jButton1.putClientProperty(FlatClientProperties.STYLE, ""
+            + "arc: 12;"
+            + "background: #0284C7;"              
+            + "foreground: #FFFFFF;"              
+            + "hoverBackground: #0369A1;"          
+            + "focusedBackground: #0369A1"
+        );
+
+        // Red Exit Button Styling
+        ExitBTN.setText("Exit"); 
+        ExitBTN.setFont(ExitBTN.getFont().deriveFont(Font.BOLD, 16f));
+        ExitBTN.setFocusable(false);
+        ExitBTN.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        ExitBTN.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_ROUND_RECT);
         
-        // Make the login button match the flat layout
-        jButton1.putClientProperty("JButton.buttonType", "roundRect");
-        
-        
+        ExitBTN.putClientProperty(FlatClientProperties.STYLE, ""
+            + "arc: 12;"
+            + "background: #EF4444;"       // Solid Red
+            + "foreground: #FFFFFF;"       // Crisp White Text
+            + "hoverBackground: #DC2626;"  // Darker Red on Hover
+            + "focusedBackground: #DC2626;"
+            + "pressedBackground: #B91C1C" // Deep Red on Press
+        );
+
+        // Enable Window Dragging
+        java.awt.event.MouseAdapter dragListener = new java.awt.event.MouseAdapter() {
+            private int mouseX, mouseY;
+
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                mouseX = e.getX();
+                mouseY = e.getY();
+            }
+
+            @Override
+            public void mouseDragged(java.awt.event.MouseEvent e) {
+                setLocation(e.getXOnScreen() - mouseX, e.getYOnScreen() - mouseY);
+            }
+        };
+
+        jPanel3.addMouseListener(dragListener);
+        jPanel3.addMouseMotionListener(dragListener);
+    }
+
+    // Smooth Fade-Out Effect
+    private void fadeOutAndOpenDashboard() {
+        javax.swing.Timer timer = new javax.swing.Timer(20, null);
+        timer.addActionListener(e -> {
+            float opacity = getOpacity();
+            opacity -= 0.05f;
+            
+            if (opacity <= 0.05f) {
+                setOpacity(0.0f);
+                timer.stop();
+                new Dashboard().setVisible(true);
+                dispose();
+            } else {
+                setOpacity(opacity);
+            }
+        });
+        timer.start();
     }
     
     /**
@@ -55,6 +151,7 @@ public class LoginUi extends javax.swing.JFrame {
         jLabel4 = new javax.swing.JLabel();
         jLabel6 = new javax.swing.JLabel();
         jLabel1 = new javax.swing.JLabel();
+        ExitBTN = new javax.swing.JButton();
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
@@ -74,7 +171,6 @@ public class LoginUi extends javax.swing.JFrame {
         jPanel3.setBackground(new java.awt.Color(0, 102, 204));
 
         jPanel1.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0), 2));
         jPanel1.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         jButton1.setBackground(new java.awt.Color(0, 102, 255));
@@ -83,7 +179,7 @@ public class LoginUi extends javax.swing.JFrame {
         jButton1.setText("Login");
         jButton1.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
         jButton1.addActionListener(this::jButton1ActionPerformed);
-        jPanel1.add(jButton1, new org.netbeans.lib.awtextra.AbsoluteConstraints(310, 370, 98, -1));
+        jPanel1.add(jButton1, new org.netbeans.lib.awtextra.AbsoluteConstraints(260, 360, 98, 30));
 
         jLabel3.setFont(new java.awt.Font("Yu Gothic UI", 1, 36)); // NOI18N
         jLabel3.setForeground(new java.awt.Color(0, 153, 255));
@@ -113,11 +209,19 @@ public class LoginUi extends javax.swing.JFrame {
         jLabel1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/Assets/logo2.png"))); // NOI18N
         jPanel1.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 60, -1, -1));
 
+        ExitBTN.setBackground(new java.awt.Color(0, 102, 255));
+        ExitBTN.setFont(new java.awt.Font("Yu Gothic UI", 0, 18)); // NOI18N
+        ExitBTN.setForeground(new java.awt.Color(0, 0, 0));
+        ExitBTN.setText("Exit");
+        ExitBTN.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        ExitBTN.addActionListener(this::ExitBTNActionPerformed);
+        jPanel1.add(ExitBTN, new org.netbeans.lib.awtextra.AbsoluteConstraints(390, 360, 100, 30));
+
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
         jPanel3Layout.setHorizontalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
+            .addGroup(jPanel3Layout.createSequentialGroup()
                 .addContainerGap(96, Short.MAX_VALUE)
                 .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, 710, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(94, 94, 94))
@@ -136,58 +240,59 @@ public class LoginUi extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        String Username = jTextField1.getText();
-        String Password = jPasswordField1.getText();
-        
-        String role = SystemLogin.CheckLogin(Username ,  Password );
+       String Username = jTextField1.getText().trim();
+        String Password = new String(jPasswordField1.getPassword());
         
         if (Username.isEmpty() || Password.isEmpty()) {
-        JOptionPane.showMessageDialog(null, "Please enter your credentials");
-        return;
-    }
-        
-        if(role.equalsIgnoreCase("admin")){
-            JOptionPane.showMessageDialog(null, "Welcome Admin");
-            new Dashboard().show();
-            this.dispose();
-            
-        }else if (role.equalsIgnoreCase("User")) {
-            JOptionPane.showMessageDialog(null, "Login Successfully");
-            new Dashboard().show();
-            this.dispose();
-        
-        }else{
-             JOptionPane.showMessageDialog(null, "Wrong credentials");
+            JOptionPane.showMessageDialog(this, "Please fill in all fields.", "Missing Information", JOptionPane.WARNING_MESSAGE);
+            return;
         }
+
+        String role = SystemLogin.CheckLogin(Username, Password);
         
+        if (role.equalsIgnoreCase("admin")) {
+            JOptionPane.showMessageDialog(this, "Welcome Admin!");
+            fadeOutAndOpenDashboard();
+            
+        } else if (role.equalsIgnoreCase("User")) {
+            JOptionPane.showMessageDialog(this, "Login Successful!");
+            fadeOutAndOpenDashboard();
+            
+        
+        } else {
+            JOptionPane.showMessageDialog(this, "Invalid credentials. Please try again.", "Login Failed", JOptionPane.ERROR_MESSAGE);
+        }
+    
     }//GEN-LAST:event_jButton1ActionPerformed
+
+    private void ExitBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ExitBTNActionPerformed
+      javax.swing.Timer timer = new javax.swing.Timer(15, null);
+        timer.addActionListener(e -> {
+            float opacity = getOpacity();
+            opacity -= 0.1f;
+            if (opacity <= 0.05f) {
+                timer.stop();
+                System.exit(0);
+            } else {
+                setOpacity(opacity);
+            }
+        });
+        timer.start();
+
+    }//GEN-LAST:event_ExitBTNActionPerformed
 
     /**
      * @param args the command line arguments
      */
     public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ReflectiveOperationException | javax.swing.UnsupportedLookAndFeelException ex) {
-            logger.log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
+        FlatLightLaf.setup();
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(() -> new LoginUi().setVisible(true));
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton ExitBTN;
     private javax.swing.JButton jButton1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel3;
