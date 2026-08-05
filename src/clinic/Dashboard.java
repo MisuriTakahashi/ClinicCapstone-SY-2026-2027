@@ -38,6 +38,7 @@ public class Dashboard extends javax.swing.JFrame {
         refreshTableAndCounters();
         refreshInventoryStatusDisplay();
         medicineBox();
+        InventoryStatusArea.setEditable(false);
         
         
         VisitPanel.putClientProperty("JComponent.arc", 25);
@@ -729,10 +730,7 @@ NOT modify this code. The content of this method is always
         );
         InventoryPanelLayout.setVerticalGroup(
             InventoryPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(InventoryPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jScrollPane3)
-                .addContainerGap())
+            .addComponent(jScrollPane3, javax.swing.GroupLayout.Alignment.TRAILING)
         );
 
         InventoryLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
@@ -969,11 +967,15 @@ NOT modify this code. The content of this method is always
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void CheckInBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CheckInBTNActionPerformed
+
      String name = NameCheckIn.getText().trim();
      String gradeSection = GSCheckIn.getText().trim();
      String lrn = LRNField.getText().trim();
      String reason = ReasonArea.getText().trim();
      Object selectedMed = jComboBox1.getSelectedItem();
+      
+
+     
         
     // 1. Medicine Null Check
     if (selectedMed == null) {
@@ -982,6 +984,32 @@ NOT modify this code. The content of this method is always
     }
 
     String medUsed = selectedMed.toString();
+    Product medProduct; 
+    
+     try {
+            
+        medProduct = productService.findByName(medUsed);
+            
+         if (medProduct != null && medProduct.isExpired()) {
+             int choice = JOptionPane.showConfirmDialog(this,
+              medUsed + " is expired and cannot be given.\n\n"
+              + "Click YES to check in this student WITHOUT recording medicine use.\n"
+              + "Click NO to go back and pick a different medicine.",
+              "Expired Medicine",
+                 JOptionPane.YES_NO_OPTION,
+                 JOptionPane.WARNING_MESSAGE);
+
+            if (choice == JOptionPane.YES_OPTION) {
+                medUsed = "None"; 
+            } else {
+                return;
+            }
+        }
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(this, "ERROR" + ex.getMessage());
+            }
+    
+    
 
     // 2. Required Fields Validation
     if (name.isEmpty() || gradeSection.isEmpty() || lrn.isEmpty()) {
@@ -1013,13 +1041,11 @@ NOT modify this code. The content of this method is always
         // 5. Process Check-in
         visitService.checkIn(name, gradeSection, lrn, reason, medUsed);
 
-        boolean medicineDeducted = productService.useMedicine(medUsed, name);
-        if (!medicineDeducted) {
-            // Red warning toast if medicine stock is out
-            showToast(CheckInPanel, "Warning: " + medUsed + " is out of stock!", false);
-        } else {
-            // Green success toast on clean check-in
-            showToast(CheckInPanel, "Student checked in successfully!", true);
+        if (!medUsed.equals("None")) {
+            boolean deducted = productService.useMedicine(medUsed, name);
+            if (!deducted) {
+                JOptionPane.showMessageDialog(this, "Warning: " + medUsed + " is out of stock. Check-in was saved, but stock was not deducted.");
+            }
         }
 
         // 6. Refresh Displays and Clear Form
@@ -1033,7 +1059,7 @@ NOT modify this code. The content of this method is always
 
     } catch (IOException ex) {
         showToast(CheckInPanel, "Error saving check-in: " + ex.getMessage(), false);
-}
+        }
     }//GEN-LAST:event_CheckInBTNActionPerformed
 
     private void LRNFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_LRNFieldActionPerformed
@@ -1204,6 +1230,7 @@ NOT modify this code. The content of this method is always
 }
     private void checkExpiredProducts() {
     try {
+        
         ArrayList<Product> products = productService.loadAll();
         ArrayList<String> expiredItems = new ArrayList<>();
         LocalDate today = LocalDate.now();

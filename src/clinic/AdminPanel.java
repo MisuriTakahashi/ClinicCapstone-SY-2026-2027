@@ -38,7 +38,7 @@ public class AdminPanel extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(AdminPanel.class.getName());
     private final ProductCsvService productService = new ProductCsvService("products.csv", "inventory_activity.log");
-    private final ArrayList<Product> currentProducts = new ArrayList<>();
+    private ArrayList<Product> currentProducts = new ArrayList<>();
     private String selectedProductName = null;
 
     /**
@@ -343,16 +343,20 @@ public class AdminPanel extends javax.swing.JFrame {
     
     private void refreshInventoryTable() {
         try {
+            
+            currentProducts = productService.loadAll();
+            
             DefaultTableModel model = (DefaultTableModel) stockTable.getModel();
             model.setRowCount(0);
 
-            for (Product p : productService.loadAll()) {
+            for (Product p : currentProducts) {
                 model.addRow(new Object[]{
                     p.getStatus(),
                     p.getname(),
                     p.getquantity()
                 });
             }
+            refreshActivityLogDisplay();
         } catch (IOException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage());
         }
@@ -795,13 +799,26 @@ public class AdminPanel extends javax.swing.JFrame {
             new String [] {
                 "Status", "Product", "Quantity"
             }
-        ));
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
         stockTable.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 stockTableMouseClicked(evt);
             }
         });
         jScrollPane1.setViewportView(stockTable);
+        if (stockTable.getColumnModel().getColumnCount() > 0) {
+            stockTable.getColumnModel().getColumn(0).setResizable(false);
+            stockTable.getColumnModel().getColumn(1).setResizable(false);
+            stockTable.getColumnModel().getColumn(2).setResizable(false);
+        }
 
         javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
         jPanel4.setLayout(jPanel4Layout);
@@ -1058,24 +1075,41 @@ public class AdminPanel extends javax.swing.JFrame {
     }//GEN-LAST:event_stockTableMouseClicked
 
     private void DeleteBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DeleteBTNActionPerformed
-             if (selectedProductName == null) {
-            JOptionPane.showMessageDialog(this, "Select a product from the table first.");
+        int[] selectedRows = stockTable.getSelectedRows();
+
+         if (selectedRows.length == 0) {
+             JOptionPane.showMessageDialog(this, "Select at least one product to delete.");
+             return;
+            }
+
+        StringBuilder namesPreview = new StringBuilder();
+        
+           for (int row : selectedRows) {
+               namesPreview.append("- ").append(currentProducts.get(row).getname()).append("\n");
+           }
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+            "Are you sure you want to delete the following medicine pills?\n\n" + namesPreview,
+            "Confirm Delete",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE);
+
+         if (confirm != JOptionPane.YES_OPTION) {
             return;
         }
 
-        try {
-            String removedItemName = selectedProductName;
-            boolean success = productService.deleteItem(selectedProductName);
-            if (!success) {
-                JOptionPane.showMessageDialog(this, "Product not found.");
-            } else {
-                refreshInventoryScreen();
-                ClearBtnActionPerformed(null);
-                showToastNotification("🗑 Removed " + removedItemName + " from inventory.", removedItemName, 1, Color.decode("#EF4444"));
+         try {
+          for (int row : selectedRows) {
+              String name = currentProducts.get(row).getname();
+              productService.deleteItem(name);
             }
-        } catch (IOException ex) {
-            JOptionPane.showMessageDialog(this, "Error deleting item: " + ex.getMessage());
-        }
+             
+             refreshInventoryScreen();
+             ClearBtnActionPerformed(null);
+
+         } catch (IOException ex) {
+         JOptionPane.showMessageDialog(this, "Error deleting items: " + ex.getMessage());
+         }
     }//GEN-LAST:event_DeleteBTNActionPerformed
 
     private void EditBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditBtnActionPerformed

@@ -165,4 +165,14 @@ public class ProductCsvService {
         }
         return false;
     }
+        
+        public Product findByName(String name) throws IOException {
+            
+            for (Product p : loadAll()) {
+            if (p.getname().equalsIgnoreCase(name)) {
+                return p;
+            }
+        }
+        return null;
+    }
 }
