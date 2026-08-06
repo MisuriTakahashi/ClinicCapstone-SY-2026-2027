@@ -35,6 +35,8 @@ public class Dashboard extends javax.swing.JFrame {
     public Dashboard() {
         initComponents();
         ((AbstractDocument) NameCheckIn.getDocument()).setDocumentFilter(new NameInputFilter());
+        ((AbstractDocument) ParentGurdianName.getDocument()).setDocumentFilter(new NameInputFilter());
+        ((AbstractDocument) PhoneField.getDocument()).setDocumentFilter(new PhoneNumberFilter());
         setLocationRelativeTo(null);
         startDateTimeClock();
         refreshTableAndCounters();
@@ -420,7 +422,7 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
              SentHomeCount.setText(String.valueOf(counts[1]));
 
               // Update footer with last sent home info
-              CheckinSystem lastSentHome = null;
+              /*CheckinSystem lastSentHome = null;
               for (CheckinSystem v : visitService.loadAll()) {
                   if ("Sent Home".equals(v.getStatus())) {
                       lastSentHome = v;
@@ -432,7 +434,7 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
               } else {
                   SentHomeFooterLabel.setText("No students sent home today.");
                   SentHomeFooterLabel.setForeground(java.awt.Color.GRAY);
-              }
+              }*/
 
                } catch (IOException ex) {
 
@@ -1385,10 +1387,35 @@ NOT modify this code. The content of this method is always
             String guardianName = ParentGurdianName.getText().trim();
             String guardianPhone = PhoneField.getText().trim();
 
-         if (guardianName.isEmpty() || guardianPhone.isEmpty()) {
-             showToast(SentHomeInformationPanel, "Guardian name and phone number are required.", false);
-             return;
-         }
+            if (guardianName.isEmpty()) {
+                showToast(SentHomeInformationPanel,
+                        "Guardian name is required.",
+                        false);
+                return;
+            }
+
+            if (guardianPhone.isEmpty()) {
+                showToast(SentHomeInformationPanel,
+                        "Guardian phone number is required.",
+                        false);
+                return;
+            }
+
+            if (!guardianPhone.matches("^09\\d{9}$")) {
+                showToast(SentHomeInformationPanel,
+                        "Phone number must start with 09 and contain exactly 11 digits.",
+                        false);
+                PhoneField.requestFocus();
+                return;
+            }
+            
+            if (!guardianName.matches("[\\p{L} .'-]+")) {
+                showToast(SentHomeInformationPanel,
+                        "Please enter a valid guardian name.",
+                        false);
+                ParentGurdianName.requestFocus();
+                return;
+            }
 
          String name = NameCheckIn.getText().trim();
          String gradeSection = GSCheckIn.getText().trim();
@@ -1414,6 +1441,10 @@ NOT modify this code. The content of this method is always
              LRNField.setText("");
              ReasonArea.setText("");
              SentHomeInformationPanel.setVisible(false);
+             glassOverlay.setVisible(false);
+
+             this.revalidate();
+             this.repaint();
 
              showToast(CheckInPanel, name + " checked in successfully. Guardian info recorded.", true);
 
@@ -1423,7 +1454,12 @@ NOT modify this code. The content of this method is always
     }//GEN-LAST:event_FinishBTNActionPerformed
 
     private void InformationBackBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_InformationBackBTNActionPerformed
-        // TODO add your handling code here:
+        
+        SentHomeInformationPanel.setVisible(false);
+        glassOverlay.setVisible(false);
+
+            this.revalidate();
+            this.repaint();
     }//GEN-LAST:event_InformationBackBTNActionPerformed
    
     private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {                                         
