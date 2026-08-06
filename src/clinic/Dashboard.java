@@ -312,7 +312,9 @@ private void updateDateTimeLabel() {
                     v.getName(),
                     v.getGradeSection(),
                     v.getLrn(),
-                    v.getReason()
+                    v.getReason(),
+                    v.getGuardianName(),
+                    v.getGuardianPhoneNums()
             });
 
         }
@@ -790,17 +792,17 @@ NOT modify this code. The content of this method is always
         ReasonTable.setForeground(new java.awt.Color(0, 0, 0));
         ReasonTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null}
+                {null, null, null, null, null, null},
+                {null, null, null, null, null, null},
+                {null, null, null, null, null, null},
+                {null, null, null, null, null, null}
             },
             new String [] {
-                "Name", "Grade/Section", "LRN", "Reason"
+                "Name", "Grade/Section", "LRN", "Reason", "Parent/Guardian Name", "Phone number"
             }
         ) {
             boolean[] canEdit = new boolean [] {
-                false, false, false, false
+                false, false, false, false, false, false
             };
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
@@ -818,6 +820,8 @@ NOT modify this code. The content of this method is always
             ReasonTable.getColumnModel().getColumn(1).setResizable(false);
             ReasonTable.getColumnModel().getColumn(2).setResizable(false);
             ReasonTable.getColumnModel().getColumn(3).setResizable(false);
+            ReasonTable.getColumnModel().getColumn(4).setResizable(false);
+            ReasonTable.getColumnModel().getColumn(5).setResizable(false);
         }
 
         javax.swing.GroupLayout CheckInPanel1Layout = new javax.swing.GroupLayout(CheckInPanel1);
@@ -989,18 +993,18 @@ NOT modify this code. The content of this method is always
             .addComponent(MainPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addGroup(layout.createSequentialGroup()
-                    .addGap(226, 226, 226)
+                    .addGap(239, 239, 239)
                     .addComponent(SentHomeInformationPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addContainerGap(253, Short.MAX_VALUE)))
+                    .addContainerGap(240, Short.MAX_VALUE)))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addComponent(MainPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addGroup(layout.createSequentialGroup()
-                    .addGap(236, 236, 236)
+                    .addGap(217, 217, 217)
                     .addComponent(SentHomeInformationPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addContainerGap(198, Short.MAX_VALUE)))
+                    .addContainerGap(217, Short.MAX_VALUE)))
         );
 
         pack();
@@ -1092,16 +1096,31 @@ NOT modify this code. The content of this method is always
      String lrn = LRNField.getText().trim();
      String reason = ReasonArea.getText().trim();
      Object selectedMed = jComboBox1.getSelectedItem();
-      
-
-     
-        
-    // 1. Medicine Null Check
+  
+    //Medicine Null Check
     if (selectedMed == null) {
         showToast(CheckInPanel, "Inventory error: Medicine list is empty!", false);
         return;
     }
 
+    //Required Fields Validation
+    if (name.isEmpty() || gradeSection.isEmpty() || lrn.isEmpty()) {
+        showToast(CheckInPanel, "Name, Grade/Section, and LRN are required!", false);
+        return;
+    }
+
+    // LRN Format Validation
+    if (!lrn.matches("\\d{12}")) {
+        showToast(CheckInPanel, "LRN must contain exactly 12 digits.", false);
+        LRNField.requestFocus();
+        return;
+    }
+    //Required Fields for Reason
+    if(reason.isEmpty()){
+        showToast(CheckInPanel, "Reason is needed to proceed on the check in" , false );
+        return;
+    }
+    
     String medUsed = selectedMed.toString();
     Product medProduct; 
     
@@ -1124,24 +1143,25 @@ NOT modify this code. The content of this method is always
                 return;
             }
         }
-            } catch (IOException ex) {
-                JOptionPane.showMessageDialog(this, "ERROR" + ex.getMessage());
-            }
+         
+         if(medProduct != null && !medUsed.equals("none") && medProduct.getquantity() <= 0){
+              int choice = JOptionPane.showConfirmDialog(this,
+                medUsed + " has 0 stock remaining.\n\n"
+                + "Do you want to proceed without using meds?",
+                "Out of Stock",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+              if (choice == JOptionPane.YES_OPTION) {
+                     medUsed = "None";
+                     
+              }else{
+                  return;
+              }
+         }
+             } catch (IOException ex) {
+              JOptionPane.showMessageDialog(this, "ERROR" + ex.getMessage());
+        }
     
-    
-
-    // 2. Required Fields Validation
-    if (name.isEmpty() || gradeSection.isEmpty() || lrn.isEmpty()) {
-        showToast(CheckInPanel, "Name, Grade/Section, and LRN are required!", false);
-        return;
-    }
-
-    // 3. LRN Format Validation
-    if (!lrn.matches("\\d{12}")) {
-        showToast(CheckInPanel, "LRN must contain exactly 12 digits.", false);
-        LRNField.requestFocus();
-        return;
-    }
 
     try {
         String existingName = visitService.findNameForLrn(lrn);
@@ -1151,30 +1171,25 @@ NOT modify this code. The content of this method is always
             "This LRN is already registered under the name \"" + existingName + "\". Please verify the LRN or name.");
         return;
     }
-        // 4. Duplicate Check-in Check
+        //Duplicate Check-in Check
          if (visitService.isCurrentlyCheckedIn(lrn)) {
         JOptionPane.showMessageDialog(this, "This student is already checked in.");
         return;
     }
-
-        // 5. Process Check-in
-        visitService.checkIn(name, gradeSection, lrn, reason, medUsed);
-
-        if (!medUsed.equals("None")) {
-            boolean deducted = productService.useMedicine(medUsed, name);
-            if (!deducted) {
-                JOptionPane.showMessageDialog(this, "Warning: " + medUsed + " is out of stock. Check-in was saved, but stock was not deducted.");
-            }
-        }
-
-        // 6. Refresh Displays and Clear Form
+        
+         
+        
+        //Refresh Displays and Clear Form
         refreshTableAndCounters();
         refreshInventoryStatusDisplay();
 
-        NameCheckIn.setText("");
-        GSCheckIn.setText("");
-        LRNField.setText("");
-        ReasonArea.setText("");
+       
+        ParentGurdianName.setText("");
+        PhoneField.setText("");
+        SentHomeInformationPanel.show();
+        
+        //testing kung gumagana yun Check btn
+        System.out.println("Showing Guardian Panel...");
 
     } catch (IOException ex) {
         showToast(CheckInPanel, "Error saving check-in: " + ex.getMessage(), false);
@@ -1222,7 +1237,44 @@ NOT modify this code. The content of this method is always
     }//GEN-LAST:event_ThemeToggleActionPerformed
 
     private void FinishBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_FinishBTNActionPerformed
-        // TODO add your handling code here:
+            String guardianName = ParentGurdianName.getText().trim();
+            String guardianPhone = PhoneField.getText().trim();
+
+         if (guardianName.isEmpty() || guardianPhone.isEmpty()) {
+             showToast(SentHomeInformationPanel, "Guardian name and phone number are required.", false);
+             return;
+         }
+
+         String name = NameCheckIn.getText().trim();
+         String gradeSection = GSCheckIn.getText().trim();
+         String lrn = LRNField.getText().trim();
+         String reason = ReasonArea.getText().trim();
+         String medUsed = jComboBox1.getSelectedItem().toString();
+
+         try {
+             visitService.checkIn(name, gradeSection, lrn, reason, medUsed, guardianName, guardianPhone);
+
+             if (!medUsed.equals("None")) {
+                 boolean deducted = productService.useMedicine(medUsed, name);
+                 if (!deducted) {
+                     showToast(CheckInPanel, "Warning: " + medUsed + " is out of stock. Stock was not deducted.", false);
+                 }
+             }
+
+             refreshTableAndCounters();
+             refreshInventoryStatusDisplay();
+
+             NameCheckIn.setText("");
+             GSCheckIn.setText("");
+             LRNField.setText("");
+             ReasonArea.setText("");
+             SentHomeInformationPanel.setVisible(false);
+
+             showToast(CheckInPanel, name + " checked in successfully. Guardian info recorded.", true);
+
+         } catch (IOException ex) {
+             showToast(CheckInPanel, "Error saving check-in: " + ex.getMessage(), false);
+         }
     }//GEN-LAST:event_FinishBTNActionPerformed
    
     private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {                                         

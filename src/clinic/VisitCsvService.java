@@ -34,53 +34,46 @@ public class VisitCsvService {
     }
     
     // this adds one new Check in row to csv 
-    public void checkIn(String name , String gradeSection , String lrn , String reason , String medUsed){
-        String now = LocalDateTime.now().format(TIME_FORMAT);
-        CheckinSystem visit = new CheckinSystem(name , gradeSection , lrn , reason , medUsed , now , "In Clinic");
-        
-         try (BufferedWriter bw = new BufferedWriter(new FileWriter(csvFile, true))) {
-            bw.write(visit.toCsvLine());
-            bw.newLine();
-        } catch (IOException ex) {
-            JOptionPane.showMessageDialog(null, ex.getMessage());
-        }
-    }
-    
+   public void checkIn(String name , String gradeSection , String lrn , String medUsed,
+                       String Reason , String guardianName, String guardianPhoneNums) throws IOException{
+       String now = LocalDateTime.now().format(TIME_FORMAT);
+       CheckinSystem visit = new CheckinSystem(name , gradeSection , lrn , medUsed , Reason ,now,
+                                                "In Clinic" , guardianName ,guardianPhoneNums);
+      
+       try (BufferedWriter bw = new BufferedWriter(new FileWriter(csvFile, true))) {
+        bw.write(visit.toCsvLine());
+        bw.newLine();
+     }
+   }
     
     //LOADS ALL THE Visits
     //reads every record fon the csv file 
     
-     public ArrayList<CheckinSystem> loadAll()  {
-        ArrayList<CheckinSystem> visits = new ArrayList<>();
-        if (!csvFile.exists()) return visits;
+    public ArrayList<CheckinSystem> loadAll() throws IOException {
+    ArrayList<CheckinSystem> visits = new ArrayList<>();
+    if (!csvFile.exists()) return visits;
 
-        try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
-            String line;
-            
-            while ((line = br.readLine()) != null) {
-                String[] data = 
-                        line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
-                
-                if (data.length >= 7) {
-                    for (int i = 0; i < data.length; i++) 
-                        data[i] = data[i].replace("\"", "");
-                    visits.add(new CheckinSystem(
-                            data[0], 
-                            data[1], 
-                            data[2], 
-                            data[3], 
-                            data[4], 
-                            data[5],
-                            data[6]));
-                }
+    try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
+        String line;
+        while ((line = br.readLine()) != null) {
+            String[] data = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+            if (data.length >= 9) {
+                for (int i = 0; i < data.length; i++) data[i] = data[i].replace("\"", "");
+                visits.add(new CheckinSystem(
+                        data[0], 
+                        data[1], 
+                        data[2], 
+                        data[3], 
+                        data[4], 
+                        data[5], 
+                        data[6], 
+                        data[7], 
+                        data[8]));
             }
-        } catch (FileNotFoundException ex) {
-            System.getLogger(VisitCsvService.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-        } catch (IOException ex) {
-            System.getLogger(VisitCsvService.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
         }
-        return visits;
     }
+    return visits;
+}
      
      
       // Returns true if this LRN currently has an active ("In Clinic") visit
