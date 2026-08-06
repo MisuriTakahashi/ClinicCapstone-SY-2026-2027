@@ -5,6 +5,7 @@
 package clinic;
 
 
+import java.awt.Component;
 import java.awt.Graphics2D;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
@@ -27,6 +28,7 @@ public class Dashboard extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Dashboard.class.getName());
     private boolean darkMode = false;
+    private GlassOverlayPanel glassOverlay = new GlassOverlayPanel();
     /**
      * Creates new form Dashboard
      */
@@ -39,7 +41,54 @@ public class Dashboard extends javax.swing.JFrame {
         refreshInventoryStatusDisplay();
         medicineBox();
         InventoryStatusArea.setEditable(false);
+        SentHomeInformationPanel.setVisible(false);
         
+        SentHomeInformationPanel.setOpaque(true);
+        SentHomeInformationPanel.setBackground(java.awt.Color.WHITE);
+
+        // Add a visible border so the popup panel pops out clearly
+        SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200), 1));
+
+        // Ensure child components are brought to the front layer
+        SentHomeInformationPanel.revalidate();
+        SentHomeInformationPanel.repaint();
+        
+        javax.swing.JLayeredPane layeredPane = this.getLayeredPane();
+
+// 2. Add the panel to a higher layer
+        layeredPane.add(SentHomeInformationPanel, javax.swing.JLayeredPane.MODAL_LAYER);
+
+        // 3. Position it over the center of the frame
+        
+        SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(180, 180, 180), 2));
+        SentHomeInformationPanel.setBackground(java.awt.Color.WHITE);
+        SentHomeInformationPanel.setOpaque(true);
+        SentHomeInformationPanel.putClientProperty("JComponent.outline", "gray");
+        SentHomeInformationPanel.putClientProperty("JComponent.arc", 15);
+        SentHomeInformationPanel.setOpaque(true);
+        SentHomeInformationPanel.setBackground(java.awt.Color.WHITE);
+
+        // FlatLaf native arc rounding and subtle outline border
+        SentHomeInformationPanel.putClientProperty("JComponent.arc", 20);
+        SentHomeInformationPanel.putClientProperty("JComponent.outline", new java.awt.Color(210, 215, 220));
+
+        // --- 2. Text Fields Styling (Pill/Rounded Style with Placeholders) ---
+        ParentGurdianName.putClientProperty("JComponent.roundRect", true);
+        ParentGurdianName.putClientProperty("JTextField.placeholderText", "Enter parent/guardian full name...");
+        ParentGurdianName.putClientProperty("JTextField.showClearButton", true);
+
+        PhoneField.putClientProperty("JComponent.roundRect", true);
+        PhoneField.putClientProperty("JTextField.placeholderText", "e.g., 09123456789");
+        PhoneField.putClientProperty("JTextField.showClearButton", true);
+
+        // --- 3. Custom Button Styles (Blue Finish / Red Back) ---
+        FinishBTN.putClientProperty("JButton.buttonType", "roundRect");
+        FinishBTN.setBackground(new java.awt.Color(0, 102, 204));
+        FinishBTN.setForeground(java.awt.Color.WHITE);
+
+        InformationBackBTN.putClientProperty("JButton.buttonType", "roundRect");
+        InformationBackBTN.setBackground(new java.awt.Color(153, 0, 0)); // Dark red tone
+        InformationBackBTN.setForeground(java.awt.Color.WHITE);
         SentHomeInformationPanel.putClientProperty("JComponent.arc", 16);
         SentHomeInformationPanel.setBackground(java.awt.Color.WHITE);
         SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
@@ -62,6 +111,14 @@ public class Dashboard extends javax.swing.JFrame {
         FinishBTN.putClientProperty("JButton.buttonType", "roundRect");
         FinishBTN.setBackground(new java.awt.Color(37, 99, 235)); // Modern Blue (#2563EB)
         FinishBTN.setForeground(java.awt.Color.WHITE);
+        
+        
+        getLayeredPane().add(glassOverlay, javax.swing.JLayeredPane.MODAL_LAYER);
+        getLayeredPane().add(SentHomeInformationPanel, javax.swing.JLayeredPane.POPUP_LAYER);
+
+        // Block mouse clicks from hitting the table underneath
+        glassOverlay.addMouseListener(new java.awt.event.MouseAdapter() {});
+        
         
         
         
@@ -150,10 +207,30 @@ public class Dashboard extends javax.swing.JFrame {
             java.awt.Color borderColor = darkMode
                     ? new java.awt.Color(100, 104, 108)
                     : new java.awt.Color(220, 225, 230);
+            javax.swing.border.Border lineBorder = javax.swing.BorderFactory.createLineBorder(borderColor, 1, true);
+
+        // 2. Create the titled border using your title text and font
+        javax.swing.border.TitledBorder titledBorder = javax.swing.BorderFactory.createTitledBorder(
+            lineBorder,
+            "Parent/Guardian Information",
+            javax.swing.border.TitledBorder.LEFT,
+            javax.swing.border.TitledBorder.TOP,
+            new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 14),
+            darkMode ? java.awt.Color.WHITE : java.awt.Color.BLACK
+        );
+
+        // 3. Add internal padding (CompoundBorder) so components inside don't touch the edges
+        javax.swing.border.Border emptyPadding = javax.swing.BorderFactory.createEmptyBorder(10, 15, 15, 15);
+
+        // 4. Set the final compound border back onto the panel
+        SentHomeInformationPanel.setBorder(
+            javax.swing.BorderFactory.createCompoundBorder(titledBorder, emptyPadding)
+        );
+            
 
             ThemeToggle.setText(darkMode ? "Light mode" : "Dark mode");
             ThemeToggle.setSelected(darkMode);
-
+            
             HeaderPanel.setBackground(headerColor);
             MainPanel.setBackground(pageBackground);
             CounterPanel.setBackground(panelBackground);
@@ -183,7 +260,7 @@ public class Dashboard extends javax.swing.JFrame {
 
             // Summary cards and check-in labels
             jLabel1.setForeground(textColor);
-            jLabel4.setForeground(textColor);
+            SentHomeFooterLabel.setForeground(textColor);
             VisitCounter.setForeground(textColor);
             SentHomeCount.setForeground(textColor);
             jLabel7.setForeground(textColor);
@@ -244,6 +321,24 @@ private void updateDateTimeLabel() {
         java.time.LocalDateTime.now().format(format)
     );
 }
+public class GlassOverlayPanel extends javax.swing.JPanel {
+    public GlassOverlayPanel() {
+        setOpaque(false); // Allows underlying content to render
+    }
+
+    @Override
+    protected void paintComponent(java.awt.Graphics g) {
+        java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+        g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+        
+        // Dark semi-transparent color (Adjust 120 alpha for darker/lighter effect)
+        g2.setColor(new java.awt.Color(0, 0, 0, 120)); 
+        g2.fillRect(0, 0, getWidth(), getHeight());
+        
+        g2.dispose();
+        super.paintComponent(g);
+    }
+}
  
    //ComboBox problem 
     private void medicineBox(){
@@ -298,37 +393,52 @@ private void updateDateTimeLabel() {
     
     //pinapakita yun table and counters and inaupdate
     private void refreshTableAndCounters(){
-         try {
-                
-             currentVisits = visitService.loadAll();
-             
-        DefaultTableModel model = (DefaultTableModel) ReasonTable.getModel();
+          try {
+                 
+              currentVisits = visitService.loadAll();
+              
+         DefaultTableModel model = (DefaultTableModel) ReasonTable.getModel();
 
-        model.setRowCount(0);
+         model.setRowCount(0);
 
-        for (CheckinSystem v : visitService.loadAll()) {
+         for (CheckinSystem v : visitService.loadAll()) {
 
-                  model.addRow(new Object[]{
-                    v.getName(),
-                    v.getGradeSection(),
-                    v.getLrn(),
-                    v.getReason(),
-                    v.getGuardianName(),
-                    v.getGuardianPhoneNums()
-            });
+                   model.addRow(new Object[]{
+                     v.getName(),
+                     v.getGradeSection(),
+                     v.getLrn(),
+                     v.getReason(),
+                     v.getGuardianName(),
+                     v.getGuardianPhoneNums()
+             });
 
-        }
-
-             int[] counts = visitService.getTodayCounts();
-        
-            VisitCounter.setText(String.valueOf(counts[0]));
-            SentHomeCount.setText(String.valueOf(counts[1]));
-
-              } catch (IOException ex) {
-
-                 JOptionPane.showMessageDialog(this, ex.getMessage());
          }
-    }
+
+              int[] counts = visitService.getTodayCounts();
+         
+             VisitCounter.setText(String.valueOf(counts[0]));
+             SentHomeCount.setText(String.valueOf(counts[1]));
+
+              // Update footer with last sent home info
+              CheckinSystem lastSentHome = null;
+              for (CheckinSystem v : visitService.loadAll()) {
+                  if ("Sent Home".equals(v.getStatus())) {
+                      lastSentHome = v;
+                  }
+              }
+              if (lastSentHome != null) {
+                  SentHomeFooterLabel.setText("Last: " + lastSentHome.getName() + " — " + lastSentHome.getReason() + " · " + lastSentHome.getCheckInTime());
+                  SentHomeFooterLabel.setForeground(new java.awt.Color(107, 114, 128));
+              } else {
+                  SentHomeFooterLabel.setText("No students sent home today.");
+                  SentHomeFooterLabel.setForeground(java.awt.Color.GRAY);
+              }
+
+               } catch (IOException ex) {
+
+                  JOptionPane.showMessageDialog(this, ex.getMessage());
+          }
+     }
     
  private void showToast(javax.swing.JPanel parentContainer, String message, boolean isSuccess) {
     // 1. Create and style the toast label
@@ -432,7 +542,7 @@ NOT modify this code. The content of this method is always
         jLabel1 = new javax.swing.JLabel();
         VisitCounter = new javax.swing.JLabel();
         SentHomePanel = new javax.swing.JPanel();
-        jLabel4 = new javax.swing.JLabel();
+        SentHomeFooterLabel = new javax.swing.JLabel();
         SentHomeCount = new javax.swing.JLabel();
         CheckInPanel = new javax.swing.JPanel();
         NameCheckIn = new javax.swing.JTextField();
@@ -466,6 +576,7 @@ NOT modify this code. The content of this method is always
         PNField = new javax.swing.JLabel();
         PhoneField = new javax.swing.JTextField();
         FinishBTN = new javax.swing.JButton();
+        InformationBackBTN = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setFocusable(false);
@@ -568,10 +679,10 @@ NOT modify this code. The content of this method is always
 
         SentHomePanel.setBackground(new java.awt.Color(255, 255, 255));
 
-        jLabel4.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        jLabel4.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel4.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel4.setText("Sent Home");
+        SentHomeFooterLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        SentHomeFooterLabel.setForeground(new java.awt.Color(0, 0, 0));
+        SentHomeFooterLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        SentHomeFooterLabel.setText("Sent Home");
 
         SentHomeCount.setFont(new java.awt.Font("Yu Gothic UI", 1, 36)); // NOI18N
         SentHomeCount.setForeground(new java.awt.Color(0, 0, 0));
@@ -585,7 +696,7 @@ NOT modify this code. The content of this method is always
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, SentHomePanelLayout.createSequentialGroup()
                 .addContainerGap(58, Short.MAX_VALUE)
                 .addGroup(SentHomePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel4, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 113, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(SentHomeFooterLabel, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 113, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, SentHomePanelLayout.createSequentialGroup()
                         .addComponent(SentHomeCount, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(18, 18, 18)))
@@ -595,7 +706,7 @@ NOT modify this code. The content of this method is always
             SentHomePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(SentHomePanelLayout.createSequentialGroup()
                 .addGap(30, 30, 30)
-                .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(SentHomeFooterLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(SentHomeCount, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
@@ -949,26 +1060,35 @@ NOT modify this code. The content of this method is always
         FinishBTN.setText("Finish");
         FinishBTN.addActionListener(this::FinishBTNActionPerformed);
 
+        InformationBackBTN.setBackground(new java.awt.Color(153, 0, 0));
+        InformationBackBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
+        InformationBackBTN.setForeground(new java.awt.Color(255, 255, 255));
+        InformationBackBTN.setText("Back");
+        InformationBackBTN.addActionListener(this::InformationBackBTNActionPerformed);
+
         javax.swing.GroupLayout SentHomeInformationPanelLayout = new javax.swing.GroupLayout(SentHomeInformationPanel);
         SentHomeInformationPanel.setLayout(SentHomeInformationPanelLayout);
         SentHomeInformationPanelLayout.setHorizontalGroup(
             SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
-                .addGap(99, 99, 99)
-                .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
-                        .addComponent(PNField)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(PhoneField, javax.swing.GroupLayout.PREFERRED_SIZE, 323, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(99, 99, 99)
+                        .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
+                                .addComponent(PNField)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(PhoneField, javax.swing.GroupLayout.PREFERRED_SIZE, 323, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
+                                .addComponent(PGNameLabel)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(ParentGurdianName, javax.swing.GroupLayout.PREFERRED_SIZE, 323, javax.swing.GroupLayout.PREFERRED_SIZE))))
                     .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
-                        .addComponent(PGNameLabel)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(ParentGurdianName, javax.swing.GroupLayout.PREFERRED_SIZE, 323, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addGap(266, 266, 266)
+                        .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(InformationBackBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 124, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(FinishBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 124, javax.swing.GroupLayout.PREFERRED_SIZE))))
                 .addContainerGap(128, Short.MAX_VALUE))
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, SentHomeInformationPanelLayout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(FinishBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 129, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(238, 238, 238))
         );
         SentHomeInformationPanelLayout.setVerticalGroup(
             SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -981,9 +1101,11 @@ NOT modify this code. The content of this method is always
                 .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(PhoneField, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(PNField))
-                .addGap(45, 45, 45)
-                .addComponent(FinishBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 58, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(58, Short.MAX_VALUE))
+                .addGap(18, 18, 18)
+                .addComponent(FinishBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 43, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(InformationBackBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 43, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(51, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -1186,7 +1308,30 @@ NOT modify this code. The content of this method is always
        
         ParentGurdianName.setText("");
         PhoneField.setText("");
-        SentHomeInformationPanel.show();
+        if (SentHomeInformationPanel.getParent() != null) {
+        SentHomeInformationPanel.getParent().setComponentZOrder(SentHomeInformationPanel, 0);
+    }
+        glassOverlay.setBounds(0, 0, getWidth(), getHeight());
+    
+    // Optional: If using Option 2 (True Blur), capture screenshot here:
+    // glassOverlay.setBlurImage(getBlurredSnapshot());
+    
+        glassOverlay.setVisible(true);
+
+        // 2. Center the popup panel relative to the window frame
+        int x = (getWidth() - SentHomeInformationPanel.getWidth()) / 2;
+        int y = (getHeight() - SentHomeInformationPanel.getHeight()) / 2;
+        SentHomeInformationPanel.setBounds(x, y, SentHomeInformationPanel.getWidth(), SentHomeInformationPanel.getHeight());
+        SentHomeInformationPanel.setVisible(true);
+
+        // 3. Refresh the layered pane stack
+        getLayeredPane().revalidate();
+        getLayeredPane().repaint();
+
+        // 2. Make it visible and refresh rendering
+        SentHomeInformationPanel.setVisible(true);
+        this.revalidate();
+        this.repaint();
         
         //testing kung gumagana yun Check btn
         System.out.println("Showing Guardian Panel...");
@@ -1276,6 +1421,10 @@ NOT modify this code. The content of this method is always
              showToast(CheckInPanel, "Error saving check-in: " + ex.getMessage(), false);
          }
     }//GEN-LAST:event_FinishBTNActionPerformed
+
+    private void InformationBackBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_InformationBackBTNActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_InformationBackBTNActionPerformed
    
     private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {                                         
             
@@ -1440,6 +1589,17 @@ NOT modify this code. The content of this method is always
         logger.log(java.util.logging.Level.SEVERE, "Error checking product expiration", ex);
     }
 }
+    private void toggleSentHomePanel(boolean visible) {
+    SentHomeInformationPanel.setVisible(visible);
+    
+    // Explicitly toggle visibility for all components inside the panel
+    for (Component comp : SentHomeInformationPanel.getComponents()) {
+        comp.setVisible(visible);
+    }
+    
+    this.revalidate();
+    this.repaint();
+}
     
     /**
      * @param args the command line arguments
@@ -1459,6 +1619,7 @@ NOT modify this code. The content of this method is always
     private javax.swing.JButton FinishBTN;
     private javax.swing.JTextField GSCheckIn;
     private javax.swing.JPanel HeaderPanel;
+    private javax.swing.JButton InformationBackBTN;
     private javax.swing.JLabel InventoryLabel;
     private javax.swing.JPanel InventoryPanel;
     private javax.swing.JTextArea InventoryStatusArea;
@@ -1476,6 +1637,7 @@ NOT modify this code. The content of this method is always
     private javax.swing.JTable ReasonTable;
     private javax.swing.JButton SentHomeBTN;
     private javax.swing.JLabel SentHomeCount;
+    private javax.swing.JLabel SentHomeFooterLabel;
     private javax.swing.JPanel SentHomeInformationPanel;
     private javax.swing.JPanel SentHomePanel;
     private javax.swing.JLabel StudentCheckinLabel;
@@ -1488,7 +1650,6 @@ NOT modify this code. The content of this method is always
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel11;
     private javax.swing.JLabel jLabel3;
-    private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel7;
     private javax.swing.JLabel jLabel8;
     private javax.swing.JLabel jLabel9;
