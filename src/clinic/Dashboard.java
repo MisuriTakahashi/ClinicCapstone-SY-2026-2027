@@ -40,6 +40,30 @@ public class Dashboard extends javax.swing.JFrame {
         medicineBox();
         InventoryStatusArea.setEditable(false);
         
+        SentHomeInformationPanel.putClientProperty("JComponent.arc", 16);
+        SentHomeInformationPanel.setBackground(java.awt.Color.WHITE);
+        SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(220, 225, 230), 1, true),
+            javax.swing.BorderFactory.createEmptyBorder(20, 20, 20, 20)
+        ));
+
+        // 2. Style the text input fields with round borders and placeholders
+        ParentGurdianName.setText("");
+        ParentGurdianName.putClientProperty("JComponent.roundRect", true);
+        ParentGurdianName.putClientProperty("JTextField.placeholderText", "Enter parent/guardian full name...");
+        ParentGurdianName.putClientProperty("JTextField.showClearButton", true);
+
+        PhoneField.setText("");
+        PhoneField.putClientProperty("JComponent.roundRect", true);
+        PhoneField.putClientProperty("JTextField.placeholderText", "e.g., 09123456789");
+        PhoneField.putClientProperty("JTextField.showClearButton", true);
+
+        // 3. Style the Action Button to match your primary theme buttons
+        FinishBTN.putClientProperty("JButton.buttonType", "roundRect");
+        FinishBTN.setBackground(new java.awt.Color(37, 99, 235)); // Modern Blue (#2563EB)
+        FinishBTN.setForeground(java.awt.Color.WHITE);
+        
+        
         
         VisitPanel.putClientProperty("JComponent.arc", 25);
         SentHomePanel.putClientProperty("JComponent.arc", 25);
@@ -138,6 +162,16 @@ public class Dashboard extends javax.swing.JFrame {
             InventoryPanel.setBackground(panelBackground);
             VisitPanel.setBackground(cardBackground);
             SentHomePanel.setBackground(cardBackground);
+            
+            SentHomeInformationPanel.setBackground(cardBackground);
+            PGNameLabel.setForeground(textColor);
+            PNField.setForeground(textColor);
+            ParentGurdianName.setBackground(inputBackground);
+            ParentGurdianName.setForeground(textColor);
+            PhoneField.setBackground(inputBackground);
+            PhoneField.setForeground(textColor);
+            
+            
 
             // Header and section titles
             jLabel3.setForeground(java.awt.Color.WHITE);
@@ -424,6 +458,12 @@ NOT modify this code. The content of this method is always
         LogsLabel = new javax.swing.JLabel();
         StudentCheckinLabel = new javax.swing.JLabel();
         ThemeToggle = new javax.swing.JToggleButton();
+        SentHomeInformationPanel = new javax.swing.JPanel();
+        ParentGurdianName = new javax.swing.JTextField();
+        PGNameLabel = new javax.swing.JLabel();
+        PNField = new javax.swing.JLabel();
+        PhoneField = new javax.swing.JTextField();
+        FinishBTN = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setFocusable(false);
@@ -456,10 +496,13 @@ NOT modify this code. The content of this method is always
         HeaderPanelLayout.setHorizontalGroup(
             HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(HeaderPanelLayout.createSequentialGroup()
-                .addGap(17, 17, 17)
                 .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 405, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 564, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(HeaderPanelLayout.createSequentialGroup()
+                        .addGap(17, 17, 17)
+                        .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 405, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(HeaderPanelLayout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 564, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 141, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
@@ -471,16 +514,16 @@ NOT modify this code. The content of this method is always
             .addGroup(HeaderPanelLayout.createSequentialGroup()
                 .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(HeaderPanelLayout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(jLabel3)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(HeaderPanelLayout.createSequentialGroup()
                         .addGap(26, 26, 26)
                         .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                .addGap(0, 16, Short.MAX_VALUE))
+                            .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                    .addGroup(HeaderPanelLayout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jLabel3)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addGap(0, 11, Short.MAX_VALUE))
         );
 
         CounterPanel.setBackground(new java.awt.Color(229, 226, 226));
@@ -597,15 +640,15 @@ NOT modify this code. The content of this method is always
         ReasonArea.setRows(5);
         jScrollPane1.setViewportView(ReasonArea);
 
-        jLabel7.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        jLabel7.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
         jLabel7.setForeground(new java.awt.Color(0, 0, 0));
         jLabel7.setText("Name");
 
-        jLabel8.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        jLabel8.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
         jLabel8.setForeground(new java.awt.Color(0, 0, 0));
         jLabel8.setText("Grade/Section");
 
-        jLabel9.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        jLabel9.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
         jLabel9.setForeground(new java.awt.Color(0, 0, 0));
         jLabel9.setText("Reason for Visit");
 
@@ -621,7 +664,7 @@ NOT modify this code. The content of this method is always
         EditBTN.setText("Edit");
         EditBTN.addActionListener(this::EditBTNActionPerformed);
 
-        jLabel11.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        jLabel11.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
         jLabel11.setForeground(new java.awt.Color(0, 0, 0));
         jLabel11.setText("Medicine used");
 
@@ -633,7 +676,7 @@ NOT modify this code. The content of this method is always
         SentHomeBTN.setText("Sent Home");
         SentHomeBTN.addActionListener(this::SentHomeBTNActionPerformed);
 
-        LRNLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        LRNLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
         LRNLabel.setForeground(new java.awt.Color(0, 0, 0));
         LRNLabel.setText("LRN");
 
@@ -676,7 +719,7 @@ NOT modify this code. The content of this method is always
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(SentHomeBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 123, javax.swing.GroupLayout.PREFERRED_SIZE)))
                         .addGap(40, 40, 40)))
-                .addContainerGap(15, Short.MAX_VALUE))
+                .addContainerGap(43, Short.MAX_VALUE))
         );
         CheckInPanelLayout.setVerticalGroup(
             CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -698,9 +741,9 @@ NOT modify this code. The content of this method is always
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 90, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel11))
+                .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(jComboBox1)
+                    .addComponent(jLabel11, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(EditBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -730,7 +773,10 @@ NOT modify this code. The content of this method is always
         );
         InventoryPanelLayout.setVerticalGroup(
             InventoryPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane3, javax.swing.GroupLayout.Alignment.TRAILING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, InventoryPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane3)
+                .addContainerGap())
         );
 
         InventoryLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
@@ -780,7 +826,7 @@ NOT modify this code. The content of this method is always
             CheckInPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CheckInPanel1Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 548, Short.MAX_VALUE)
+                .addComponent(jScrollPane2)
                 .addContainerGap())
         );
         CheckInPanel1Layout.setVerticalGroup(
@@ -815,37 +861,39 @@ NOT modify this code. The content of this method is always
             MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addComponent(HeaderPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(MainPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(MainPanelLayout.createSequentialGroup()
-                        .addGap(137, 137, 137)
-                        .addComponent(StudentCheckinLabel)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(LogsLabel)
-                        .addGap(264, 264, 264))
-                    .addGroup(MainPanelLayout.createSequentialGroup()
-                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainPanelLayout.createSequentialGroup()
-                                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(CounterPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addGroup(MainPanelLayout.createSequentialGroup()
-                                        .addGap(196, 196, 196)
-                                        .addComponent(OverviewLabel)))
-                                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addGroup(MainPanelLayout.createSequentialGroup()
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                        .addComponent(InventoryLabel)
-                                        .addGap(168, 168, 168))
-                                    .addGroup(MainPanelLayout.createSequentialGroup()
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                        .addComponent(InventoryPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
-                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainPanelLayout.createSequentialGroup()
-                                .addComponent(CheckInPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(183, 183, 183)
+                .addComponent(StudentCheckinLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(LogsLabel)
+                .addGap(267, 267, 267))
+            .addGroup(MainPanelLayout.createSequentialGroup()
+                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainPanelLayout.createSequentialGroup()
+                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(MainPanelLayout.createSequentialGroup()
+                                .addGap(24, 24, 24)
+                                .addComponent(CounterPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(MainPanelLayout.createSequentialGroup()
+                                .addGap(220, 220, 220)
+                                .addComponent(OverviewLabel)))
+                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(MainPanelLayout.createSequentialGroup()
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 234, Short.MAX_VALUE)
+                                .addComponent(InventoryLabel)
+                                .addGap(235, 235, 235))
+                            .addGroup(MainPanelLayout.createSequentialGroup()
                                 .addGap(18, 18, 18)
-                                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                    .addComponent(CheckInPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(ThemeToggle, javax.swing.GroupLayout.PREFERRED_SIZE, 141, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                        .addGap(39, 39, 39))))
+                                .addComponent(InventoryPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainPanelLayout.createSequentialGroup()
+                        .addGap(39, 39, 39)
+                        .addComponent(CheckInPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(18, 18, 18)
+                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(CheckInPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addGroup(MainPanelLayout.createSequentialGroup()
+                                .addGap(0, 0, Short.MAX_VALUE)
+                                .addComponent(ThemeToggle, javax.swing.GroupLayout.PREFERRED_SIZE, 141, javax.swing.GroupLayout.PREFERRED_SIZE)))))
+                .addGap(29, 29, 29))
         );
         MainPanelLayout.setVerticalGroup(
             MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -860,7 +908,7 @@ NOT modify this code. The content of this method is always
                     .addComponent(InventoryPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(CounterPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(StudentCheckinLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(LogsLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -870,18 +918,89 @@ NOT modify this code. The content of this method is always
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(ThemeToggle, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addComponent(CheckInPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(12, Short.MAX_VALUE))
+        );
+
+        SentHomeInformationPanel.setBackground(new java.awt.Color(255, 255, 255));
+        SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED), javax.swing.BorderFactory.createTitledBorder(null, "Parent/Guardian Information", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Yu Gothic UI", 1, 18), new java.awt.Color(0, 0, 0)))); // NOI18N
+        SentHomeInformationPanel.setForeground(new java.awt.Color(0, 0, 0));
+
+        ParentGurdianName.setBackground(new java.awt.Color(227, 226, 226));
+        ParentGurdianName.setForeground(new java.awt.Color(0, 0, 0));
+
+        PGNameLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
+        PGNameLabel.setForeground(new java.awt.Color(0, 0, 0));
+        PGNameLabel.setText("Name :");
+
+        PNField.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
+        PNField.setForeground(new java.awt.Color(0, 0, 0));
+        PNField.setText("Phone Number :");
+
+        PhoneField.setBackground(new java.awt.Color(227, 226, 226));
+        PhoneField.setForeground(new java.awt.Color(0, 0, 0));
+
+        FinishBTN.setBackground(new java.awt.Color(0, 102, 204));
+        FinishBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
+        FinishBTN.setForeground(new java.awt.Color(255, 255, 255));
+        FinishBTN.setText("Finish");
+        FinishBTN.addActionListener(this::FinishBTNActionPerformed);
+
+        javax.swing.GroupLayout SentHomeInformationPanelLayout = new javax.swing.GroupLayout(SentHomeInformationPanel);
+        SentHomeInformationPanel.setLayout(SentHomeInformationPanelLayout);
+        SentHomeInformationPanelLayout.setHorizontalGroup(
+            SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
+                .addGap(99, 99, 99)
+                .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
+                        .addComponent(PNField)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(PhoneField, javax.swing.GroupLayout.PREFERRED_SIZE, 323, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
+                        .addComponent(PGNameLabel)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(ParentGurdianName, javax.swing.GroupLayout.PREFERRED_SIZE, 323, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(128, Short.MAX_VALUE))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, SentHomeInformationPanelLayout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(FinishBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 129, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(238, 238, 238))
+        );
+        SentHomeInformationPanelLayout.setVerticalGroup(
+            SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
+                .addGap(67, 67, 67)
+                .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(ParentGurdianName, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(PGNameLabel))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(PhoneField, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(PNField))
+                .addGap(45, 45, 45)
+                .addComponent(FinishBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 58, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(58, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(MainPanel, javax.swing.GroupLayout.PREFERRED_SIZE, 1032, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addComponent(MainPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(layout.createSequentialGroup()
+                    .addGap(226, 226, 226)
+                    .addComponent(SentHomeInformationPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addContainerGap(253, Short.MAX_VALUE)))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(MainPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addComponent(MainPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(layout.createSequentialGroup()
+                    .addGap(236, 236, 236)
+                    .addComponent(SentHomeInformationPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addContainerGap(198, Short.MAX_VALUE)))
         );
 
         pack();
@@ -1101,6 +1220,10 @@ NOT modify this code. The content of this method is always
     private void ThemeToggleActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ThemeToggleActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_ThemeToggleActionPerformed
+
+    private void FinishBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_FinishBTNActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_FinishBTNActionPerformed
    
     private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {                                         
             
@@ -1281,6 +1404,7 @@ NOT modify this code. The content of this method is always
     private javax.swing.JPanel CounterPanel;
     private javax.swing.JLabel DateTimeLabel;
     private javax.swing.JButton EditBTN;
+    private javax.swing.JButton FinishBTN;
     private javax.swing.JTextField GSCheckIn;
     private javax.swing.JPanel HeaderPanel;
     private javax.swing.JLabel InventoryLabel;
@@ -1292,10 +1416,15 @@ NOT modify this code. The content of this method is always
     private javax.swing.JPanel MainPanel;
     private javax.swing.JTextField NameCheckIn;
     private javax.swing.JLabel OverviewLabel;
+    private javax.swing.JLabel PGNameLabel;
+    private javax.swing.JLabel PNField;
+    private javax.swing.JTextField ParentGurdianName;
+    private javax.swing.JTextField PhoneField;
     private javax.swing.JTextArea ReasonArea;
     private javax.swing.JTable ReasonTable;
     private javax.swing.JButton SentHomeBTN;
     private javax.swing.JLabel SentHomeCount;
+    private javax.swing.JPanel SentHomeInformationPanel;
     private javax.swing.JPanel SentHomePanel;
     private javax.swing.JLabel StudentCheckinLabel;
     private javax.swing.JToggleButton ThemeToggle;
