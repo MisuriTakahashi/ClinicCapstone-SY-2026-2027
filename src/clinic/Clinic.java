@@ -28,7 +28,7 @@ public class Clinic {
        
         java.awt.EventQueue.invokeLater(() -> {
             //new Dashboard().setVisible(true);
-            new Dashboard().setVisible(true);
+            new LoginUi().setVisible(true);
            
         });
         

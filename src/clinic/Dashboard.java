@@ -29,157 +29,184 @@ public class Dashboard extends javax.swing.JFrame {
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Dashboard.class.getName());
     private boolean darkMode = false;
     private GlassOverlayPanel glassOverlay = new GlassOverlayPanel();
+    private AccountSystem loggedInAccount;
     /**
      * Creates new form Dashboard
      */
-    public Dashboard() {
-        initComponents();
-        ((AbstractDocument) NameCheckIn.getDocument()).setDocumentFilter(new NameInputFilter());
-        ((AbstractDocument) ParentGurdianName.getDocument()).setDocumentFilter(new NameInputFilter());
-        ((AbstractDocument) PhoneField.getDocument()).setDocumentFilter(new PhoneNumberFilter());
-        setLocationRelativeTo(null);
-        startDateTimeClock();
-        refreshTableAndCounters();
-        refreshInventoryStatusDisplay();
-        medicineBox();
-        InventoryStatusArea.setEditable(false);
-        SentHomeInformationPanel.setVisible(false);
-        
-        SentHomeInformationPanel.setOpaque(true);
-        SentHomeInformationPanel.setBackground(java.awt.Color.WHITE);
+  
+            // Used when you just want to preview/open Dashboard
+            // has no design whatsoever 
+            /*public Dashboard() {
+            initComponents();
 
-        // Add a visible border so the popup panel pops out clearly
-        SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200), 1));
+            this.loggedInAccount = null;
 
-        // Ensure child components are brought to the front layer
-        SentHomeInformationPanel.revalidate();
-        SentHomeInformationPanel.repaint();
-        
-        javax.swing.JLayeredPane layeredPane = this.getLayeredPane();
+            setLocationRelativeTo(null);
+            startDateTimeClock();
+            refreshTableAndCounters();
+            refreshInventoryStatusDisplay();
+            medicineBox();
 
-// 2. Add the panel to a higher layer
-        layeredPane.add(SentHomeInformationPanel, javax.swing.JLayeredPane.MODAL_LAYER);
+            jButton1.setVisible(false);
+            
+        }*/
+            
+            // Used when opening Dashboard normally after login
+        public Dashboard(AccountSystem account) {
+            this.loggedInAccount = account;
+            
+            initComponents();
+            
+            ((AbstractDocument) NameCheckIn.getDocument()).setDocumentFilter(new NameInputFilter()); //this is an input filter for NameCheckin which dont allows numbers
+            ((AbstractDocument) ParentGurdianName.getDocument()).setDocumentFilter(new NameInputFilter()); //this also and input filter for the parentName which do not allows numbers too
+            ((AbstractDocument) PhoneField.getDocument()).setDocumentFilter(new PhoneNumberFilter()); // this only allows 09 number and also 11 digits only 
+            jButton1.setVisible(loggedInAccount.isAdmin());
+            setLocationRelativeTo(null);
+            
+            //this already shows the time and Table and Counters and display the inventoryStatus and medicinebox which is the comboBox
+            startDateTimeClock();
+            refreshTableAndCounters();
+            refreshInventoryStatusDisplay();
+            medicineBox();
+            
+            InventoryStatusArea.setEditable(false);
+            SentHomeInformationPanel.setVisible(false);
 
-        // 3. Position it over the center of the frame
-        
-        SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(180, 180, 180), 2));
-        SentHomeInformationPanel.setBackground(java.awt.Color.WHITE);
-        SentHomeInformationPanel.setOpaque(true);
-        SentHomeInformationPanel.putClientProperty("JComponent.outline", "gray");
-        SentHomeInformationPanel.putClientProperty("JComponent.arc", 15);
-        SentHomeInformationPanel.setOpaque(true);
-        SentHomeInformationPanel.setBackground(java.awt.Color.WHITE);
+            SentHomeInformationPanel.setOpaque(true);
+            SentHomeInformationPanel.setBackground(java.awt.Color.WHITE);
 
-        // FlatLaf native arc rounding and subtle outline border
-        SentHomeInformationPanel.putClientProperty("JComponent.arc", 20);
-        SentHomeInformationPanel.putClientProperty("JComponent.outline", new java.awt.Color(210, 215, 220));
+            // Add a visible border so the popup panel pops out clearly
+            SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200), 1));
 
-        // --- 2. Text Fields Styling (Pill/Rounded Style with Placeholders) ---
-        ParentGurdianName.putClientProperty("JComponent.roundRect", true);
-        ParentGurdianName.putClientProperty("JTextField.placeholderText", "Enter parent/guardian full name...");
-        ParentGurdianName.putClientProperty("JTextField.showClearButton", true);
+            // Ensure child components are brought to the front layer
+            SentHomeInformationPanel.revalidate();
+            SentHomeInformationPanel.repaint();
 
-        PhoneField.putClientProperty("JComponent.roundRect", true);
-        PhoneField.putClientProperty("JTextField.placeholderText", "e.g., 09123456789");
-        PhoneField.putClientProperty("JTextField.showClearButton", true);
+            javax.swing.JLayeredPane layeredPane = this.getLayeredPane();
 
-        // --- 3. Custom Button Styles (Blue Finish / Red Back) ---
-        FinishBTN.putClientProperty("JButton.buttonType", "roundRect");
-        FinishBTN.setBackground(new java.awt.Color(0, 102, 204));
-        FinishBTN.setForeground(java.awt.Color.WHITE);
+    // 2. Add the panel to a higher layer
+            layeredPane.add(SentHomeInformationPanel, javax.swing.JLayeredPane.MODAL_LAYER);
 
-        InformationBackBTN.putClientProperty("JButton.buttonType", "roundRect");
-        InformationBackBTN.setBackground(new java.awt.Color(153, 0, 0)); // Dark red tone
-        InformationBackBTN.setForeground(java.awt.Color.WHITE);
-        SentHomeInformationPanel.putClientProperty("JComponent.arc", 16);
-        SentHomeInformationPanel.setBackground(java.awt.Color.WHITE);
-        SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(220, 225, 230), 1, true),
-            javax.swing.BorderFactory.createEmptyBorder(20, 20, 20, 20)
-        ));
+            // 3. Position it over the center of the frame
 
-        // 2. Style the text input fields with round borders and placeholders
-        ParentGurdianName.setText("");
-        ParentGurdianName.putClientProperty("JComponent.roundRect", true);
-        ParentGurdianName.putClientProperty("JTextField.placeholderText", "Enter parent/guardian full name...");
-        ParentGurdianName.putClientProperty("JTextField.showClearButton", true);
+            SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(180, 180, 180), 2));
+            SentHomeInformationPanel.setBackground(java.awt.Color.WHITE);
+            SentHomeInformationPanel.setOpaque(true);
+            SentHomeInformationPanel.putClientProperty("JComponent.outline", "gray");
+            SentHomeInformationPanel.putClientProperty("JComponent.arc", 15);
+            SentHomeInformationPanel.setOpaque(true);
+            SentHomeInformationPanel.setBackground(java.awt.Color.WHITE);
 
-        PhoneField.setText("");
-        PhoneField.putClientProperty("JComponent.roundRect", true);
-        PhoneField.putClientProperty("JTextField.placeholderText", "e.g., 09123456789");
-        PhoneField.putClientProperty("JTextField.showClearButton", true);
+            // FlatLaf native arc rounding and subtle outline border
+            SentHomeInformationPanel.putClientProperty("JComponent.arc", 20);
+            SentHomeInformationPanel.putClientProperty("JComponent.outline", new java.awt.Color(210, 215, 220));
 
-        // 3. Style the Action Button to match your primary theme buttons
-        FinishBTN.putClientProperty("JButton.buttonType", "roundRect");
-        FinishBTN.setBackground(new java.awt.Color(37, 99, 235)); // Modern Blue (#2563EB)
-        FinishBTN.setForeground(java.awt.Color.WHITE);
-        
-        
-        getLayeredPane().add(glassOverlay, javax.swing.JLayeredPane.MODAL_LAYER);
-        getLayeredPane().add(SentHomeInformationPanel, javax.swing.JLayeredPane.POPUP_LAYER);
+            // --- 2. Text Fields Styling (Pill/Rounded Style with Placeholders) ---
+            ParentGurdianName.putClientProperty("JComponent.roundRect", true);
+            ParentGurdianName.putClientProperty("JTextField.placeholderText", "Enter parent/guardian full name...");
+            ParentGurdianName.putClientProperty("JTextField.showClearButton", true);
 
-        // Block mouse clicks from hitting the table underneath
-        glassOverlay.addMouseListener(new java.awt.event.MouseAdapter() {});
-        
-        
-        
-        
-        VisitPanel.putClientProperty("JComponent.arc", 25);
-        SentHomePanel.putClientProperty("JComponent.arc", 25);
-        CheckInPanel.putClientProperty("JComponent.arc", 25);
-        InventoryPanel.putClientProperty("JComponent.arc", 25);
-        
-        java.awt.Color softSlate = new java.awt.Color(245, 247, 250); 
-        CheckInPanel.setBackground(softSlate);
-        CounterPanel.setBackground(softSlate);
-        InventoryPanel.setBackground(softSlate);
-        MainPanel.setBackground(java.awt.Color.WHITE); // Bright, clean backdrop
+            PhoneField.putClientProperty("JComponent.roundRect", true);
+            PhoneField.putClientProperty("JTextField.placeholderText", "e.g., 09123456789");
+            PhoneField.putClientProperty("JTextField.showClearButton", true);
 
-        // --- 2. Flat UI Unified Table & ScrollPane Fixes ---
-        ReasonTable.setFillsViewportHeight(true); // Keeps entire viewport area uniform white
-        ReasonTable.setBackground(java.awt.Color.WHITE);
-        jScrollPane2.getViewport().setBackground(java.awt.Color.WHITE); 
-        jScrollPane2.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(220, 225, 230)));
+            // --- 3. Custom Button Styles (Blue Finish / Red Back) ---
+            FinishBTN.putClientProperty("JButton.buttonType", "roundRect");
+            FinishBTN.setBackground(new java.awt.Color(0, 102, 204));
+            FinishBTN.setForeground(java.awt.Color.WHITE);
 
-        // Clean up text areas and inventory panels
-        InventoryStatusArea.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        jScrollPane3.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(220, 225, 230)));
-        ReasonArea.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 8, 6, 8));
-        jScrollPane1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(220, 225, 230)));
+            InformationBackBTN.putClientProperty("JButton.buttonType", "roundRect");
+            InformationBackBTN.setBackground(new java.awt.Color(153, 0, 0)); // Dark red tone
+            InformationBackBTN.setForeground(java.awt.Color.WHITE);
+            SentHomeInformationPanel.putClientProperty("JComponent.arc", 16);
+            SentHomeInformationPanel.setBackground(java.awt.Color.WHITE);
+            SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(220, 225, 230), 1, true),
+                javax.swing.BorderFactory.createEmptyBorder(20, 20, 20, 20)
+            ));
 
-        // --- 3. Sleek Inputs & Smart Placeholders ---
-        // Clear default text values ("Name" / "Grade/Section") so placeholders take over
-        NameCheckIn.setText("");
-        NameCheckIn.putClientProperty("JComponent.roundRect", true);
-        NameCheckIn.putClientProperty("JTextField.placeholderText", "Enter student's full name...");
-        NameCheckIn.putClientProperty("JTextField.showClearButton", true); // Quick clear 'X' icon
+            // 2. Style the text input fields with round borders and placeholders
+            ParentGurdianName.setText("");
+            ParentGurdianName.putClientProperty("JComponent.roundRect", true);
+            ParentGurdianName.putClientProperty("JTextField.placeholderText", "Enter parent/guardian full name...");
+            ParentGurdianName.putClientProperty("JTextField.showClearButton", true);
 
-        GSCheckIn.setText("");
-        GSCheckIn.putClientProperty("JComponent.roundRect", true);
-        GSCheckIn.putClientProperty("JTextField.placeholderText", "e.g., Grade 12 - ICT");
-        
-        LRNField.setText("");
-        LRNField.putClientProperty("JComponent.roundRect", true);
-        LRNField.putClientProperty("JTextField.placeholderText", "e.g., 10940900001");
+            PhoneField.setText("");
+            PhoneField.putClientProperty("JComponent.roundRect", true);
+            PhoneField.putClientProperty("JTextField.placeholderText", "e.g., 09123456789");
+            PhoneField.putClientProperty("JTextField.showClearButton", true);
 
-        // --- 4. Round Modern Component Elements ---
-        CheckInBTN.putClientProperty("JButton.buttonType", "roundRect");
-        EditBTN.putClientProperty("JButton.buttonType", "roundRect");
-        jButton1.putClientProperty("JButton.buttonType", "roundRect"); // Admin button
-        jComboBox1.putClientProperty("JComponent.roundRect", true);
-        SentHomeBTN.putClientProperty("JButton.buttonType", "roundRect");
-        
-        ThemeToggle.setText("Dark mode");
-        ThemeToggle.addActionListener(e -> {
-            darkMode = ThemeToggle.isSelected();
+            // 3. Style the Action Button to match your primary theme buttons
+            FinishBTN.putClientProperty("JButton.buttonType", "roundRect");
+            FinishBTN.setBackground(new java.awt.Color(37, 99, 235)); // Modern Blue (#2563EB)
+            FinishBTN.setForeground(java.awt.Color.WHITE);
+
+
+            getLayeredPane().add(glassOverlay, javax.swing.JLayeredPane.MODAL_LAYER);
+            getLayeredPane().add(SentHomeInformationPanel, javax.swing.JLayeredPane.POPUP_LAYER);
+
+            // Block mouse clicks from hitting the table underneath
+            glassOverlay.addMouseListener(new java.awt.event.MouseAdapter() {});
+
+
+
+
+            VisitPanel.putClientProperty("JComponent.arc", 25);
+            SentHomePanel.putClientProperty("JComponent.arc", 25);
+            CheckInPanel.putClientProperty("JComponent.arc", 25);
+            InventoryPanel.putClientProperty("JComponent.arc", 25);
+
+            java.awt.Color softSlate = new java.awt.Color(245, 247, 250); 
+            CheckInPanel.setBackground(softSlate);
+            CounterPanel.setBackground(softSlate);
+            InventoryPanel.setBackground(softSlate);
+            MainPanel.setBackground(java.awt.Color.WHITE); // Bright, clean backdrop
+
+            // --- 2. Flat UI Unified Table & ScrollPane Fixes ---
+            ReasonTable.setFillsViewportHeight(true); // Keeps entire viewport area uniform white
+            ReasonTable.setBackground(java.awt.Color.WHITE);
+            jScrollPane2.getViewport().setBackground(java.awt.Color.WHITE); 
+            jScrollPane2.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(220, 225, 230)));
+
+            // Clean up text areas and inventory panels
+            InventoryStatusArea.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            jScrollPane3.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(220, 225, 230)));
+            ReasonArea.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 8, 6, 8));
+            jScrollPane1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(220, 225, 230)));
+
+            // --- 3. Sleek Inputs & Smart Placeholders ---
+            // Clear default text values ("Name" / "Grade/Section") so placeholders take over
+            NameCheckIn.setText("");
+            NameCheckIn.putClientProperty("JComponent.roundRect", true);
+            NameCheckIn.putClientProperty("JTextField.placeholderText", "Enter student's full name...");
+            NameCheckIn.putClientProperty("JTextField.showClearButton", true); // Quick clear 'X' icon
+
+            GSCheckIn.setText("");
+            GSCheckIn.putClientProperty("JComponent.roundRect", true);
+            GSCheckIn.putClientProperty("JTextField.placeholderText", "e.g., Grade 12 - ICT");
+
+            LRNField.setText("");
+            LRNField.putClientProperty("JComponent.roundRect", true);
+            LRNField.putClientProperty("JTextField.placeholderText", "e.g., 10940900001");
+
+            // --- 4. Round Modern Component Elements ---
+            CheckInBTN.putClientProperty("JButton.buttonType", "roundRect");
+            EditBTN.putClientProperty("JButton.buttonType", "roundRect");
+            jButton1.putClientProperty("JButton.buttonType", "roundRect"); // Admin button
+            jComboBox1.putClientProperty("JComponent.roundRect", true);
+            SentHomeBTN.putClientProperty("JButton.buttonType", "roundRect");
+
+            ThemeToggle.setText("Dark mode");
+            ThemeToggle.addActionListener(e -> {
+                darkMode = ThemeToggle.isSelected();
+                applyTheme();
+            });
+
+            // Apply the starting light theme
             applyTheme();
-        });
+            checkExpiredProducts();
 
-        // Apply the starting light theme
-        applyTheme();
-        checkExpiredProducts();
-        
-    }
+        }
     private void applyTheme() {
         try {
             if (darkMode) {
@@ -1135,8 +1162,19 @@ NOT modify this code. The content of this method is always
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        new AdminPanel().setVisible(true);
-        this.dispose();
+       if (loggedInAccount == null || !loggedInAccount.isAdmin()) {
+
+        showToast(
+                MainPanel,
+                "Access denied. Admin role required.",
+                false
+        );
+
+        return;
+    }
+
+        new AdminPanel(loggedInAccount).setVisible(true);
+        this.dispose(); 
     }//GEN-LAST:event_jButton1ActionPerformed
 
     
@@ -1226,12 +1264,49 @@ NOT modify this code. The content of this method is always
         showToast(CheckInPanel, "Inventory error: Medicine list is empty!", false);
         return;
     }
+        //if else if statement for feilds 
+        if (name.isEmpty() && gradeSection.isEmpty() && lrn.isEmpty()) {
 
-    //Required Fields Validation
-    if (name.isEmpty() || gradeSection.isEmpty() || lrn.isEmpty()) {
-        showToast(CheckInPanel, "Name, Grade/Section, and LRN are required!", false);
-        return;
-    }
+       
+            showToast(CheckInPanel,"Name, Grade/Section, and LRN are required!",false);
+            return;
+
+         } else if (name.isEmpty() && gradeSection.isEmpty()) {
+
+             
+            showToast( CheckInPanel,"Name and Grade/Section are required!",false);
+            return;
+
+         } else if (name.isEmpty() && lrn.isEmpty()) {
+
+        
+             showToast(CheckInPanel,"Name and LRN are required!",false);
+             return;
+
+         } else if (gradeSection.isEmpty() && lrn.isEmpty()) {
+
+          
+             showToast(CheckInPanel,"Grade/Section and LRN are required!",false);
+             return;
+
+         } else if (name.isEmpty()) {
+
+            
+             showToast(CheckInPanel,"Name is required!",false);
+             return;
+
+         } else if (gradeSection.isEmpty()) {
+
+            
+             showToast(CheckInPanel,"Grade/Section is required!",false);
+             return;
+
+         } else if (lrn.isEmpty()) {
+
+             
+             showToast( CheckInPanel, "LRN is required!", false);
+             return;
+         }
 
     // LRN Format Validation
     if (!lrn.matches("\\d{12}")) {
@@ -1642,7 +1717,7 @@ NOT modify this code. The content of this method is always
      */
     public static void main(String args[]) {
         com.formdev.flatlaf.FlatLightLaf.setup();
-        java.awt.EventQueue.invokeLater(() -> new Dashboard().setVisible(true));
+        //java.awt.EventQueue.invokeLater(() -> new Dashboard().setVisible(true));
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

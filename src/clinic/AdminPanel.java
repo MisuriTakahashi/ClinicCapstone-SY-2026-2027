@@ -44,15 +44,17 @@ public class AdminPanel extends javax.swing.JFrame {
     private final ProductCsvService productService = new ProductCsvService("products.csv", "inventory_activity.log");
     private ArrayList<Product> currentProducts = new ArrayList<>();
     private String selectedProductName = null;
+    private AccountSystem loggedInAccount;
 
     /**
      * Creates the administrator inventory panel.
      */
-    public AdminPanel() {
+    public AdminPanel(AccountSystem account) {
         initComponents();
         configureFlatLafUi();
         statisticsContainer.setVisible(false);
         AccountManagementPanel.setVisible(false);
+        this.loggedInAccount = account;
         configureAccountManagementUi();
         ((AbstractDocument) ExpDate.getDocument()).setDocumentFilter(new DateInputFilter());
         setLocationRelativeTo(null);
@@ -60,6 +62,7 @@ public class AdminPanel extends javax.swing.JFrame {
         refreshActivityLogDisplay();
         refreshInventoryTable();
         loadStatistics();
+        refreshAccountTable();
     }
 
     /** Applies the FlatLaf treatment after NetBeans creates the form controls. */
@@ -303,13 +306,13 @@ private void configureAccountManagementUi() {
     AccountManagementPanel.setBackground(page);
 
     // ---------- Table (match stockTable) ----------
-    jTable1.setRowHeight(38);
-    jTable1.setShowVerticalLines(false);
-    jTable1.setShowHorizontalLines(true);
-    jTable1.setGridColor(border);
-    jTable1.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-    jTable1.setForeground(textSecondary);
-    jTable1.getTableHeader().putClientProperty(FlatClientProperties.STYLE,
+    ACTTable.setRowHeight(38);
+    ACTTable.setShowVerticalLines(false);
+    ACTTable.setShowHorizontalLines(true);
+    ACTTable.setGridColor(border);
+    ACTTable.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+    ACTTable.setForeground(textSecondary);
+    ACTTable.getTableHeader().putClientProperty(FlatClientProperties.STYLE,
             "background: #F1F5F9; foreground: #475569; font: +1");
     jScrollPane3.setBorder(BorderFactory.createEmptyBorder());
 
@@ -599,7 +602,7 @@ private void animateContentIn(JPanel panel) {
         AccManageBTN = new javax.swing.JButton();
         AccountManagementPanel = new javax.swing.JPanel();
         jScrollPane3 = new javax.swing.JScrollPane();
-        jTable1 = new javax.swing.JTable();
+        ACTTable = new javax.swing.JTable();
         AccNameField = new javax.swing.JTextField();
         AccPasswordField = new javax.swing.JPasswordField();
         ConfirmPasswordField = new javax.swing.JPasswordField();
@@ -741,7 +744,7 @@ private void animateContentIn(JPanel panel) {
 
         AccountManagementPanel.setBackground(new java.awt.Color(255, 255, 255));
 
-        jTable1.setModel(new javax.swing.table.DefaultTableModel(
+        ACTTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
                 {null, null},
                 {null, null},
@@ -752,25 +755,28 @@ private void animateContentIn(JPanel panel) {
                 "Name", "Role"
             }
         ) {
+            Class[] types = new Class [] {
+                java.lang.String.class, java.lang.Object.class
+            };
             boolean[] canEdit = new boolean [] {
                 false, false
             };
+
+            public Class getColumnClass(int columnIndex) {
+                return types [columnIndex];
+            }
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
                 return canEdit [columnIndex];
             }
         });
-        jScrollPane3.setViewportView(jTable1);
-        if (jTable1.getColumnModel().getColumnCount() > 0) {
-            jTable1.getColumnModel().getColumn(0).setResizable(false);
-            jTable1.getColumnModel().getColumn(1).setResizable(false);
+        jScrollPane3.setViewportView(ACTTable);
+        if (ACTTable.getColumnModel().getColumnCount() > 0) {
+            ACTTable.getColumnModel().getColumn(0).setResizable(false);
+            ACTTable.getColumnModel().getColumn(1).setResizable(false);
         }
 
-        AccNameField.setText("jTextField1");
-
-        AccPasswordField.setText("jPasswordField1");
-
-        ConfirmPasswordField.setText("jPasswordField1");
+        AccPasswordField.addActionListener(this::AccPasswordFieldActionPerformed);
 
         AccountNameLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
         AccountNameLabel.setForeground(new java.awt.Color(0, 0, 0));
@@ -1273,9 +1279,9 @@ private void animateContentIn(JPanel panel) {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
-
+    
     private void jButton7ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton7ActionPerformed
-        Dashboard dashboard = new Dashboard();
+        Dashboard dashboard = new Dashboard(loggedInAccount);
         dashboard.setLocationRelativeTo(this);
         dashboard.setVisible(true);
         this.dispose();
@@ -1473,16 +1479,140 @@ private void animateContentIn(JPanel panel) {
     }//GEN-LAST:event_ExpDateKeyTyped
 
     private void AccDeleteBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AccDeleteBTNActionPerformed
-        // TODO add your handling code here:
+                int[] selectedRows = ACTTable.getSelectedRows();
+
+        // Nothing selected
+        if (selectedRows.length == 0) {
+            JOptionPane.showMessageDialog(
+                this,
+                "Please select an account to delete.",
+                "No Account Selected",
+                JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        // Build list of selected account names
+        StringBuilder accountList = new StringBuilder();
+
+        for (int row : selectedRows) {
+            String name = ACTTable.getValueAt(row, 0).toString();
+
+            accountList.append("- ")
+                       .append(name)
+                       .append("\n");
+        }
+
+        // Confirmation warning
+        int choice = JOptionPane.showConfirmDialog(
+            this,
+            "Are you sure you want to delete the following account(s)?\n\n"
+            + accountList,
+            "Confirm Delete",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE
+        );
+
+        // User clicked No
+        if (choice != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        try {
+
+            // Delete each selected account
+            for (int row : selectedRows) {
+
+                String name = ACTTable.getValueAt(row, 0).toString();
+
+                accountService.deleteAccount(name);
+            }
+
+            JOptionPane.showMessageDialog(
+                this,
+                "Selected account(s) deleted successfully.",
+                "Delete Successful",
+                JOptionPane.INFORMATION_MESSAGE
+            );
+
+            // Refresh the table
+            refreshAccountTable();
+
+        } catch (IOException ex) {
+
+            JOptionPane.showMessageDialog(
+                this,
+                "Error deleting account: " + ex.getMessage(),
+                "Delete Error",
+                JOptionPane.ERROR_MESSAGE
+            );
+        }
     }//GEN-LAST:event_AccDeleteBTNActionPerformed
 
     private void CAdminBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CAdminBTNActionPerformed
-        // TODO add your handling code here:
+        createAccountFromForm("Admin");
     }//GEN-LAST:event_CAdminBTNActionPerformed
 
     private void CUserBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CUserBTNActionPerformed
-        // TODO add your handling code here:
+         createAccountFromForm("User");
     }//GEN-LAST:event_CUserBTNActionPerformed
+        
+    private final AccountCsvService accountService = new AccountCsvService("accounts.csv");
+    
+            //login for creation account
+            private void createAccountFromForm(String role) {
+            String name = AccNameField.getText().trim();
+            char[] pw1 = AccPasswordField.getPassword();
+            char[] pw2 = ConfirmPasswordField.getPassword();
+            String password = new String(pw1);
+            String confirmPassword = new String(pw2);
+
+            if (name.isEmpty() || password.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Name and password are required.");
+                return;
+            }
+
+            if (!password.equals(confirmPassword)) {
+                JOptionPane.showMessageDialog(this, "Passwords do not match.");
+                return;
+            }
+
+            try {
+                if (accountService.nameExists(name)) {
+                    JOptionPane.showMessageDialog(this, "An account with this name already exists.");
+                    return;
+                }
+
+                accountService.createAccount(name, password, role);
+                JOptionPane.showMessageDialog(this, role + " account created for " + name + ".");
+
+                AccNameField.setText("");
+                AccPasswordField.setText("");
+                ConfirmPasswordField.setText("");
+                refreshAccountTable();
+
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(this, "Error creating account: " + ex.getMessage());
+            }
+        }
+            
+                    private void refreshAccountTable() {
+            try {
+                DefaultTableModel model = (DefaultTableModel) ACTTable.getModel();
+                model.setRowCount(0);
+
+                for (AccountSystem a : accountService.loadAll()) {
+                    model.addRow(new Object[]{a.GetName(), a.getRole()});
+                }
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(this, "Error loading accounts: " + ex.getMessage());
+            }
+        }
+
+    
+    private void AccPasswordFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AccPasswordFieldActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_AccPasswordFieldActionPerformed
 
     /**
      * @param args the command line arguments
@@ -1494,10 +1624,11 @@ private void animateContentIn(JPanel panel) {
         UIManager.put("TextComponent.arc", 10);
 
         /* Create and display the form */
-        java.awt.EventQueue.invokeLater(() -> new AdminPanel().setVisible(true));
+        //java.awt.EventQueue.invokeLater(() -> new AdminPanel().setVisible(true));
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JTable ACTTable;
     private javax.swing.JButton AccDeleteBTN;
     private javax.swing.JButton AccManageBTN;
     private javax.swing.JTextField AccNameField;
@@ -1549,7 +1680,6 @@ private void animateContentIn(JPanel panel) {
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
-    private javax.swing.JTable jTable1;
     private javax.swing.JLabel lblFridayCount;
     private javax.swing.JLabel lblFridayDate;
     private javax.swing.JLabel lblFridayDay;

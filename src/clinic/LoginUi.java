@@ -8,6 +8,7 @@ import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.FlatLightLaf;
 import java.awt.Color;
 import java.awt.Font;
+import java.io.IOException;
 import javax.swing.JOptionPane;
 
 /**
@@ -22,7 +23,7 @@ public class LoginUi extends javax.swing.JFrame {
      * Creates new form LoginUi
      */
     public LoginUi() {
-       setUndecorated(true);
+        setUndecorated(true);
         initComponents();
         setLocationRelativeTo(null);
     
@@ -114,7 +115,7 @@ public class LoginUi extends javax.swing.JFrame {
     }
 
     // Smooth Fade-Out Effect
-    private void fadeOutAndOpenDashboard() {
+    private void fadeOutAndOpenDashboard(AccountSystem account) {
         javax.swing.Timer timer = new javax.swing.Timer(20, null);
         timer.addActionListener(e -> {
             float opacity = getOpacity();
@@ -123,7 +124,7 @@ public class LoginUi extends javax.swing.JFrame {
             if (opacity <= 0.05f) {
                 setOpacity(0.0f);
                 timer.stop();
-                new Dashboard().setVisible(true);
+                new Dashboard(account).setVisible(true);
                 dispose();
             } else {
                 setOpacity(opacity);
@@ -240,29 +241,37 @@ public class LoginUi extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-       String Username = jTextField1.getText().trim();
-        String Password = new String(jPasswordField1.getPassword());
-        
-        if (Username.isEmpty() || Password.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please fill in all fields.", "Missing Information", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
+          String userName = jTextField1.getText().trim();
+          char[] passwordChars = jPasswordField1.getPassword();
+          String password = new String(passwordChars);
 
-        String role = SystemLogin.CheckLogin(Username, Password);
-        
-        if (role.equalsIgnoreCase("admin")) {
-            JOptionPane.showMessageDialog(this, "Welcome Admin!");
-            fadeOutAndOpenDashboard();
-            
-        } else if (role.equalsIgnoreCase("User")) {
-            JOptionPane.showMessageDialog(this, "Login Successful!");
-            fadeOutAndOpenDashboard();
-            
-        
-        } else {
-            JOptionPane.showMessageDialog(this, "Invalid credentials. Please try again.", "Login Failed", JOptionPane.ERROR_MESSAGE);
-        }
-    
+          if (userName.isEmpty() || password.isEmpty()) {
+              JOptionPane.showMessageDialog(this,
+                      "Please enter your credentials.");
+              return;
+          }
+
+          AccountCsvService accountService = new AccountCsvService("accounts.csv");
+
+          try {
+
+              AccountSystem account = accountService.authenticate(userName, password);
+
+              if (account == null) {
+                  JOptionPane.showMessageDialog(this,
+                          "Wrong username or password.");
+                  return;
+              }
+
+              fadeOutAndOpenDashboard(account);
+              
+
+          } catch (IOException ex) {
+
+              JOptionPane.showMessageDialog(this,
+                      "Error reading accounts: " + ex.getMessage());
+          }
+
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void ExitBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ExitBTNActionPerformed
