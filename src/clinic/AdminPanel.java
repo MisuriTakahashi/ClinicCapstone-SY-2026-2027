@@ -8,6 +8,7 @@ import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.FlatClientProperties;
 import java.awt.Color;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.io.IOException;
@@ -35,6 +36,9 @@ import javax.swing.text.AbstractDocument;
  * @author PC
  */
 public class AdminPanel extends javax.swing.JFrame {
+    private static final int SIDEBAR_WIDTH = 180;
+    private static final int CONTENT_GAP = 20;
+    private static final int CONTENT_X = SIDEBAR_WIDTH + CONTENT_GAP;
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(AdminPanel.class.getName());
     private final ProductCsvService productService = new ProductCsvService("products.csv", "inventory_activity.log");
@@ -47,9 +51,9 @@ public class AdminPanel extends javax.swing.JFrame {
     public AdminPanel() {
         initComponents();
         configureFlatLafUi();
-        jButton5.setEnabled(false);
-        jButton6.setEnabled(true);
         statisticsContainer.setVisible(false);
+        AccountManagementPanel.setVisible(false);
+        configureAccountManagementUi();
         ((AbstractDocument) ExpDate.getDocument()).setDocumentFilter(new DateInputFilter());
         setLocationRelativeTo(null);
         refreshInventoryScreen();
@@ -59,69 +63,148 @@ public class AdminPanel extends javax.swing.JFrame {
     }
 
     /** Applies the FlatLaf treatment after NetBeans creates the form controls. */
-    private void configureFlatLafUi() {
-        Color page = Color.decode("#F8FAFC");
-        Color surface = Color.WHITE;
-        Color border = Color.decode("#E2E8F0");
-        Color primary = Color.decode("#2563EB");
-        Color sidebar = Color.decode("#0F172A");
+   private void configureFlatLafUi() {
+    Color page = Color.decode("#F8FAFC");
+    Color surface = Color.WHITE;
+    Color border = Color.decode("#E2E8F0");
+    Color primary = Color.decode("#2563EB");
+    Color sidebar = Color.decode("#0F172A");
 
-        getContentPane().setBackground(page);
-        setTitle("Clinic · Admin Panel");
-        jPanel1.setBackground(page);
-        createHeader(primary);
-        jPanel3.setBackground(sidebar);
-        jPanel3.setBorder(BorderFactory.createEmptyBorder());
+    getContentPane().setBackground(page);
+    setTitle("Clinic · Admin Panel");
+    jPanel1.setBackground(page);
+    createHeader(primary);
+    jPanel3.setBackground(sidebar);
+    jPanel3.setBorder(BorderFactory.createEmptyBorder());
 
-        styleCard(jPanel4, surface, border);
-        styleCard(jPanel5, surface, border);
-        styleCard(jPanel6, surface, border);
-        jPanel5.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(border), BorderFactory.createEmptyBorder(18, 18, 18, 18)));
+    styleCard(jPanel4, surface, border);
+    styleCard(jPanel5, surface, border);
+    styleCard(jPanel6, surface, border);
+    jPanel5.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(border), BorderFactory.createEmptyBorder(18, 18, 18, 18)));
 
-        jLabel6.setText("Stock overview");
-        styleNavigationButton(jButton7, "\u2190 Back", false);
-        jLabel1.setText("Inventory activity");
-        jLabel1.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        jLabel2.setText("Manage stock");
-        jLabel2.setFont(new Font("Segoe UI", Font.BOLD, 16));
+    jLabel6.setText("Stock overview");
+    jLabel1.setText("Inventory activity");
+    jLabel1.setFont(new Font("Segoe UI", Font.BOLD, 22));
+    jLabel2.setText("Manage stock");
+    jLabel2.setFont(new Font("Segoe UI", Font.BOLD, 16));
 
-        styleNavigationButton(jButton5, "Inventory", true);
-        styleNavigationButton(jButton6, "Statistics", false);
-        styleNavigationButton(jButton7, "← Back", false);
+    // Sidebar buttons — dark theme
+    styleSidebarButton(jButton5, "Inventory", true);      // starts active
+    styleSidebarButton(jButton6, "Statistics", false);
+    styleSidebarButton(AccManageBTN, "Account Management", false);
 
-        stylePrimaryButton(AddBTN, "Add item", primary);
-        styleSecondaryButton(EditBtn, "Edit");
-        styleDangerButton(DeleteBTN, "Delete");
-        styleSecondaryButton(ClearBtn, "Clear form");
+    // Back button — muted at bottom
+    jButton7.setText("← Back");
+    jButton7.setForeground(Color.decode("#94A3B8"));
+    jButton7.setBackground(Color.decode("#0F172A"));
+    jButton7.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+    jButton7.putClientProperty(FlatClientProperties.STYLE, null);
+    jButton7.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
+    jButton7.setFocusPainted(false);
 
-        for (JComponent field : new JComponent[]{ProductName, ExpDate, Qty}) {
-            field.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT,
-                    field == ProductName ? "e.g. Paracetamol" : field == ExpDate ? "YYYY-MM-DD" : "0");
-            field.putClientProperty(FlatClientProperties.STYLE, "arc: 10; margin: 6,10,6,10");
+    // Hover effect
+    jButton7.addMouseListener(new java.awt.event.MouseAdapter() {
+        @Override
+        public void mouseEntered(java.awt.event.MouseEvent evt) {
+            jButton7.setBackground(Color.decode("#DC2626"));
+            jButton7.setForeground(Color.WHITE);
+        }
+        @Override
+        public void mouseExited(java.awt.event.MouseEvent evt) {
+            jButton7.setBackground(Color.decode("#0F172A"));
+            jButton7.setForeground(Color.decode("#94A3B8"));
+        }
+    });
+
+    configureSidebarHover(jButton5);
+    configureSidebarHover(jButton6);
+    configureSidebarHover(AccManageBTN);
+    
+    stylePrimaryButton(AddBTN, "Add item", primary);
+    styleSecondaryButton(EditBtn, "Edit");
+    styleDangerButton(DeleteBTN, "Delete");
+    styleSecondaryButton(ClearBtn, "Clear form");
+
+    for (JComponent field : new JComponent[]{ProductName, ExpDate, Qty}) {
+        field.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT,
+                field == ProductName ? "e.g. Paracetamol" : field == ExpDate ? "YYYY-MM-DD" : "0");
+        field.putClientProperty(FlatClientProperties.STYLE, "arc: 10; margin: 6,10,6,10");
+    }
+
+    stockTable.setRowHeight(38);
+    stockTable.setShowVerticalLines(false);
+    stockTable.setShowHorizontalLines(true);
+    stockTable.setGridColor(border);
+    stockTable.getTableHeader().putClientProperty(FlatClientProperties.STYLE,
+            "background: #F1F5F9; foreground: #475569; font: +1");
+    jScrollPane1.setBorder(BorderFactory.createEmptyBorder());
+    jScrollPane2.setBorder(BorderFactory.createEmptyBorder());
+    InventoryLogs.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Recent stock activity will appear here.");
+    InventoryLogs.putClientProperty(FlatClientProperties.STYLE, "border: 0,0,0,0");
+    InventoryLogs.setText("No recent activity\n\nChanges to stock levels will be recorded here.");
+    InventoryLogs.setEditable(false);
+    InventoryLogs.setForeground(Color.decode("#64748B"));
+    InventoryLogs.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+    InventoryLogs.setMargin(new java.awt.Insets(18, 18, 18, 18));
+    InventoryLogs.setBackground(surface);
+    stockTable.setToolTipText("Your available medical supplies");
+
+    // Wire actions
+    jButton5.addActionListener(event -> showInventory());
+    jButton6.addActionListener(event -> showStatistics());
+    AccManageBTN.addActionListener(event -> showAccountManagement());
+}
+    private void styleSidebarButton(JButton btn, String text, boolean active) {
+    btn.setText(text);
+    // Keep selected buttons enabled. Disabled FlatLaf buttons use the light
+    // default disabled color, which breaks the sidebar's dark active state.
+    btn.setEnabled(true);
+    btn.setFocusPainted(false);
+    btn.setFont(new Font("Segoe UI", active ? Font.BOLD : Font.PLAIN, 13));
+    btn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+    btn.setHorizontalAlignment(SwingConstants.LEFT);
+    btn.setOpaque(true);
+    btn.setContentAreaFilled(true);
+    btn.putClientProperty("sidebar.active", active);
+    
+    // Remove 'arc' from STYLE — not supported in your FlatLaf version
+    btn.putClientProperty(FlatClientProperties.STYLE, null);
+    
+    if (active) {
+        btn.setBackground(Color.decode("#1E293B"));
+        btn.setForeground(Color.decode("#F8FAFC"));
+        btn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 3, 0, 0, Color.decode("#2563EB")),
+            BorderFactory.createEmptyBorder(10, 13, 10, 16)
+        ));
+    } else {
+        btn.setBackground(Color.decode("#0F172A"));
+        btn.setForeground(Color.decode("#94A3B8"));
+        btn.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
+    }
+}
+
+/** Adds the hover treatment once; the selected navigation item keeps its active color. */
+private void configureSidebarHover(JButton btn) {
+    btn.addMouseListener(new java.awt.event.MouseAdapter() {
+        @Override
+        public void mouseEntered(java.awt.event.MouseEvent event) {
+            if (!Boolean.TRUE.equals(btn.getClientProperty("sidebar.active"))) {
+                btn.setBackground(Color.WHITE);
+                btn.setForeground(Color.decode("#0F172A"));
+            }
         }
 
-        stockTable.setRowHeight(38);
-        stockTable.setShowVerticalLines(false);
-        stockTable.setShowHorizontalLines(true);
-        stockTable.setGridColor(border);
-        stockTable.getTableHeader().putClientProperty(FlatClientProperties.STYLE,
-                "background: #F1F5F9; foreground: #475569; font: +1");
-        jScrollPane1.setBorder(BorderFactory.createEmptyBorder());
-        jScrollPane2.setBorder(BorderFactory.createEmptyBorder());
-        InventoryLogs.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Recent stock activity will appear here.");
-        InventoryLogs.putClientProperty(FlatClientProperties.STYLE, "border: 0,0,0,0");
-        InventoryLogs.setText("No recent activity\n\nChanges to stock levels will be recorded here.");
-        InventoryLogs.setEditable(false);
-        InventoryLogs.setForeground(Color.decode("#64748B"));
-        InventoryLogs.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        InventoryLogs.setMargin(new java.awt.Insets(18, 18, 18, 18));
-        InventoryLogs.setBackground(surface);
-        stockTable.setToolTipText("Your available medical supplies");
-
-        jButton5.addActionListener(event -> showInventory());
-        jButton6.addActionListener(event -> showStatistics());
-    }
+        @Override
+        public void mouseExited(java.awt.event.MouseEvent event) {
+            if (!Boolean.TRUE.equals(btn.getClientProperty("sidebar.active"))) {
+                btn.setBackground(Color.decode("#0F172A"));
+                btn.setForeground(Color.decode("#94A3B8"));
+            }
+        }
+    });
+}
 
     private void showToastNotification(String actionText, String itemName, int count, Color backgroundColor) {
         String countText = (count > 1) ? count + " products" : "1 product";
@@ -192,55 +275,125 @@ public class AdminPanel extends javax.swing.JFrame {
     }
 
     private void showStatistics() {
-        jPanel4.setVisible(false);
-        jPanel5.setVisible(false);
-        jPanel6.setVisible(false);
-        jLabel1.setVisible(false);
-        jLabel6.setVisible(false);
+          AccountManagementPanel.setVisible(false);
 
-        statisticsContainer.setLocation(1020, 30); 
-        statisticsContainer.setVisible(true);
+    jPanel4.setVisible(false);
+    jPanel5.setVisible(false);
+    jPanel6.setVisible(false);
+    jLabel1.setVisible(false);
+    jLabel6.setVisible(false);
 
-        jButton5.setEnabled(true);   
-        jButton6.setEnabled(false);  
-        
-        styleNavigationButton(jButton5, "Inventory", false);
-        styleNavigationButton(jButton6, "Statistics", true);
+    statisticsContainer.setLocation(1200, 30);
+    statisticsContainer.setVisible(true);
 
-        javax.swing.Timer timer = new javax.swing.Timer(10, null);
-        timer.addActionListener(new java.awt.event.ActionListener() {
-            int currentX = 1020;
-            int targetX = 180;
+    styleSidebarButton(jButton5, "Inventory", false);
+    styleSidebarButton(jButton6, "Statistics", true);
+    styleSidebarButton(AccManageBTN, "Account Management", false);
 
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) {
-                if (currentX > targetX) {
-                    currentX = Math.max(targetX, currentX - 35);
-                    statisticsContainer.setLocation(currentX, 30);
-                    jPanel1.repaint();
-                } else {
-                    timer.stop();
-                }
-            }
-        });
-        timer.start();
+    animateContentIn(statisticsContainer);
+    }
+    /** Applies the same FlatLaf card/typography treatment to the account panel. */
+private void configureAccountManagementUi() {
+    Color page   = Color.decode("#F8FAFC");
+    Color border = Color.decode("#E2E8F0");
+    Color primary = Color.decode("#2563EB");
+    Color textSecondary = Color.decode("#475569");
+
+    // Panel background
+    AccountManagementPanel.setBackground(page);
+
+    // ---------- Table (match stockTable) ----------
+    jTable1.setRowHeight(38);
+    jTable1.setShowVerticalLines(false);
+    jTable1.setShowHorizontalLines(true);
+    jTable1.setGridColor(border);
+    jTable1.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+    jTable1.setForeground(textSecondary);
+    jTable1.getTableHeader().putClientProperty(FlatClientProperties.STYLE,
+            "background: #F1F5F9; foreground: #475569; font: +1");
+    jScrollPane3.setBorder(BorderFactory.createEmptyBorder());
+
+    // ---------- Form fields ----------
+    AccNameField.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "e.g. nurse_jane");
+    AccNameField.putClientProperty(FlatClientProperties.STYLE, "arc: 10; margin: 6,10,6,10");
+    AccNameField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+    AccNameField.setText("");                 // remove "jTextField1"
+
+    AccPasswordField.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "••••••••");
+    AccPasswordField.putClientProperty(FlatClientProperties.STYLE,
+            "arc: 10; margin: 6,10,6,10; showRevealButton: true");
+    AccPasswordField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+    AccPasswordField.setText("");             // remove "jPasswordField1"
+
+    ConfirmPasswordField.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "••••••••");
+    ConfirmPasswordField.putClientProperty(FlatClientProperties.STYLE, "arc: 10; margin: 6,10,6,10");
+    ConfirmPasswordField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+    ConfirmPasswordField.setText("");         // remove "jPasswordField1"
+
+    // ---------- Labels ----------
+    for (javax.swing.JLabel lbl : new javax.swing.JLabel[]{
+            AccountNameLabel, AccountPasswordLabel, ConfirmPasswordLabel}) {
+        lbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lbl.setForeground(textSecondary);
     }
 
+    // ---------- Buttons ----------
+    stylePrimaryButton(CAdminBTN, "Create Admin", primary);
+    stylePrimaryButton(CUserBTN,  "Create User",  primary);
+    styleDangerButton(AccDeleteBTN, "Delete");
+}
+private void showAccountManagement() {
+   jPanel4.setVisible(false);
+    jPanel5.setVisible(false);
+    jPanel6.setVisible(false);
+    jLabel1.setVisible(false);
+    jLabel6.setVisible(false);
+    statisticsContainer.setVisible(false);
+
+    AccountManagementPanel.setLocation(1200, 30);
+    AccountManagementPanel.setVisible(true);
+
+    styleSidebarButton(jButton5, "Inventory", false);
+    styleSidebarButton(jButton6, "Statistics", false);
+    styleSidebarButton(AccManageBTN, "Account Management", true);
+
+    animateContentIn(AccountManagementPanel);
+}
+
+/** Slides page content into place without moving the fixed sidebar. */
+private void animateContentIn(JPanel panel) {
+    javax.swing.Timer timer = new javax.swing.Timer(10, null);
+    timer.addActionListener(new java.awt.event.ActionListener() {
+        private int currentX = 1200;
+
+        @Override
+        public void actionPerformed(java.awt.event.ActionEvent event) {
+            if (currentX > CONTENT_X) {
+                currentX = Math.max(CONTENT_X, currentX - 35);
+                panel.setLocation(currentX, 30);
+                jPanel1.repaint();
+            } else {
+                timer.stop();
+            }
+        }
+    });
+    timer.start();
+}
+
     private void showInventory() {
-        statisticsContainer.setVisible(false);
+         statisticsContainer.setVisible(false);
+    AccountManagementPanel.setVisible(false);
 
-        jPanel4.setLocation(200, 140); 
-        jPanel4.setVisible(true);
-        jPanel5.setVisible(true);
-        jPanel6.setVisible(true);
-        jLabel1.setVisible(true);
-        jLabel6.setVisible(true);
+    jPanel4.setLocation(200, 140);
+    jPanel4.setVisible(true);
+    jPanel5.setVisible(true);
+    jPanel6.setVisible(true);
+    jLabel1.setVisible(true);
+    jLabel6.setVisible(true);
 
-        jButton5.setEnabled(false);  
-        jButton6.setEnabled(true);   
-
-        styleNavigationButton(jButton5, "Inventory", true);
-        styleNavigationButton(jButton6, "Statistics", false);
+    styleSidebarButton(jButton5, "Inventory", true);
+    styleSidebarButton(jButton6, "Statistics", false);
+    styleSidebarButton(AccManageBTN, "Account Management", false);
 
         javax.swing.Timer timer = new javax.swing.Timer(10, null);
         timer.addActionListener(new java.awt.event.ActionListener() {
@@ -287,21 +440,12 @@ public class AdminPanel extends javax.swing.JFrame {
         component.setBorder(BorderFactory.createLineBorder(border));
         component.putClientProperty(FlatClientProperties.STYLE, "arc: 16");
     }
-
-    private void styleNavigationButton(JButton button, String text, boolean selected) {
-        button.setText(text);
-        button.setForeground(Color.BLACK);
-        button.putClientProperty(FlatClientProperties.STYLE, selected
-                ? "arc: 10; background: #E2E8F0; hoverBackground: #CBD5E1; borderWidth: 0; font: bold +1"
-                : "arc: 10; background: #F8FAFC; hoverBackground: #E2E8F0; borderWidth: 0; font: bold +1");
-    }
-
     private void stylePrimaryButton(JButton button, String text, Color color) {
         button.setText(text);
         button.setBackground(color);
         button.setForeground(Color.WHITE);
         button.putClientProperty(FlatClientProperties.STYLE,
-                "arc: 10; borderWidth: 0; font: bold; margin: 7,12,7,12");
+                "arc: 10; font: bold; margin: 7,12,7,12");
     }
 
     private void styleSecondaryButton(JButton button, String text) {
@@ -452,6 +596,19 @@ public class AdminPanel extends javax.swing.JFrame {
         jButton5 = new javax.swing.JButton();
         jButton6 = new javax.swing.JButton();
         jButton7 = new javax.swing.JButton();
+        AccManageBTN = new javax.swing.JButton();
+        AccountManagementPanel = new javax.swing.JPanel();
+        jScrollPane3 = new javax.swing.JScrollPane();
+        jTable1 = new javax.swing.JTable();
+        AccNameField = new javax.swing.JTextField();
+        AccPasswordField = new javax.swing.JPasswordField();
+        ConfirmPasswordField = new javax.swing.JPasswordField();
+        AccountNameLabel = new javax.swing.JLabel();
+        AccountPasswordLabel = new javax.swing.JLabel();
+        ConfirmPasswordLabel = new javax.swing.JLabel();
+        CAdminBTN = new javax.swing.JButton();
+        CUserBTN = new javax.swing.JButton();
+        AccDeleteBTN = new javax.swing.JButton();
         statisticsContainer = new javax.swing.JPanel();
         jLabel7 = new javax.swing.JLabel();
         lblReportingPeriod = new javax.swing.JLabel();
@@ -531,30 +688,40 @@ public class AdminPanel extends javax.swing.JFrame {
 
         jPanel1.add(jPanel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1200, 30));
 
-        jPanel3.setBackground(new java.awt.Color(204, 204, 204));
-        jPanel3.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(0, 0, 0), 1, true));
+        jPanel3.setBackground(new java.awt.Color(15, 23, 42));
+        jPanel3.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
-        jButton5.setForeground(new java.awt.Color(0, 0, 0));
+        jButton5.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        jButton5.setForeground(new java.awt.Color(255, 255, 255));
         jButton5.setText("Inventory");
         jButton5.addActionListener(this::jButton5ActionPerformed);
 
-        jButton6.setForeground(new java.awt.Color(0, 0, 0));
+        jButton6.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        jButton6.setForeground(new java.awt.Color(255, 255, 255));
         jButton6.setText("Statistic");
 
+        jButton7.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        jButton7.setForeground(new java.awt.Color(255, 255, 255));
         jButton7.setText("Return");
         jButton7.addActionListener(this::jButton7ActionPerformed);
+
+        AccManageBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 10)); // NOI18N
+        AccManageBTN.setForeground(new java.awt.Color(255, 255, 255));
+        AccManageBTN.setText("Account Management");
 
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
         jPanel3Layout.setHorizontalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel3Layout.createSequentialGroup()
-                .addGap(22, 22, 22)
-                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jButton7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jButton6, javax.swing.GroupLayout.DEFAULT_SIZE, 149, Short.MAX_VALUE)
-                    .addComponent(jButton5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addContainerGap(17, Short.MAX_VALUE))
+                .addGap(14, 14, 14)
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jButton7, javax.swing.GroupLayout.PREFERRED_SIZE, 153, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                        .addComponent(jButton6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(jButton5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(AccManageBTN, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                .addContainerGap(13, Short.MAX_VALUE))
         );
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -563,12 +730,133 @@ public class AdminPanel extends javax.swing.JFrame {
                 .addComponent(jButton5, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jButton6, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 361, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(AccManageBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 295, Short.MAX_VALUE)
                 .addComponent(jButton7, javax.swing.GroupLayout.PREFERRED_SIZE, 48, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(23, 23, 23))
         );
 
-        jPanel1.add(jPanel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(-10, 0, 190, 650));
+        jPanel1.add(jPanel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 30, 180, 620));
+
+        AccountManagementPanel.setBackground(new java.awt.Color(255, 255, 255));
+
+        jTable1.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null},
+                {null, null},
+                {null, null},
+                {null, null}
+            },
+            new String [] {
+                "Name", "Role"
+            }
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        jScrollPane3.setViewportView(jTable1);
+        if (jTable1.getColumnModel().getColumnCount() > 0) {
+            jTable1.getColumnModel().getColumn(0).setResizable(false);
+            jTable1.getColumnModel().getColumn(1).setResizable(false);
+        }
+
+        AccNameField.setText("jTextField1");
+
+        AccPasswordField.setText("jPasswordField1");
+
+        ConfirmPasswordField.setText("jPasswordField1");
+
+        AccountNameLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
+        AccountNameLabel.setForeground(new java.awt.Color(0, 0, 0));
+        AccountNameLabel.setText("Account Name");
+
+        AccountPasswordLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
+        AccountPasswordLabel.setForeground(new java.awt.Color(0, 0, 0));
+        AccountPasswordLabel.setText("Account Password");
+
+        ConfirmPasswordLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
+        ConfirmPasswordLabel.setForeground(new java.awt.Color(0, 0, 0));
+        ConfirmPasswordLabel.setText("Confirm Password");
+
+        CAdminBTN.setBackground(new java.awt.Color(0, 102, 204));
+        CAdminBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        CAdminBTN.setForeground(new java.awt.Color(255, 255, 255));
+        CAdminBTN.setText("Create Admin");
+        CAdminBTN.addActionListener(this::CAdminBTNActionPerformed);
+
+        CUserBTN.setBackground(new java.awt.Color(0, 102, 204));
+        CUserBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        CUserBTN.setForeground(new java.awt.Color(255, 255, 255));
+        CUserBTN.setText("Create User");
+        CUserBTN.addActionListener(this::CUserBTNActionPerformed);
+
+        AccDeleteBTN.setBackground(new java.awt.Color(0, 102, 204));
+        AccDeleteBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        AccDeleteBTN.setForeground(new java.awt.Color(255, 255, 255));
+        AccDeleteBTN.setText("Delete");
+        AccDeleteBTN.addActionListener(this::AccDeleteBTNActionPerformed);
+
+        javax.swing.GroupLayout AccountManagementPanelLayout = new javax.swing.GroupLayout(AccountManagementPanel);
+        AccountManagementPanel.setLayout(AccountManagementPanelLayout);
+        AccountManagementPanelLayout.setHorizontalGroup(
+            AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(AccountManagementPanelLayout.createSequentialGroup()
+                .addContainerGap(146, Short.MAX_VALUE)
+                .addGroup(AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, AccountManagementPanelLayout.createSequentialGroup()
+                        .addGroup(AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(AccNameField)
+                            .addComponent(AccPasswordField)
+                            .addComponent(ConfirmPasswordField, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 253, Short.MAX_VALUE)
+                            .addComponent(AccountNameLabel)
+                            .addComponent(AccountPasswordLabel)
+                            .addComponent(ConfirmPasswordLabel)
+                            .addGroup(AccountManagementPanelLayout.createSequentialGroup()
+                                .addComponent(CUserBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(CAdminBTN)))
+                        .addGap(109, 109, 109)
+                        .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(56, 56, 56))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, AccountManagementPanelLayout.createSequentialGroup()
+                        .addComponent(AccDeleteBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 134, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(209, 209, 209))))
+        );
+        AccountManagementPanelLayout.setVerticalGroup(
+            AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(AccountManagementPanelLayout.createSequentialGroup()
+                .addGap(157, 157, 157)
+                .addComponent(AccountNameLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(AccNameField, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(AccountPasswordLabel)
+                .addGap(4, 4, 4)
+                .addComponent(AccPasswordField, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(ConfirmPasswordLabel)
+                .addGap(4, 4, 4)
+                .addComponent(ConfirmPasswordField, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
+                .addGroup(AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(CUserBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(CAdminBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, AccountManagementPanelLayout.createSequentialGroup()
+                .addContainerGap(84, Short.MAX_VALUE)
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
+                .addComponent(AccDeleteBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(43, 43, 43))
+        );
+
+        jPanel1.add(AccountManagementPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 30, 1000, 620));
 
         statisticsContainer.setBackground(new java.awt.Color(248, 250, 252));
         statisticsContainer.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
@@ -785,7 +1073,7 @@ public class AdminPanel extends javax.swing.JFrame {
 
         statisticsContainer.add(jPanel7, new org.netbeans.lib.awtextra.AbsoluteConstraints(22, 380, 950, 208));
 
-        jPanel1.add(statisticsContainer, new org.netbeans.lib.awtextra.AbsoluteConstraints(180, 30, 1020, 620));
+        jPanel1.add(statisticsContainer, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 30, 1000, 620));
 
         jPanel4.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
 
@@ -987,7 +1275,9 @@ public class AdminPanel extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton7ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton7ActionPerformed
-        new Dashboard().show();
+        Dashboard dashboard = new Dashboard();
+        dashboard.setLocationRelativeTo(this);
+        dashboard.setVisible(true);
         this.dispose();
     }//GEN-LAST:event_jButton7ActionPerformed
 
@@ -1182,6 +1472,18 @@ public class AdminPanel extends javax.swing.JFrame {
         // TODO add your handling code here:
     }//GEN-LAST:event_ExpDateKeyTyped
 
+    private void AccDeleteBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AccDeleteBTNActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_AccDeleteBTNActionPerformed
+
+    private void CAdminBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CAdminBTNActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_CAdminBTNActionPerformed
+
+    private void CUserBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CUserBTNActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_CUserBTNActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -1196,8 +1498,19 @@ public class AdminPanel extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton AccDeleteBTN;
+    private javax.swing.JButton AccManageBTN;
+    private javax.swing.JTextField AccNameField;
+    private javax.swing.JPasswordField AccPasswordField;
+    private javax.swing.JPanel AccountManagementPanel;
+    private javax.swing.JLabel AccountNameLabel;
+    private javax.swing.JLabel AccountPasswordLabel;
     private javax.swing.JButton AddBTN;
+    private javax.swing.JButton CAdminBTN;
+    private javax.swing.JButton CUserBTN;
     private javax.swing.JButton ClearBtn;
+    private javax.swing.JPasswordField ConfirmPasswordField;
+    private javax.swing.JLabel ConfirmPasswordLabel;
     private javax.swing.JButton DeleteBTN;
     private javax.swing.JButton EditBtn;
     private javax.swing.JTextField ExpDate;
@@ -1235,6 +1548,8 @@ public class AdminPanel extends javax.swing.JFrame {
     private javax.swing.JPanel jPanel9;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JScrollPane jScrollPane3;
+    private javax.swing.JTable jTable1;
     private javax.swing.JLabel lblFridayCount;
     private javax.swing.JLabel lblFridayDate;
     private javax.swing.JLabel lblFridayDay;
