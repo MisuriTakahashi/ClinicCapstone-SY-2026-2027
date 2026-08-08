@@ -41,7 +41,7 @@ public class AdminPanel extends javax.swing.JFrame {
     private static final int CONTENT_X = SIDEBAR_WIDTH + CONTENT_GAP;
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(AdminPanel.class.getName());
-    private final ProductCsvService productService = new ProductCsvService("products.csv", "inventory_activity.log");
+    private final ProductCsvHandling productService = new ProductCsvHandling("products.csv", "inventory_activity.log");
     private ArrayList<Product> currentProducts = new ArrayList<>();
     private String selectedProductName = null;
     private AccountSystem loggedInAccount;
@@ -524,63 +524,176 @@ private void animateContentIn(JPanel panel) {
         }  
     }
     
-    private void loadStatistics() {
+  private void loadStatistics() {
         try {
-            ArrayList<CheckinSystem> visits = new VisitCsvService("visits.csv").loadAll();
+            
+            ArrayList<CheckinSystem> visits = new VisitCsvHandling("visits.csv").loadAll();
 
             int weeklyCheckins = 0;
             int inClinic = 0;
             int sentHome = 0;
 
-            int monday = 0, tuesday = 0, wednesday = 0, thursday = 0, friday = 0;
+            int monday = 0;
+            int tuesday = 0;
+            int wednesday = 0;
+            int thursday = 0;
+            int friday = 0;
 
             Map<String, Integer> reasonCount = new HashMap<>();
             Map<String, Integer> medicineCount = new HashMap<>();
 
+            // Get the current week's Monday and Friday
             LocalDate today = LocalDate.now();
             LocalDate mondayOfWeek = today.with(DayOfWeek.MONDAY);
             LocalDate fridayOfWeek = today.with(DayOfWeek.FRIDAY);
 
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+            DateTimeFormatter formatter =
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+
+            lblMondayDate.setText(
+                    String.valueOf(mondayOfWeek.getDayOfMonth())
+            );
+
+            lblTuesdayDate.setText(
+                    String.valueOf(mondayOfWeek.plusDays(1).getDayOfMonth())
+            );
+
+            lblWednesdayDate.setText(
+                    String.valueOf(mondayOfWeek.plusDays(2).getDayOfMonth())
+            );
+
+            lblThursdayDate.setText(
+                    String.valueOf(mondayOfWeek.plusDays(3).getDayOfMonth())
+            );
+
+            lblFridayDate.setText(
+                    String.valueOf(mondayOfWeek.plusDays(4).getDayOfMonth())
+            );
+
 
             for (CheckinSystem v : visits) {
-                LocalDate visitDate = LocalDateTime.parse(v.getCheckInTime(), formatter).toLocalDate();
+                
+                LocalDate visitDate;
 
-                if (!visitDate.isBefore(mondayOfWeek) && !visitDate.isAfter(fridayOfWeek)) {
+                try {
+                    visitDate = LocalDateTime
+                            .parse(v.getCheckInTime(), formatter)
+                            .toLocalDate();
+
+                } catch (DateTimeParseException ex) {
+
+                    continue;
+                }
+
+                if (!visitDate.isBefore(mondayOfWeek)
+                        && !visitDate.isAfter(fridayOfWeek)) {
+
                     weeklyCheckins++;
+
                     switch (visitDate.getDayOfWeek()) {
-                        case MONDAY -> monday++;
-                        case TUESDAY -> tuesday++;
-                        case WEDNESDAY -> wednesday++;
-                        case THURSDAY -> thursday++;
-                        case FRIDAY -> friday++;
+
+                        case MONDAY:
+                            monday++;
+                            break;
+
+                        case TUESDAY:
+                            tuesday++;
+                            break;
+
+                        case WEDNESDAY:
+                            wednesday++;
+                            break;
+
+                        case THURSDAY:
+                            thursday++;
+                            break;
+
+                        case FRIDAY:
+                            friday++;
+                            break;
+
+                        default:
+                            break;
                     }
                 }
 
-                if (v.getStatus().equalsIgnoreCase("In Clinic")) inClinic++;
-                if (v.getStatus().equalsIgnoreCase("Sent Home")) sentHome++;
 
-                reasonCount.put(v.getReason(), reasonCount.getOrDefault(v.getReason(), 0) + 1);
+                if ("In Clinic".equalsIgnoreCase(v.getStatus())) {
+                    inClinic++;
+                }
 
-                if (!v.getMedUsed().isBlank()) {
-                    medicineCount.put(v.getMedUsed(), medicineCount.getOrDefault(v.getMedUsed(), 0) + 1);
+                if ("Sent Home".equalsIgnoreCase(v.getStatus())) {
+                    sentHome++;
+                }
+
+
+                if (v.getReason() != null && !v.getReason().isBlank()) {
+                    reasonCount.put(
+                            v.getReason(),
+                            reasonCount.getOrDefault(v.getReason(), 0) + 1
+                    );
+                }
+
+
+                if (v.getMedUsed() != null && !v.getMedUsed().isBlank()) {
+                    medicineCount.put(
+                            v.getMedUsed(),
+                            medicineCount.getOrDefault(v.getMedUsed(), 0) + 1
+                    );
                 }
             }
 
-            lblWeeklyCheckInsValue.setText(String.valueOf(weeklyCheckins));
-            lblInClinicValue.setText(String.valueOf(inClinic));
-            lblSentHomeValue.setText(String.valueOf(sentHome));
+            lblWeeklyCheckInsValue.setText(
+                    String.valueOf(weeklyCheckins)
+            );
 
-            lblMondayCount.setText(String.valueOf(monday));
-            lblTuesdayCount.setText(String.valueOf(tuesday));
-            lblWednesdayCount.setText(String.valueOf(wednesday));
-            lblThursdayCount.setText(String.valueOf(thursday));
-            lblFridayCount.setText(String.valueOf(friday));
+            lblInClinicValue.setText(
+                    String.valueOf(inClinic)
+            );
 
-            lblReportingPeriod.setText("Reporting period: " + mondayOfWeek + " to " + fridayOfWeek);
+            lblSentHomeValue.setText(
+                    String.valueOf(sentHome)
+            );
+
+            lblMondayCount.setText(
+                    String.valueOf(monday)
+            );
+
+            lblTuesdayCount.setText(
+                    String.valueOf(tuesday)
+            );
+
+            lblWednesdayCount.setText(
+                    String.valueOf(wednesday)
+            );
+
+            lblThursdayCount.setText(
+                    String.valueOf(thursday)
+            );
+
+            lblFridayCount.setText(
+                    String.valueOf(friday)
+            );
+
+            DateTimeFormatter displayFormatter =
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+            lblReportingPeriod.setText(
+                    "Reporting period: "
+                    + mondayOfWeek.format(displayFormatter)
+                    + " to "
+                    + fridayOfWeek.format(displayFormatter)
+            );
 
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error loading statistics: " + ex.getMessage());
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Error loading statistics: " + ex.getMessage(),
+                    "Statistics Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
         }
     }
 
@@ -1298,7 +1411,8 @@ private void animateContentIn(JPanel panel) {
     }//GEN-LAST:event_QtyKeyTyped
 
     private void AddBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddBTNActionPerformed
-         String name = ProductName.getText().trim();
+        
+        String name = ProductName.getText().trim();
         String expDateInput = ExpDate.getText().trim();
         String quantityText = Qty.getText().trim();
         
@@ -1557,7 +1671,7 @@ private void animateContentIn(JPanel panel) {
          createAccountFromForm("User");
     }//GEN-LAST:event_CUserBTNActionPerformed
         
-    private final AccountCsvService accountService = new AccountCsvService("accounts.csv");
+    private final AccountCsvHandling accountService = new AccountCsvHandling("accounts.csv");
     
             //login for creation account
             private void createAccountFromForm(String role) {

@@ -21,7 +21,7 @@ import javax.swing.JOptionPane;
  *
  * @author PC
  */
-public class VisitCsvService {
+public class VisitCsvHandling {
     
     //eto yun ginawa ni ser sa dateformatter na ginawa naten noong nag print tayo 
     private final File csvFile;
@@ -29,7 +29,7 @@ public class VisitCsvService {
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm" );
     
    //sabi daw ni ai eto daw yun naghahanap kung ano ginagamit na CSV file maybe maybe not
-    public VisitCsvService(String path){
+    public VisitCsvHandling(String path){
         this.csvFile = new File(path);
     }
     

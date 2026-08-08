@@ -16,11 +16,11 @@ import java.util.ArrayList;
  *
  * @author PC
  */
-public class AccountCsvService {
+public class AccountCsvHandling {
     
       private final File csvFile;
 
-    public AccountCsvService(String path) {
+    public AccountCsvHandling (String path) {
         this.csvFile = new File(path);
     }
 

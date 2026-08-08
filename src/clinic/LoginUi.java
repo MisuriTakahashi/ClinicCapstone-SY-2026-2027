@@ -251,7 +251,7 @@ public class LoginUi extends javax.swing.JFrame {
               return;
           }
 
-          AccountCsvService accountService = new AccountCsvService("accounts.csv");
+          AccountCsvHandling accountService = new AccountCsvHandling("accounts.csv");
 
           try {
 

@@ -388,8 +388,8 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
 
 
     //ps this will help display the inventory on the "inventory status"
-    private VisitCsvService visitService = new VisitCsvService("visits.csv");
-    private ProductCsvService productService = new ProductCsvService("products.csv", "inventory_activity.log");
+    private VisitCsvHandling visitService = new VisitCsvHandling("visits.csv");
+    private ProductCsvHandling productService = new ProductCsvHandling("products.csv", "inventory_activity.log");
     
     private void refreshInventoryStatusDisplay(){
         try{

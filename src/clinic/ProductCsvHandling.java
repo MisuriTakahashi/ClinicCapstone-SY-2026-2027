@@ -19,12 +19,12 @@ import java.util.ArrayList;
  *
  * @author PC
  */
-public class ProductCsvService {
+public class ProductCsvHandling {
     private final File csvFile;
     private final File activityLogFile;
     private static final DateTimeFormatter Time_Format = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     
-    public ProductCsvService(String csvPath , String activityLogFile){
+    public ProductCsvHandling(String csvPath , String activityLogFile){
         this.csvFile = new File(csvPath);
         this.activityLogFile = new File(activityLogFile);
     }
