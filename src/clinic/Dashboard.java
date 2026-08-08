@@ -372,10 +372,10 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
    //ComboBox problem 
     private void medicineBox(){
         try{
-            ArrayList<Product> products = productService.loadAll();
+            ArrayList<Medicine> medicine = productService.loadAll();
             DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
             
-            for(Product p : products){
+            for(Medicine p : medicine){
                 model.addElement(p.getname());
             }
             
@@ -389,17 +389,17 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
 
     //ps this will help display the inventory on the "inventory status"
     private VisitCsvHandling visitService = new VisitCsvHandling("visits.csv");
-    private ProductCsvHandling productService = new ProductCsvHandling("products.csv", "inventory_activity.log");
+    private MedicineCsvHandling productService = new MedicineCsvHandling("products.csv", "inventory_activity.log");
     
     private void refreshInventoryStatusDisplay(){
         try{
-             ArrayList<Product> products = productService.loadAll();
+             ArrayList<Medicine> medicine = productService.loadAll();
                  StringBuilder sb = new StringBuilder();
 
-                 if (products.isEmpty()) {
+                 if (medicine.isEmpty()) {
                      sb.append("No items in inventory yet.");
                  } else {
-                     for (Product p : products) {
+                     for (Medicine p : medicine) {
                       sb.append(p.getname())
                           .append(" — ")
                           .append(p.getquantity())
@@ -1321,7 +1321,7 @@ NOT modify this code. The content of this method is always
     }
     
     String medUsed = selectedMed.toString();
-    Product medProduct; 
+    Medicine medProduct; 
     
      try {
             
@@ -1666,14 +1666,14 @@ NOT modify this code. The content of this method is always
     private void checkExpiredProducts() {
     try {
         
-        ArrayList<Product> products = productService.loadAll();
+        ArrayList<Medicine> medicine = productService.loadAll();
         ArrayList<String> expiredItems = new ArrayList<>();
         LocalDate today = LocalDate.now();
         
         // Try multiple date formatters if needed (e.g. yyyy-MM-dd or MM/dd/yyyy)
         java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-        for (Product p : products) {
+        for (Medicine p : medicine) {
             // Option A: If status itself is marked as "Expired" or "OutOfStock"
             if (p.getStatus() != null && p.getStatus().equalsIgnoreCase("Expired")) {
                 expiredItems.add(p.getname());

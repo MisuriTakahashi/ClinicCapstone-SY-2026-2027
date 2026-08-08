@@ -13,8 +13,10 @@ import javax.swing.text.DocumentFilter;
  * @author PC
  */
 public class DateInputFilter extends DocumentFilter{
-        
-      @Override
+    
+    // Filters date input to allow only numbers and hyphens.
+    // Example: 2026-08-08  
+    @Override
     public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException {
         if (isValidPartialDate(string)) {
             super.insertString(fb, offset, string, attr);

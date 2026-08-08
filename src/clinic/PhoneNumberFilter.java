@@ -15,6 +15,8 @@ import javax.swing.text.DocumentFilter;
  */
 public class PhoneNumberFilter extends DocumentFilter {
     
+    // filters phone number input to allow digits only with a maximum of 11 digits onlly
+    // Example 09342435321
     @Override
     public void insertString(FilterBypass fb, int offset,
             String string, AttributeSet attr)

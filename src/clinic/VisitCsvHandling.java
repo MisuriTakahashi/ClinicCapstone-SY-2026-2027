@@ -7,7 +7,6 @@ package clinic;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -15,7 +14,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import javax.swing.JOptionPane;
 
 /**
  *
@@ -23,12 +21,12 @@ import javax.swing.JOptionPane;
  */
 public class VisitCsvHandling {
     
-    //eto yun ginawa ni ser sa dateformatter na ginawa naten noong nag print tayo 
+    //this is the Time formmatter which makes the date and time for the check in function 
     private final File csvFile;
     private static final DateTimeFormatter TIME_FORMAT = 
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm" );
     
-   //sabi daw ni ai eto daw yun naghahanap kung ano ginagamit na CSV file maybe maybe not
+   //this is the path of the Csv
     public VisitCsvHandling(String path){
         this.csvFile = new File(path);
     }
@@ -88,7 +86,7 @@ public class VisitCsvHandling {
      
     
      //MARK STUDENT AS SENT HOME
-     //finds  a students visit and changes to the status from "in clinic" to "sent home" 
+     //Counts today's total check-ins and students who have been sent home 
      public boolean markSentHome(String lrn) throws IOException {
 
         ArrayList<CheckinSystem> visits = loadAll();
@@ -133,7 +131,7 @@ public class VisitCsvHandling {
           return new int[]{totalToday, sentHomeToday};
      }
     
-     
+     //Finds the student's currently active visit with an "In Clinic" status
      public CheckinSystem findActiveVisit(String lrn) throws IOException {
         for (CheckinSystem v : loadAll()) {
 
@@ -175,7 +173,7 @@ public class VisitCsvHandling {
       
     }
      
-     
+     //this uses the name of student to find the LRN 
      public String findNameForLrn(String lrn) throws IOException {
                for (CheckinSystem v : loadAll()) {
                if (v.getLrn().equals(lrn)) {

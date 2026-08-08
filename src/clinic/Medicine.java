@@ -10,14 +10,14 @@ import java.time.LocalDate;
  *
  * @author PC
  */
-public class Product {
+public class Medicine {
         private String name; // the name of the item
         private String ExpDate; // exp date
         private int quantity; // quantity 
     
         private static final int LOW_STOCK_THRESHOLD = 10;
     
-        public Product(String name , String ExpDate , int quantity){
+        public Medicine(String name , String ExpDate , int quantity){
             this.name = name;
             this.ExpDate = ExpDate;
             this.quantity = quantity;
@@ -35,8 +35,6 @@ public class Product {
         public int getquantity(){
             return quantity;
         }
-        
-        
         
         
         //setters

@@ -14,6 +14,9 @@ import javax.swing.text.DocumentFilter;
  */
 public class NameInputFilter extends DocumentFilter {
        
+       //this does not allow numbers on the name inputted
+       //Example David56 this is not allowed
+       //it only allows spaces periods
        @Override
        public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException {
            if (isValidNameText(string)) {

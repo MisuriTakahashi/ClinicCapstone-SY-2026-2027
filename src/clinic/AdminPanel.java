@@ -41,8 +41,8 @@ public class AdminPanel extends javax.swing.JFrame {
     private static final int CONTENT_X = SIDEBAR_WIDTH + CONTENT_GAP;
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(AdminPanel.class.getName());
-    private final ProductCsvHandling productService = new ProductCsvHandling("products.csv", "inventory_activity.log");
-    private ArrayList<Product> currentProducts = new ArrayList<>();
+    private final MedicineCsvHandling productService = new MedicineCsvHandling("products.csv", "inventory_activity.log");
+    private ArrayList<Medicine> currentProducts = new ArrayList<>();
     private String selectedProductName = null;
     private AccountSystem loggedInAccount;
 
@@ -496,7 +496,7 @@ private void animateContentIn(JPanel panel) {
             DefaultTableModel model = (DefaultTableModel) stockTable.getModel();
             model.setRowCount(0);
 
-            for (Product p : currentProducts) {
+            for (Medicine p : currentProducts) {
                 model.addRow(new Object[]{
                     p.getStatus(),
                     p.getname(),
@@ -511,11 +511,11 @@ private void animateContentIn(JPanel panel) {
     
     private void refreshInventoryScreen() {
         try {
-            ArrayList<Product> products = productService.loadAll();
+            ArrayList<Medicine> medicine = productService.loadAll();
             DefaultTableModel model = (DefaultTableModel) stockTable.getModel();
             model.setRowCount(0);
 
-            for (Product p : products) {
+            for (Medicine p : medicine) {
                 model.addRow(new Object[]{p.getStatus(), p.getname(), p.getquantity()});
             }
             refreshActivityLogDisplay();
@@ -1475,7 +1475,7 @@ private void animateContentIn(JPanel panel) {
        int row = stockTable.getSelectedRow();
        if (row == -1) return;
 
-        Product selected = currentProducts.get(row); // real object, correct types guaranteed - DJJ - ps I DON'T KNOW WHAT THIS DO BUT DO NOT REMOVE IT
+        Medicine selected = currentProducts.get(row); // real object, correct types guaranteed - DJJ - ps I DON'T KNOW WHAT THIS DO BUT DO NOT REMOVE IT
 
         selectedProductName = selected.getname();
         ProductName.setText(selected.getname());

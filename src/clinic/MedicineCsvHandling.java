@@ -19,20 +19,21 @@ import java.util.ArrayList;
  *
  * @author PC
  */
-public class ProductCsvHandling {
+public class MedicineCsvHandling {
+   
     private final File csvFile;
     private final File activityLogFile;
     private static final DateTimeFormatter Time_Format = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-    
-    public ProductCsvHandling(String csvPath , String activityLogFile){
+    private ArrayList<Medicine> medicine = new ArrayList<>();
+    public MedicineCsvHandling(String csvPath , String activityLogFile){
         this.csvFile = new File(csvPath);
         this.activityLogFile = new File(activityLogFile);
     }
     
-        //this loads all of the product is the table
-       public ArrayList<Product> loadAll() throws IOException  {
-        ArrayList<Product> products = new ArrayList<>();
-        if(!csvFile.exists()) return products;
+       // Loads all products from the CSV file
+       public ArrayList<Medicine> loadAll() throws IOException  {
+        
+        if(!csvFile.exists()) return medicine;
         
         try(BufferedReader br = new BufferedReader (new FileReader(csvFile))){
             String line;
@@ -42,25 +43,25 @@ public class ProductCsvHandling {
                     String name = data[0].replace("\"", "");
                     String expDate = data[1].replace("\"", "");
                     int quantity = Integer.parseInt(data[2].trim());
-                    products.add(new Product(name, expDate, quantity));
+                    medicine.add(new Medicine(name, expDate, quantity));
                 }
             }
         }
-            return products;
+            return medicine;
     }
     
        
        //this add the new items
        public void addItem(String name, String expDate, int quantity) throws IOException {
-        Product product = new Product(name, expDate, quantity);
+        Medicine medicine = new Medicine(name, expDate, quantity);
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(csvFile, true))) {
-            bw.write(product.toCsvLine());
+            bw.write(medicine.toCsvLine());
             bw.newLine();
         }
         logActivity("Added " + quantity + "x " + name);
     }
     
-       
+       //this shows the Log Activity on the Products like if the item is deducted by a student or delete or edited 
        private void logActivity(String message) throws IOException {
         String timestamp = LocalDateTime.now().format(Time_Format);
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(activityLogFile, true))) {
@@ -69,12 +70,12 @@ public class ProductCsvHandling {
         }
     }
           
-    
+        //this edit the current item like if you want to change date or add another stocks
         public boolean editItem(String currentName , String newName ,String newExpDate , int newQuantity ) throws IOException {
-         ArrayList<Product> products = loadAll();
+         ArrayList<Medicine> medicine = loadAll();
          boolean found = false;
          
-         for(Product p : products){
+         for(Medicine p : medicine){
              if(p.getname().equals(currentName)){
                 p.setname(newName);
                 p.setExpDate(newExpDate);
@@ -84,24 +85,24 @@ public class ProductCsvHandling {
          }
           if (!found) return false;
 
-        rewriteFile(products);
+        rewriteFile(medicine);
         logActivity("Edited " + currentName + " -> " + newName + " (" + newQuantity + "x)");
         return true;
     }
     
-    
-        private void rewriteFile(ArrayList<Product> products) throws IOException {
+        //this rewrites the Data on the File if Edited and Deleted 
+        private void rewriteFile(ArrayList<Medicine> products) throws IOException {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(csvFile))) {
-            for (Product p : products) {
+            for (Medicine p : products) {
                 bw.write(p.toCsvLine());
                 bw.newLine();
             }
         }
     }
       
-      
+        //this is just an delete button
         public boolean deleteItem(String name) throws IOException {
-        ArrayList<Product> products = loadAll();
+        ArrayList<Medicine> products = loadAll();
         boolean removed = products.removeIf(p -> p.getname().equals(name));
 
         if (!removed) return false;
@@ -112,7 +113,7 @@ public class ProductCsvHandling {
     }
        
       
-       // Reads the activity log back for display — most recent entries last
+       // Reads the activity log back for display  most recent entries last
         public ArrayList<String> loadActivityLog() throws IOException {
         ArrayList<String> lines = new ArrayList<>();
         if (!activityLogFile.exists()) return lines;
@@ -126,13 +127,13 @@ public class ProductCsvHandling {
         return lines;
     }
      
-        
+        //this is the checking of the medicine that the student use it also checks if no stocks 
         public boolean useMedicine(String productName , String studentName) throws IOException{
                 
-            ArrayList<Product> products = loadAll();
+            ArrayList<Medicine> products = loadAll();
             boolean found = false;
             
-            for(Product p : products){
+            for(Medicine p : products){
             
                 if(p.getname().equalsIgnoreCase(productName)){
             
@@ -155,20 +156,20 @@ public class ProductCsvHandling {
             
             return true; 
     }
- 
+        //this is the method for not duplicating the name 
         public boolean nameExists(String name) throws IOException {
         
-            for (Product p : loadAll()) {
+            for (Medicine p : loadAll()) {
             if (p.getname().equalsIgnoreCase(name)) {
                 return true;
             }
         }
         return false;
     }
-        
-        public Product findByName(String name) throws IOException {
+        //this just find the name i think
+        public Medicine findByName(String name) throws IOException {
             
-            for (Product p : loadAll()) {
+            for (Medicine p : loadAll()) {
             if (p.getname().equalsIgnoreCase(name)) {
                 return p;
             }
