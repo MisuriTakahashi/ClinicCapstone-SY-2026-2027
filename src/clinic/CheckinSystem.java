@@ -14,19 +14,21 @@ public class CheckinSystem {
     private String lrn;
     private String reason;
     private String medUsed;
+    private int medsQty;
     private String checkInTime;
     private String status;
     private String guardianName;
     private String guardianPhoneNums;
 
     public CheckinSystem(String name, String gradeSection, String lrn, String reason,
-                          String medUsed, String checkInTime, String status,
+                          String medUsed, int medsQty ,String checkInTime, String status,
                           String guardianName, String guardianPhoneNums) {
         this.name = name;
         this.gradeSection = gradeSection;
         this.lrn = lrn;
         this.reason = reason;
         this.medUsed = medUsed;
+        this.medsQty = medsQty;
         this.checkInTime = checkInTime;
         this.status = status;
         this.guardianName = guardianName;
@@ -48,6 +50,9 @@ public class CheckinSystem {
     }
     public String getMedUsed() {
         return medUsed;
+    }
+    public int getmedsQty(){
+        return medsQty;
     }
     public String getCheckInTime() { 
         return checkInTime;
@@ -76,6 +81,9 @@ public class CheckinSystem {
     public void setMedUsed(String medUsed) {
         this.medUsed = medUsed;
     }
+    public void setMedsQty(int medsQty){
+        this.medsQty = medsQty;
+    }
     public void setStatus(String status) {
         this.status = status;
     }
@@ -85,11 +93,19 @@ public class CheckinSystem {
     public void setGuardianPhone(String guardianPhoneNums) {
         this.guardianPhoneNums = guardianPhoneNums;
     }
-
+    
+    // Returns the medicine name and quantity for display.
+    // Returns "None" when no medicine was used.
+    public String getMedicineDisplay() {
+        if (medUsed == null || medUsed.equals("None")) return "None";
+        return medUsed + " x" + medsQty;
+    }
+   
+    // Converts the check-in information into a CSV-formatted line for file storage.
     public String toCsvLine() {
         return "\"" + name + "\",\"" + gradeSection + "\",\"" + lrn + "\",\"" + reason + "\",\""
-                + medUsed + "\",\"" + checkInTime + "\",\"" + status + "\",\""
+                + medUsed + "\",\"" + medsQty + "\",\""  + checkInTime + "\",\"" + status + "\",\""
                 + guardianName + "\",\"" + guardianPhoneNums + "\"";
     }
-    //asd
+    
 }

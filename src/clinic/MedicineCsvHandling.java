@@ -32,9 +32,13 @@ public class MedicineCsvHandling {
     
        // Loads all products from the CSV file
        public ArrayList<Medicine> loadAll() throws IOException  {
-        
-        if(!csvFile.exists()) return medicine;
-        
+       
+           ArrayList<Medicine> medicine = new ArrayList<>();
+
+        if (!csvFile.exists()) {
+            return medicine;
+        }
+
         try(BufferedReader br = new BufferedReader (new FileReader(csvFile))){
             String line;
             while((line = br.readLine()) != null){
@@ -128,34 +132,28 @@ public class MedicineCsvHandling {
     }
      
         //this is the checking of the medicine that the student use it also checks if no stocks 
-        public boolean useMedicine(String productName , String studentName) throws IOException{
-                
+            public boolean useMedicine(String productName, String studentName, int quantity) throws IOException {
             ArrayList<Medicine> products = loadAll();
             boolean found = false;
-            
-            for(Medicine p : products){
-            
-                if(p.getname().equalsIgnoreCase(productName)){
-            
-                if(p.getquantity () <= 0){
-                    return false; // no stocks
-                }
-                
-                p.setquantity(p.getquantity () - 1);
-                found = true;
-                break;
-            }
-        }
-            if(!found){
-                return false;
-            }
-            
-            rewriteFile(products);
-            
-            logActivity("Student " + studentName + " Used 1x " + productName);
-            
-            return true; 
-    }
+
+            for (Medicine p : products) {
+              if (p.getname().equalsIgnoreCase(productName)) {
+                  if (p.getquantity() < quantity) {
+                      return false; // not enough stock for the requested amount
+                  }
+                  p.setquantity(p.getquantity() - quantity);
+                  found = true;
+                  break;
+              }
+          }
+
+          if (!found) return false;
+
+          rewriteFile(products);
+          logActivity("Student " + studentName + " Used " + quantity + "x " + productName);
+          return true;
+       }
+        
         //this is the method for not duplicating the name 
         public boolean nameExists(String name) throws IOException {
         

@@ -32,17 +32,18 @@ public class VisitCsvHandling {
     }
     
     // this adds one new Check in row to csv 
-   public void checkIn(String name , String gradeSection , String lrn , String medUsed,
-                       String Reason , String guardianName, String guardianPhoneNums) throws IOException{
-       String now = LocalDateTime.now().format(TIME_FORMAT);
-       CheckinSystem visit = new CheckinSystem(name , gradeSection , lrn , medUsed , Reason ,now,
-                                                "In Clinic" , guardianName ,guardianPhoneNums);
-      
-       try (BufferedWriter bw = new BufferedWriter(new FileWriter(csvFile, true))) {
-        bw.write(visit.toCsvLine());
-        bw.newLine();
+        public void checkIn(String name, String gradeSection, String lrn, String reason, String medUsed,
+                          int medsQty, String guardianName, String guardianPhone) throws IOException {
+         String now = LocalDateTime.now().format(TIME_FORMAT);
+         CheckinSystem visit = new CheckinSystem(name, gradeSection, lrn, reason, medUsed, medsQty,
+                                                  now, "In Clinic", guardianName, guardianPhone);
+
+         try (BufferedWriter bw = new BufferedWriter(new FileWriter(csvFile, true))) {
+             bw.write(visit.toCsvLine());
+             bw.newLine();
+         }
      }
-   }
+
     
     //LOADS ALL THE Visits
     //reads every record fon the csv file 
@@ -55,18 +56,21 @@ public class VisitCsvHandling {
         String line;
         while ((line = br.readLine()) != null) {
             String[] data = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
-            if (data.length >= 9) {
+            
+            if (data.length >= 10) {
                 for (int i = 0; i < data.length; i++) data[i] = data[i].replace("\"", "");
+                int medsQty = Integer.parseInt(data[5].trim());
                 visits.add(new CheckinSystem(
-                        data[0], 
-                        data[1], 
+                        data[0],
+                        data[1],
                         data[2], 
                         data[3], 
                         data[4], 
-                        data[5], 
+                        medsQty, 
                         data[6], 
                         data[7], 
-                        data[8]));
+                        data[8], 
+                        data[9]));
             }
         }
     }
@@ -146,7 +150,7 @@ public class VisitCsvHandling {
      
      //this the Edit Function
      public boolean editVisit(String lrn , String newName , String newGradeSection , 
-             String newReason ,String newMedUsed ) throws IOException {
+            String newReason ,String newMedUsed , int newMedsQty) throws IOException {
             ArrayList<CheckinSystem> visits = loadAll();
             boolean found = false;
          
@@ -156,6 +160,7 @@ public class VisitCsvHandling {
               v.setGradeSection(newGradeSection);
               v.setReason(newReason);
               v.setMedUsed(newMedUsed);
+              v.setMedsQty(newMedsQty);
                 found = true;
               }
            }
