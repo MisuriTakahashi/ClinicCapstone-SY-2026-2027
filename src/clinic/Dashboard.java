@@ -29,7 +29,7 @@ public class Dashboard extends javax.swing.JFrame {
     
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Dashboard.class.getName());
-    private boolean darkMode = false;
+    private static boolean darkMode = false;
     private GlassOverlayPanel glassOverlay = new GlassOverlayPanel();
     private AccountSystem loggedInAccount;
     /**
@@ -164,6 +164,7 @@ public class Dashboard extends javax.swing.JFrame {
             VisitPanel.putClientProperty("JComponent.arc", 25);
             SentHomePanel.putClientProperty("JComponent.arc", 25);
             CheckInPanel.putClientProperty("JComponent.arc", 25);
+            
             InventoryPanel.putClientProperty("JComponent.arc", 25);
 
             java.awt.Color softSlate = new java.awt.Color(245, 247, 250); 
@@ -202,6 +203,7 @@ public class Dashboard extends javax.swing.JFrame {
             // --- 4. Round Modern Component Elements ---
             CheckInBTN.putClientProperty("JButton.buttonType", "roundRect");
             EditBTN.putClientProperty("JButton.buttonType", "roundRect");
+            ClearBTN.putClientProperty("JButton.buttonType", "roundRect");
             jButton1.putClientProperty("JButton.buttonType", "roundRect"); // Admin button
             jComboBox1.putClientProperty("JComponent.roundRect", true);
             SentHomeBTN.putClientProperty("JButton.buttonType", "roundRect");
@@ -252,9 +254,11 @@ public class Dashboard extends javax.swing.JFrame {
     CheckInPanel.add(jLabel11, "split 2, gaptop 10");
     CheckInPanel.add(jComboBox1, "w 140!");
     // Push buttons to the bottom
-    CheckInPanel.add(CheckInBTN, "growx, pushy, aligny bottom, gaptop 20");
-    CheckInPanel.add(EditBTN, "growx, gaptop 8");
-    CheckInPanel.add(SentHomeBTN, "growx, gaptop 8");
+    CheckInPanel.add(CheckInBTN,  "growx, pushy, aligny bottom, gaptop 20 ");
+    CheckInPanel.add(SentHomeBTN, "growx, gaptop 8 ");
+    CheckInPanel.add(EditBTN,     "split 2, growx, gaptop 8 ");  // Edit + Clear share this row
+    CheckInPanel.add(ClearBTN,    "growx ");                     // sits inline with Edit
+    
 
     // ================= STAT CARDS (VISITS & SENT HOME) =================
     // Configure them directly (No CounterPanel wrapper)
@@ -315,6 +319,8 @@ public class Dashboard extends javax.swing.JFrame {
 
     MainPanel.revalidate();
     MainPanel.repaint();
+    
+    
 }
      // ===== SVG ICONS (FlatLaf Extras) =====
 // ===== SVG ICONS (FlatLaf Extras) =====
@@ -399,7 +405,7 @@ private void applyTheme() {
         ThemeToggle.setBackground(java.awt.Color.WHITE);
         ThemeToggle.setForeground(java.awt.Color.BLACK);
         // --- ACTION BUTTONS (Blue) ---
-        javax.swing.JButton[] actionButtons = {CheckInBTN, EditBTN, SentHomeBTN};
+        javax.swing.JButton[] actionButtons = {CheckInBTN, EditBTN, SentHomeBTN, ClearBTN};
         for (javax.swing.JButton btn : actionButtons) {
             btn.putClientProperty("JButton.buttonType", "roundRect");
             btn.putClientProperty("JComponent.arc", 10);
@@ -773,6 +779,7 @@ NOT modify this code. The content of this method is always
         LRNLabel = new javax.swing.JLabel();
         LRNField = new javax.swing.JTextField();
         StudentCheckinLabel = new javax.swing.JLabel();
+        ClearBTN = new javax.swing.JButton();
         InventoryPanel = new javax.swing.JPanel();
         jScrollPane3 = new javax.swing.JScrollPane();
         InventoryStatusArea = new javax.swing.JTextArea();
@@ -998,10 +1005,20 @@ NOT modify this code. The content of this method is always
         StudentCheckinLabel.setForeground(new java.awt.Color(0, 0, 0));
         StudentCheckinLabel.setText("Student Check-in");
 
+        ClearBTN.setBackground(new java.awt.Color(0, 102, 204));
+        ClearBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
+        ClearBTN.setForeground(new java.awt.Color(255, 255, 255));
+        ClearBTN.setText("Clear");
+        ClearBTN.addActionListener(this::ClearBTNActionPerformed);
+
         javax.swing.GroupLayout CheckInPanelLayout = new javax.swing.GroupLayout(CheckInPanel);
         CheckInPanel.setLayout(CheckInPanelLayout);
         CheckInPanelLayout.setHorizontalGroup(
             CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(CheckInPanelLayout.createSequentialGroup()
+                .addGap(142, 142, 142)
+                .addComponent(StudentCheckinLabel)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
             .addGroup(CheckInPanelLayout.createSequentialGroup()
                 .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(CheckInPanelLayout.createSequentialGroup()
@@ -1028,12 +1045,11 @@ NOT modify this code. The content of this method is always
                             .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                                 .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 274, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 367, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                        .addGap(0, 37, Short.MAX_VALUE)))
+                        .addGap(0, 37, Short.MAX_VALUE))
+                    .addGroup(CheckInPanelLayout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(ClearBTN, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addContainerGap())
-            .addGroup(CheckInPanelLayout.createSequentialGroup()
-                .addGap(142, 142, 142)
-                .addComponent(StudentCheckinLabel)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         CheckInPanelLayout.setVerticalGroup(
             CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1060,12 +1076,14 @@ NOT modify this code. The content of this method is always
                 .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jComboBox1)
                     .addComponent(jLabel11, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 61, Short.MAX_VALUE)
+                .addGap(32, 32, 32)
                 .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(EditBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(SentHomeBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(ClearBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
 
@@ -1768,6 +1786,11 @@ NOT modify this code. The content of this method is always
             this.revalidate();
             this.repaint();
     }//GEN-LAST:event_InformationBackBTNActionPerformed
+
+    private void ClearBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ClearBTNActionPerformed
+       clearCheckInForm();
+        showToast(CheckInPanel, "Form cleared.", true);
+    }//GEN-LAST:event_ClearBTNActionPerformed
    
     private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {                                         
             
@@ -1976,6 +1999,7 @@ NOT modify this code. The content of this method is always
     private javax.swing.JButton CheckInBTN;
     private javax.swing.JPanel CheckInPanel;
     private javax.swing.JPanel CheckInPanel1;
+    private javax.swing.JButton ClearBTN;
     private javax.swing.JLabel DateTimeLabel;
     private javax.swing.JButton EditBTN;
     private javax.swing.JButton FinishBTN;

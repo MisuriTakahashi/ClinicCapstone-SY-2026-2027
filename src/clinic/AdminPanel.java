@@ -50,6 +50,7 @@ public class AdminPanel extends javax.swing.JFrame {
      * Creates the administrator inventory panel.
      */
     public AdminPanel(AccountSystem account) {
+        com.formdev.flatlaf.FlatLightLaf.setup();
         initComponents();
         configureFlatLafUi();
         statisticsContainer.setVisible(false);
