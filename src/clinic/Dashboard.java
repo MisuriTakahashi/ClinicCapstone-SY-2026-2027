@@ -10,6 +10,7 @@ import java.awt.Graphics2D;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
+import net.miginfocom.swing.MigLayout;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -25,6 +26,7 @@ import javax.swing.text.AbstractDocument;
  * @author PC
  */
 public class Dashboard extends javax.swing.JFrame {
+    
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Dashboard.class.getName());
     private boolean darkMode = false;
@@ -56,6 +58,14 @@ public class Dashboard extends javax.swing.JFrame {
             this.loggedInAccount = account;
             
             initComponents();
+            applyMigLayouts();
+            
+            this.setSize(1366, 800);             // Sets a standard HD laptop size
+            this.setMinimumSize(new java.awt.Dimension(1024, 600)); // Prevents it from getting too small
+            this.setLocationRelativeTo(null);
+            
+            
+            
             
             ((AbstractDocument) NameCheckIn.getDocument()).setDocumentFilter(new NameInputFilter()); //this is an input filter for NameCheckin which dont allows numbers
             ((AbstractDocument) ParentGurdianName.getDocument()).setDocumentFilter(new NameInputFilter()); //this also and input filter for the parentName which do not allows numbers too
@@ -158,7 +168,7 @@ public class Dashboard extends javax.swing.JFrame {
 
             java.awt.Color softSlate = new java.awt.Color(245, 247, 250); 
             CheckInPanel.setBackground(softSlate);
-            CounterPanel.setBackground(softSlate);
+            
             InventoryPanel.setBackground(softSlate);
             MainPanel.setBackground(java.awt.Color.WHITE); // Bright, clean backdrop
 
@@ -196,7 +206,9 @@ public class Dashboard extends javax.swing.JFrame {
             jComboBox1.putClientProperty("JComponent.roundRect", true);
             SentHomeBTN.putClientProperty("JButton.buttonType", "roundRect");
 
-            ThemeToggle.setText("Dark mode");
+            ThemeToggle.setText(null);
+            ThemeToggle.setIcon(createMoonIcon());
+            ThemeToggle.setToolTipText("Switch to Dark Mode");
             ThemeToggle.addActionListener(e -> {
                 darkMode = ThemeToggle.isSelected();
                 applyTheme();
@@ -207,130 +219,299 @@ public class Dashboard extends javax.swing.JFrame {
             checkExpiredProducts();
 
         }
-    private void applyTheme() {
-        try {
-            if (darkMode) {
-                com.formdev.flatlaf.FlatDarkLaf.setup();
-            } else {
-                com.formdev.flatlaf.FlatLightLaf.setup();
+     private void applyMigLayouts() {
+    // ================= HEADER =================
+        HeaderPanel.removeAll();
+        HeaderPanel.setLayout(new MigLayout(
+            "fillx, aligny center, insets 12 18", 
+            "[][grow, center][]", ""));
+        HeaderPanel.add(DateTimeLabel, "aligny center");            
+        HeaderPanel.add(jLabel3, "alignx center");                  
+
+        // CHANGE THIS LINE: Added "w 50!" to force width to 50px and prevent shrinking
+        // Also added "gapleft 20" to separate it from the title
+        HeaderPanel.add(ThemeToggle, "split 3, aligny center, gapleft 20, w 50!"); 
+
+        HeaderPanel.add(jButton1, "gapleft 10");
+        HeaderPanel.add(jButton2, "gapleft 10");
+
+    // ================= LEFT SIDEBAR (FORM) =================
+    CheckInPanel.removeAll();
+    CheckInPanel.setLayout(new MigLayout(
+        "wrap 1, fillx, insets 20", 
+        "[fill, grow]", ""));
+    CheckInPanel.add(StudentCheckinLabel, "alignx center, gapbottom 15");
+    CheckInPanel.add(jLabel7);
+    CheckInPanel.add(NameCheckIn);
+    CheckInPanel.add(jLabel8, "gaptop 8");
+    CheckInPanel.add(GSCheckIn);
+    CheckInPanel.add(LRNLabel, "gaptop 8");
+    CheckInPanel.add(LRNField);
+    CheckInPanel.add(jLabel9, "gaptop 8");
+    CheckInPanel.add(jScrollPane1, "h 170!"); 
+    CheckInPanel.add(jLabel11, "split 2, gaptop 10");
+    CheckInPanel.add(jComboBox1, "w 140!");
+    // Push buttons to the bottom
+    CheckInPanel.add(CheckInBTN, "growx, pushy, aligny bottom, gaptop 20");
+    CheckInPanel.add(EditBTN, "growx, gaptop 8");
+    CheckInPanel.add(SentHomeBTN, "growx, gaptop 8");
+
+    // ================= STAT CARDS (VISITS & SENT HOME) =================
+    // Configure them directly (No CounterPanel wrapper)
+   jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+    VisitCounter.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+    SentHomeFooterLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+    SentHomeCount.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+
+    VisitPanel.removeAll();
+    VisitPanel.setLayout(new MigLayout("wrap 1, fillx, insets 10", "[grow, fill]"));
+    VisitPanel.add(jLabel1,      "growx, pushy, aligny bottom");   // space goes ABOVE the label
+    VisitPanel.add(VisitCounter, "growx, pushy, aligny top, gaptop 4"); // number sticks right below it
+
+    SentHomePanel.removeAll();
+    SentHomePanel.setLayout(new MigLayout("wrap 1, fillx, insets 10", "[grow, fill]"));
+    SentHomePanel.add(SentHomeFooterLabel, "growx, pushy, aligny bottom");
+    SentHomePanel.add(SentHomeCount,       "growx, pushy, aligny top, gaptop 4");
+
+    // ================= INVENTORY (TOP RIGHT) =================
+    InventoryPanel.removeAll();
+    InventoryPanel.setLayout(new MigLayout("fill, insets 5", "[grow, fill]", "[grow, fill]"));
+    InventoryPanel.add(jScrollPane3, "grow");
+
+    // ================= LOGS TABLE (BOTTOM) =================
+    CheckInPanel1.removeAll();
+    CheckInPanel1.setLayout(new MigLayout("fill, insets 10", "[grow, fill]", "[grow, fill]"));
+    CheckInPanel1.add(jScrollPane2, "grow");
+
+    // ================= MAIN LAYOUT ASSEMBLY =================
+    MainPanel.removeAll();
+    
+    MainPanel.setLayout(new MigLayout(
+        "fill, insets 10, gapx 12, gapy 6",
+        "[400, fill][grow, fill][450, fill]", 
+        "[][][220!][][grow, fill]")); 
+
+    // Row 1: Header (Full Width)
+    MainPanel.add(HeaderPanel, "spanx 3, growx, wrap");
+
+    // Row 2-5: Left Sidebar (Spans all rows below header)
+    MainPanel.add(CheckInPanel, "spany 4, grow");
+
+    // Row 2: Section Labels
+    MainPanel.add(OverviewLabel, "alignx center");          
+    MainPanel.add(InventoryLabel, "alignx center, wrap");   
+
+    // Row 3: The Panels (VisitPanel + SentHomePanel | InventoryPanel)
+    // We add VisitPanel and SentHomePanel directly here using split 2
+    MainPanel.add(VisitPanel, "split 2, grow");             
+    MainPanel.add(SentHomePanel, "grow");                   
+    MainPanel.add(InventoryPanel, "grow, wrap");
+
+    // Row 4: Logs Label (Spans Cols 2 & 3)
+    MainPanel.add(LogsLabel, "spanx 2, alignx center, wrap");
+
+    // Row 5: The Table (Spans Cols 2 & 3, Grows to fill height)
+    MainPanel.add(CheckInPanel1, "spanx 2, grow, wrap");
+
+    MainPanel.revalidate();
+    MainPanel.repaint();
+}
+     // ===== SVG ICONS (FlatLaf Extras) =====
+// ===== SVG ICONS (FlatLaf Extras) =====
+private javax.swing.Icon createSunIcon() {
+    return new javax.swing.Icon() {
+        public int getIconWidth() { return 22; }
+        public int getIconHeight() { return 22; }
+        public void paintIcon(java.awt.Component c, java.awt.Graphics g, int x, int y) {
+            java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(java.awt.Color.BLACK);
+            // Center circle
+            g2.fillOval(x + 7, y + 7, 8, 8);
+            // Rays
+            g2.setStroke(new java.awt.BasicStroke(2f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
+            for (int i = 0; i < 8; i++) {
+                double a = Math.PI / 4 * i;
+                g2.drawLine(x + 11 + (int) Math.round(7 * Math.cos(a)),
+                            y + 11 + (int) Math.round(7 * Math.sin(a)),
+                            x + 11 + (int) Math.round(10 * Math.cos(a)),
+                            y + 11 + (int) Math.round(10 * Math.sin(a)));
             }
-            // Ternary operator
-            java.awt.Color pageBackground = darkMode
-                    ? new java.awt.Color(43, 43, 43)
-                    : java.awt.Color.WHITE;
-            java.awt.Color panelBackground = darkMode
-                    ? new java.awt.Color(60, 63, 65)
-                    : new java.awt.Color(245, 247, 250);
-            java.awt.Color cardBackground = darkMode
-                    ? new java.awt.Color(70, 73, 75)
-                    : java.awt.Color.WHITE;
-            java.awt.Color inputBackground = darkMode
-                    ? new java.awt.Color(48, 50, 52)
-                    : java.awt.Color.WHITE;
-            java.awt.Color textColor = darkMode
-                    ? new java.awt.Color(235, 235, 235)
-                    : new java.awt.Color(25, 25, 25);
-            java.awt.Color headerColor = darkMode
-                    ? new java.awt.Color(30, 76, 120)
-                    : new java.awt.Color(51, 153, 255);
-            java.awt.Color borderColor = darkMode
-                    ? new java.awt.Color(100, 104, 108)
-                    : new java.awt.Color(220, 225, 230);
-            javax.swing.border.Border lineBorder = javax.swing.BorderFactory.createLineBorder(borderColor, 1, true);
-
-        // 2. Create the titled border using your title text and font
-        javax.swing.border.TitledBorder titledBorder = javax.swing.BorderFactory.createTitledBorder(
-            lineBorder,
-            "Parent/Guardian Information",
-            javax.swing.border.TitledBorder.LEFT,
-            javax.swing.border.TitledBorder.TOP,
-            new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 14),
-            darkMode ? java.awt.Color.WHITE : java.awt.Color.BLACK
-        );
-
-        // 3. Add internal padding (CompoundBorder) so components inside don't touch the edges
-        javax.swing.border.Border emptyPadding = javax.swing.BorderFactory.createEmptyBorder(10, 15, 15, 15);
-
-        // 4. Set the final compound border back onto the panel
-        SentHomeInformationPanel.setBorder(
-            javax.swing.BorderFactory.createCompoundBorder(titledBorder, emptyPadding)
-        );
-            
-
-            ThemeToggle.setText(darkMode ? "Light mode" : "Dark mode");
-            ThemeToggle.setSelected(darkMode);
-            
-            HeaderPanel.setBackground(headerColor);
-            MainPanel.setBackground(pageBackground);
-            CounterPanel.setBackground(panelBackground);
-            CheckInPanel.setBackground(panelBackground);
-            CheckInPanel1.setBackground(panelBackground);
-            InventoryPanel.setBackground(panelBackground);
-            VisitPanel.setBackground(cardBackground);
-            SentHomePanel.setBackground(cardBackground);
-            
-            SentHomeInformationPanel.setBackground(cardBackground);
-            PGNameLabel.setForeground(textColor);
-            PNField.setForeground(textColor);
-            ParentGurdianName.setBackground(inputBackground);
-            ParentGurdianName.setForeground(textColor);
-            PhoneField.setBackground(inputBackground);
-            PhoneField.setForeground(textColor);
-            
-            
-
-            // Header and section titles
-            jLabel3.setForeground(java.awt.Color.WHITE);
-            DateTimeLabel.setForeground(java.awt.Color.WHITE);
-            InventoryLabel.setForeground(textColor);
-            OverviewLabel.setForeground(textColor);
-            LogsLabel.setForeground(textColor);
-            StudentCheckinLabel.setForeground(textColor);
-
-            // Summary cards and check-in labels
-            jLabel1.setForeground(textColor);
-            SentHomeFooterLabel.setForeground(textColor);
-            VisitCounter.setForeground(textColor);
-            SentHomeCount.setForeground(textColor);
-            jLabel7.setForeground(textColor);
-            jLabel8.setForeground(textColor);
-            LRNLabel.setForeground(textColor);
-            jLabel9.setForeground(textColor);
-            jLabel11.setForeground(textColor);
-
-            // Inputs, text areas, tables, and their scroll panes
-            NameCheckIn.setBackground(inputBackground);
-            NameCheckIn.setForeground(textColor);
-            LRNField.setBackground(inputBackground);
-            LRNField.setForeground(textColor);
-            GSCheckIn.setBackground(inputBackground);
-            GSCheckIn.setForeground(textColor);
-            ReasonArea.setBackground(inputBackground);
-            ReasonArea.setForeground(textColor);
-            InventoryStatusArea.setBackground(inputBackground);
-            InventoryStatusArea.setForeground(textColor);
-            ReasonTable.setBackground(inputBackground);
-            ReasonTable.setForeground(textColor);
-            ReasonTable.getTableHeader().setBackground(cardBackground);
-            ReasonTable.getTableHeader().setForeground(textColor);
-            jComboBox1.setBackground(inputBackground);
-            jComboBox1.setForeground(textColor);
-
-            jScrollPane1.getViewport().setBackground(inputBackground);
-            jScrollPane2.getViewport().setBackground(inputBackground);
-            jScrollPane3.getViewport().setBackground(inputBackground);
-            jScrollPane1.setBorder(javax.swing.BorderFactory.createLineBorder(borderColor));
-            jScrollPane2.setBorder(javax.swing.BorderFactory.createLineBorder(borderColor));
-            jScrollPane3.setBorder(javax.swing.BorderFactory.createLineBorder(borderColor));
-
-            for (java.awt.Window window : java.awt.Window.getWindows()) {
-                javax.swing.SwingUtilities.updateComponentTreeUI(window);
-                window.pack();
-            }
-        } catch (Exception ex) {
-            logger.log(java.util.logging.Level.SEVERE, "Failed to apply theme", ex);
+            g2.dispose();
         }
+    };
+}
+
+private javax.swing.Icon createMoonIcon() {
+    return new javax.swing.Icon() {
+        public int getIconWidth() { return 22; }
+        public int getIconHeight() { return 22; }
+        public void paintIcon(java.awt.Component c, java.awt.Graphics g, int x, int y) {
+            java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+            // Draw a crescent moon by subtracting one circle from another
+            java.awt.geom.Area moon = new java.awt.geom.Area(new java.awt.geom.Ellipse2D.Double(x + 4, y + 3, 14, 16));
+            moon.subtract(new java.awt.geom.Area(new java.awt.geom.Ellipse2D.Double(x + 9, y + 5, 12, 12)));
+            g2.setColor(java.awt.Color.BLACK);
+            g2.fill(moon);
+            g2.dispose();
+        }
+    };
+}
+private void applyTheme() {
+    try {
+        if (darkMode) {
+            com.formdev.flatlaf.FlatDarkLaf.setup();
+        } else {
+            com.formdev.flatlaf.FlatLightLaf.setup();
+        }
+
+        // --- COLOR PALETTE ---
+        java.awt.Color pageBackground = darkMode ? new java.awt.Color(43, 43, 43) : java.awt.Color.WHITE;
+        java.awt.Color panelBackground = darkMode ? new java.awt.Color(60, 63, 65) : new java.awt.Color(245, 247, 250);
+        java.awt.Color cardBackground = darkMode ? new java.awt.Color(70, 73, 75) : java.awt.Color.WHITE;
+        java.awt.Color inputBackground = darkMode ? new java.awt.Color(48, 50, 52) : java.awt.Color.WHITE;
+        java.awt.Color textColor = darkMode ? new java.awt.Color(235, 235, 235) : new java.awt.Color(25, 25, 25);
+        java.awt.Color headerColor = darkMode ? new java.awt.Color(30, 76, 120) : new java.awt.Color(51, 153, 255);
+        java.awt.Color borderColor = darkMode ? new java.awt.Color(100, 104, 108) : new java.awt.Color(220, 225, 230);
+
+        // --- HEADER BUTTONS (Reliable Styling) ---
+        // We use standard methods for colors to ensure they stick and are readable
+        javax.swing.JButton[] headerButtons = {jButton1, jButton2};
+        for (javax.swing.JButton btn : headerButtons) {
+            btn.putClientProperty("JButton.buttonType", "roundRect");
+            btn.putClientProperty("JComponent.arc", 15);
+            btn.setBackground(java.awt.Color.WHITE);       // Always White
+            btn.setForeground(java.awt.Color.BLACK);       // Always Black Text
+            btn.setFont(btn.getFont().deriveFont(java.awt.Font.BOLD));
+        }
+
+        // Theme Toggle Button -> SVG icons
+        ThemeToggle.setText(null);
+        ThemeToggle.setIcon(darkMode ? createSunIcon() : createMoonIcon());
+        ThemeToggle.setToolTipText(darkMode ? "Switch to Light Mode" : "Switch to Dark Mode");
+
+        
+
+        // 3. Styling (White Pill) - Keep this part as is
+        ThemeToggle.putClientProperty("JButton.buttonType", "roundRect");
+        ThemeToggle.putClientProperty("JComponent.arc", 15);
+        ThemeToggle.setBackground(java.awt.Color.WHITE);
+        ThemeToggle.setForeground(java.awt.Color.BLACK);
+        // --- ACTION BUTTONS (Blue) ---
+        javax.swing.JButton[] actionButtons = {CheckInBTN, EditBTN, SentHomeBTN};
+        for (javax.swing.JButton btn : actionButtons) {
+            btn.putClientProperty("JButton.buttonType", "roundRect");
+            btn.putClientProperty("JComponent.arc", 10);
+            btn.setBackground(new java.awt.Color(37, 99, 235)); // Modern Blue
+            btn.setForeground(java.awt.Color.WHITE);
+        }
+        
+        // Popup Buttons
+        FinishBTN.putClientProperty("JButton.buttonType", "roundRect");
+        FinishBTN.putClientProperty("JComponent.arc", 10);
+        FinishBTN.setBackground(new java.awt.Color(37, 99, 235));
+        FinishBTN.setForeground(java.awt.Color.WHITE);
+        
+        InformationBackBTN.putClientProperty("JButton.buttonType", "roundRect");
+        InformationBackBTN.putClientProperty("JComponent.arc", 10);
+        InformationBackBTN.setBackground(new java.awt.Color(153, 0, 0));
+        InformationBackBTN.setForeground(java.awt.Color.WHITE);
+
+        // --- APPLY COLORS TO COMPONENTS ---
+        
+        ThemeToggle.setSelected(darkMode);
+        
+        HeaderPanel.setBackground(headerColor);
+        MainPanel.setBackground(pageBackground);
+        CheckInPanel.setBackground(panelBackground);
+        CheckInPanel1.setBackground(panelBackground);
+        InventoryPanel.setBackground(panelBackground);
+        VisitPanel.setBackground(cardBackground);
+        SentHomePanel.setBackground(cardBackground);
+        SentHomeInformationPanel.setBackground(cardBackground);
+
+        // Borders
+        javax.swing.border.Border softBorder = javax.swing.BorderFactory.createLineBorder(borderColor, 1, true);
+        javax.swing.border.Border paddedBorder = javax.swing.BorderFactory.createCompoundBorder(
+            softBorder, javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        CheckInPanel.setBorder(paddedBorder);
+        InventoryPanel.setBorder(paddedBorder);
+        CheckInPanel1.setBorder(javax.swing.BorderFactory.createCompoundBorder(softBorder, javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10)));
+        VisitPanel.setBorder(softBorder);
+        SentHomePanel.setBorder(softBorder);
+
+        // Popup Panel Border
+        javax.swing.border.TitledBorder titledBorder = javax.swing.BorderFactory.createTitledBorder(
+            softBorder, "Parent/Guardian Information", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP,
+            new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 14), textColor);
+        SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(titledBorder, javax.swing.BorderFactory.createEmptyBorder(10, 15, 15, 15)));
+
+        // Text Colors
+        jLabel3.setForeground(java.awt.Color.WHITE);
+        DateTimeLabel.setForeground(java.awt.Color.WHITE);
+        InventoryLabel.setForeground(textColor);
+        OverviewLabel.setForeground(textColor);
+        LogsLabel.setForeground(textColor);
+        StudentCheckinLabel.setForeground(textColor);
+        jLabel1.setForeground(textColor);
+        SentHomeFooterLabel.setForeground(textColor);
+        VisitCounter.setForeground(textColor);
+        SentHomeCount.setForeground(textColor);
+        jLabel7.setForeground(textColor);
+        jLabel8.setForeground(textColor);
+        LRNLabel.setForeground(textColor);
+        jLabel9.setForeground(textColor);
+        jLabel11.setForeground(textColor);
+        PGNameLabel.setForeground(textColor);
+        PNField.setForeground(textColor);
+
+        // Inputs
+        ParentGurdianName.setBackground(inputBackground); ParentGurdianName.setForeground(textColor);
+        PhoneField.setBackground(inputBackground); PhoneField.setForeground(textColor);
+        NameCheckIn.setBackground(inputBackground); NameCheckIn.setForeground(textColor);
+        LRNField.setBackground(inputBackground); LRNField.setForeground(textColor);
+        GSCheckIn.setBackground(inputBackground); GSCheckIn.setForeground(textColor);
+        ReasonArea.setBackground(inputBackground); ReasonArea.setForeground(textColor);
+        InventoryStatusArea.setBackground(inputBackground); InventoryStatusArea.setForeground(textColor);
+        jComboBox1.setBackground(inputBackground); jComboBox1.setForeground(textColor);
+
+        // Table
+        ReasonTable.setBackground(inputBackground);
+        ReasonTable.setForeground(textColor);
+        ReasonTable.getTableHeader().setBackground(cardBackground);
+        ReasonTable.getTableHeader().setForeground(textColor);
+        
+        jScrollPane1.getViewport().setBackground(inputBackground);
+        jScrollPane2.getViewport().setBackground(inputBackground);
+        jScrollPane3.getViewport().setBackground(inputBackground);
+        
+        jScrollPane1.setBorder(softBorder);
+        jScrollPane2.setBorder(softBorder);
+        jScrollPane3.setBorder(softBorder);
+
+        // --- FIX WINDOW RESIZING ---
+        java.awt.Dimension currentSize = this.getSize();
+        java.awt.Point currentLocation = this.getLocation();
+        int currentState = this.getExtendedState();
+
+        for (java.awt.Window window : java.awt.Window.getWindows()) {
+            javax.swing.SwingUtilities.updateComponentTreeUI(window);
+            // Removed window.pack() to prevent resizing
+        }
+
+        if (currentState == this.MAXIMIZED_BOTH) {
+            this.setExtendedState(this.MAXIMIZED_BOTH);
+        } else {
+            this.setSize(currentSize);
+            this.setLocation(currentLocation);
+        }
+
+    } catch (Exception ex) {
+        logger.log(java.util.logging.Level.SEVERE, "Failed to apply theme", ex);
     }
+}
 
     
     
@@ -560,19 +741,20 @@ NOT modify this code. The content of this method is always
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
+        SentHomeInformationPanel = new javax.swing.JPanel();
+        ParentGurdianName = new javax.swing.JTextField();
+        PGNameLabel = new javax.swing.JLabel();
+        PNField = new javax.swing.JLabel();
+        PhoneField = new javax.swing.JTextField();
+        FinishBTN = new javax.swing.JButton();
+        InformationBackBTN = new javax.swing.JButton();
         MainPanel = new javax.swing.JPanel();
         HeaderPanel = new javax.swing.JPanel();
         jLabel3 = new javax.swing.JLabel();
         jButton1 = new javax.swing.JButton();
         DateTimeLabel = new javax.swing.JLabel();
         jButton2 = new javax.swing.JButton();
-        CounterPanel = new javax.swing.JPanel();
-        VisitPanel = new javax.swing.JPanel();
-        jLabel1 = new javax.swing.JLabel();
-        VisitCounter = new javax.swing.JLabel();
-        SentHomePanel = new javax.swing.JPanel();
-        SentHomeFooterLabel = new javax.swing.JLabel();
-        SentHomeCount = new javax.swing.JLabel();
+        ThemeToggle = new javax.swing.JToggleButton();
         CheckInPanel = new javax.swing.JPanel();
         NameCheckIn = new javax.swing.JTextField();
         GSCheckIn = new javax.swing.JTextField();
@@ -588,6 +770,7 @@ NOT modify this code. The content of this method is always
         SentHomeBTN = new javax.swing.JButton();
         LRNLabel = new javax.swing.JLabel();
         LRNField = new javax.swing.JTextField();
+        StudentCheckinLabel = new javax.swing.JLabel();
         InventoryPanel = new javax.swing.JPanel();
         jScrollPane3 = new javax.swing.JScrollPane();
         InventoryStatusArea = new javax.swing.JTextArea();
@@ -597,19 +780,87 @@ NOT modify this code. The content of this method is always
         ReasonTable = new javax.swing.JTable();
         OverviewLabel = new javax.swing.JLabel();
         LogsLabel = new javax.swing.JLabel();
-        StudentCheckinLabel = new javax.swing.JLabel();
-        ThemeToggle = new javax.swing.JToggleButton();
-        SentHomeInformationPanel = new javax.swing.JPanel();
-        ParentGurdianName = new javax.swing.JTextField();
-        PGNameLabel = new javax.swing.JLabel();
-        PNField = new javax.swing.JLabel();
-        PhoneField = new javax.swing.JTextField();
-        FinishBTN = new javax.swing.JButton();
-        InformationBackBTN = new javax.swing.JButton();
+        SentHomePanel = new javax.swing.JPanel();
+        SentHomeFooterLabel = new javax.swing.JLabel();
+        SentHomeCount = new javax.swing.JLabel();
+        VisitPanel = new javax.swing.JPanel();
+        jLabel1 = new javax.swing.JLabel();
+        VisitCounter = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setFocusable(false);
-        setResizable(false);
+
+        SentHomeInformationPanel.setBackground(new java.awt.Color(255, 255, 255));
+        SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED), javax.swing.BorderFactory.createTitledBorder(null, "Parent/Guardian Information", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Yu Gothic UI", 1, 18), new java.awt.Color(0, 0, 0)))); // NOI18N
+        SentHomeInformationPanel.setForeground(new java.awt.Color(0, 0, 0));
+
+        ParentGurdianName.setBackground(new java.awt.Color(227, 226, 226));
+        ParentGurdianName.setForeground(new java.awt.Color(0, 0, 0));
+
+        PGNameLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
+        PGNameLabel.setForeground(new java.awt.Color(0, 0, 0));
+        PGNameLabel.setText("Name :");
+
+        PNField.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
+        PNField.setForeground(new java.awt.Color(0, 0, 0));
+        PNField.setText("Phone Number :");
+
+        PhoneField.setBackground(new java.awt.Color(227, 226, 226));
+        PhoneField.setForeground(new java.awt.Color(0, 0, 0));
+
+        FinishBTN.setBackground(new java.awt.Color(0, 102, 204));
+        FinishBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
+        FinishBTN.setForeground(new java.awt.Color(255, 255, 255));
+        FinishBTN.setText("Finish");
+        FinishBTN.addActionListener(this::FinishBTNActionPerformed);
+
+        InformationBackBTN.setBackground(new java.awt.Color(153, 0, 0));
+        InformationBackBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
+        InformationBackBTN.setForeground(new java.awt.Color(255, 255, 255));
+        InformationBackBTN.setText("Back");
+        InformationBackBTN.addActionListener(this::InformationBackBTNActionPerformed);
+
+        javax.swing.GroupLayout SentHomeInformationPanelLayout = new javax.swing.GroupLayout(SentHomeInformationPanel);
+        SentHomeInformationPanel.setLayout(SentHomeInformationPanelLayout);
+        SentHomeInformationPanelLayout.setHorizontalGroup(
+            SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
+                .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
+                        .addGap(99, 99, 99)
+                        .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
+                                .addComponent(PNField)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(PhoneField, javax.swing.GroupLayout.PREFERRED_SIZE, 323, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
+                                .addComponent(PGNameLabel)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(ParentGurdianName, javax.swing.GroupLayout.PREFERRED_SIZE, 323, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                    .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
+                        .addGap(266, 266, 266)
+                        .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(InformationBackBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 124, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(FinishBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 124, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                .addContainerGap(112, Short.MAX_VALUE))
+        );
+        SentHomeInformationPanelLayout.setVerticalGroup(
+            SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
+                .addGap(67, 67, 67)
+                .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(ParentGurdianName, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(PGNameLabel))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(PhoneField, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(PNField))
+                .addGap(18, 18, 18)
+                .addComponent(FinishBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 43, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(InformationBackBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 43, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(54, Short.MAX_VALUE))
+        );
 
         MainPanel.setBackground(new java.awt.Color(255, 255, 255));
 
@@ -633,19 +884,24 @@ NOT modify this code. The content of this method is always
         jButton2.setText("Logout");
         jButton2.addActionListener(this::jButton2ActionPerformed);
 
+        ThemeToggle.setBackground(new java.awt.Color(255, 255, 255));
+        ThemeToggle.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
+        ThemeToggle.setForeground(new java.awt.Color(0, 0, 0));
+        ThemeToggle.setText("Mode");
+        ThemeToggle.addActionListener(this::ThemeToggleActionPerformed);
+
         javax.swing.GroupLayout HeaderPanelLayout = new javax.swing.GroupLayout(HeaderPanel);
         HeaderPanel.setLayout(HeaderPanelLayout);
         HeaderPanelLayout.setHorizontalGroup(
             HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(HeaderPanelLayout.createSequentialGroup()
-                .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(HeaderPanelLayout.createSequentialGroup()
-                        .addGap(17, 17, 17)
-                        .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 405, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(HeaderPanelLayout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 564, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap()
+                .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 564, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 405, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(155, 155, 155)
+                .addComponent(ThemeToggle, javax.swing.GroupLayout.PREFERRED_SIZE, 131, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
                 .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 141, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jButton2)
@@ -654,112 +910,15 @@ NOT modify this code. The content of this method is always
         HeaderPanelLayout.setVerticalGroup(
             HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(HeaderPanelLayout.createSequentialGroup()
+                .addGap(23, 23, 23)
                 .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(HeaderPanelLayout.createSequentialGroup()
-                        .addGap(26, 26, 26)
-                        .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                    .addGroup(HeaderPanelLayout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(jLabel3)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addGap(0, 11, Short.MAX_VALUE))
-        );
-
-        CounterPanel.setBackground(new java.awt.Color(229, 226, 226));
-        CounterPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
-
-        VisitPanel.setBackground(new java.awt.Color(255, 255, 255));
-
-        jLabel1.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        jLabel1.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel1.setText("Today's Visits");
-
-        VisitCounter.setFont(new java.awt.Font("Yu Gothic UI", 1, 36)); // NOI18N
-        VisitCounter.setForeground(new java.awt.Color(0, 0, 0));
-        VisitCounter.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        VisitCounter.setText("0");
-
-        javax.swing.GroupLayout VisitPanelLayout = new javax.swing.GroupLayout(VisitPanel);
-        VisitPanel.setLayout(VisitPanelLayout);
-        VisitPanelLayout.setHorizontalGroup(
-            VisitPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(VisitPanelLayout.createSequentialGroup()
-                .addGap(49, 49, 49)
-                .addGroup(VisitPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 113, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGroup(VisitPanelLayout.createSequentialGroup()
-                        .addGap(14, 14, 14)
-                        .addComponent(VisitCounter, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(64, Short.MAX_VALUE))
-        );
-        VisitPanelLayout.setVerticalGroup(
-            VisitPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(VisitPanelLayout.createSequentialGroup()
-                .addGap(31, 31, 31)
-                .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(VisitCounter, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(34, Short.MAX_VALUE))
-        );
-
-        SentHomePanel.setBackground(new java.awt.Color(255, 255, 255));
-
-        SentHomeFooterLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        SentHomeFooterLabel.setForeground(new java.awt.Color(0, 0, 0));
-        SentHomeFooterLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        SentHomeFooterLabel.setText("Sent Home");
-
-        SentHomeCount.setFont(new java.awt.Font("Yu Gothic UI", 1, 36)); // NOI18N
-        SentHomeCount.setForeground(new java.awt.Color(0, 0, 0));
-        SentHomeCount.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        SentHomeCount.setText("0");
-
-        javax.swing.GroupLayout SentHomePanelLayout = new javax.swing.GroupLayout(SentHomePanel);
-        SentHomePanel.setLayout(SentHomePanelLayout);
-        SentHomePanelLayout.setHorizontalGroup(
-            SentHomePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, SentHomePanelLayout.createSequentialGroup()
-                .addContainerGap(58, Short.MAX_VALUE)
-                .addGroup(SentHomePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(SentHomeFooterLabel, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 113, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, SentHomePanelLayout.createSequentialGroup()
-                        .addComponent(SentHomeCount, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(18, 18, 18)))
-                .addGap(68, 68, 68))
-        );
-        SentHomePanelLayout.setVerticalGroup(
-            SentHomePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(SentHomePanelLayout.createSequentialGroup()
-                .addGap(30, 30, 30)
-                .addComponent(SentHomeFooterLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(SentHomeCount, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-        );
-
-        javax.swing.GroupLayout CounterPanelLayout = new javax.swing.GroupLayout(CounterPanel);
-        CounterPanel.setLayout(CounterPanelLayout);
-        CounterPanelLayout.setHorizontalGroup(
-            CounterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(CounterPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(VisitPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(SentHomePanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addContainerGap())
-        );
-        CounterPanelLayout.setVerticalGroup(
-            CounterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(CounterPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(CounterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(VisitPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(SentHomePanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addContainerGap())
+                    .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(ThemeToggle, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(jLabel3)))
+                .addGap(0, 23, Short.MAX_VALUE))
         );
 
         CheckInPanel.setBackground(new java.awt.Color(226, 226, 226));
@@ -833,65 +992,79 @@ NOT modify this code. The content of this method is always
             }
         });
 
+        StudentCheckinLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
+        StudentCheckinLabel.setForeground(new java.awt.Color(0, 0, 0));
+        StudentCheckinLabel.setText("Student Check-in");
+
         javax.swing.GroupLayout CheckInPanelLayout = new javax.swing.GroupLayout(CheckInPanel);
         CheckInPanel.setLayout(CheckInPanelLayout);
         CheckInPanelLayout.setHorizontalGroup(
             CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(CheckInPanelLayout.createSequentialGroup()
-                .addGap(35, 35, 35)
-                .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(GSCheckIn)
-                    .addComponent(NameCheckIn)
-                    .addComponent(LRNField)
-                    .addComponent(jScrollPane1)
+                .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(CheckInPanelLayout.createSequentialGroup()
+                        .addGap(6, 6, 6)
                         .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(CheckInPanelLayout.createSequentialGroup()
-                                .addComponent(jLabel11)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 126, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(CheckInBTN, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(EditBTN, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(SentHomeBTN, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                    .addGroup(CheckInPanelLayout.createSequentialGroup()
+                        .addGap(35, 35, 35)
+                        .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jLabel9)
                             .addComponent(LRNLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addComponent(jLabel8)
-                            .addComponent(jLabel7)
-                            .addGroup(CheckInPanelLayout.createSequentialGroup()
-                                .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(EditBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(SentHomeBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 123, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                        .addGap(40, 40, 40)))
-                .addContainerGap(43, Short.MAX_VALUE))
+                            .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                .addComponent(NameCheckIn)
+                                .addGroup(CheckInPanelLayout.createSequentialGroup()
+                                    .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(jLabel11)
+                                        .addComponent(jLabel7))
+                                    .addGap(288, 288, 288)))
+                            .addComponent(GSCheckIn, javax.swing.GroupLayout.PREFERRED_SIZE, 367, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(LRNField, javax.swing.GroupLayout.PREFERRED_SIZE, 367, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 274, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 367, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addGap(0, 37, Short.MAX_VALUE)))
+                .addContainerGap())
+            .addGroup(CheckInPanelLayout.createSequentialGroup()
+                .addGap(142, 142, 142)
+                .addComponent(StudentCheckinLabel)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         CheckInPanelLayout.setVerticalGroup(
             CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(CheckInPanelLayout.createSequentialGroup()
-                .addGap(12, 12, 12)
+                .addGap(17, 17, 17)
+                .addComponent(StudentCheckinLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(26, 26, 26)
                 .addComponent(jLabel7)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(NameCheckIn, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jLabel8)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(GSCheckIn, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(LRNLabel)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(LRNField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jLabel9)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 90, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 161, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jComboBox1)
-                    .addComponent(jLabel11, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(jLabel11, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 61, Short.MAX_VALUE)
+                .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(EditBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(SentHomeBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(16, Short.MAX_VALUE))
+                .addComponent(EditBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(SentHomeBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
         );
 
         InventoryPanel.setBackground(new java.awt.Color(226, 226, 226));
@@ -908,16 +1081,16 @@ NOT modify this code. The content of this method is always
         InventoryPanel.setLayout(InventoryPanelLayout);
         InventoryPanelLayout.setHorizontalGroup(
             InventoryPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(InventoryPanelLayout.createSequentialGroup()
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, InventoryPanelLayout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane3)
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 493, Short.MAX_VALUE)
                 .addContainerGap())
         );
         InventoryPanelLayout.setVerticalGroup(
             InventoryPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, InventoryPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jScrollPane3)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 190, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
 
@@ -932,17 +1105,17 @@ NOT modify this code. The content of this method is always
         ReasonTable.setForeground(new java.awt.Color(0, 0, 0));
         ReasonTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null, null, null},
-                {null, null, null, null, null, null},
-                {null, null, null, null, null, null},
-                {null, null, null, null, null, null}
+                {null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null}
             },
             new String [] {
-                "Name", "Grade/Section", "LRN", "Reason", "Parent/Guardian Name", "Phone number"
+                "Status", "Name", "Grade/Section", "LRN", "Medecine/Pills Used", "Reason", "Parent/Guardian Name", "Phone number"
             }
         ) {
             boolean[] canEdit = new boolean [] {
-                false, false, false, false, false, false
+                false, false, false, false, false, false, false, false
             };
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
@@ -962,22 +1135,24 @@ NOT modify this code. The content of this method is always
             ReasonTable.getColumnModel().getColumn(3).setResizable(false);
             ReasonTable.getColumnModel().getColumn(4).setResizable(false);
             ReasonTable.getColumnModel().getColumn(5).setResizable(false);
+            ReasonTable.getColumnModel().getColumn(6).setResizable(false);
+            ReasonTable.getColumnModel().getColumn(7).setResizable(false);
         }
 
         javax.swing.GroupLayout CheckInPanel1Layout = new javax.swing.GroupLayout(CheckInPanel1);
         CheckInPanel1.setLayout(CheckInPanel1Layout);
         CheckInPanel1Layout.setHorizontalGroup(
             CheckInPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CheckInPanel1Layout.createSequentialGroup()
+            .addGroup(CheckInPanel1Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane2)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 1216, Short.MAX_VALUE)
                 .addContainerGap())
         );
         CheckInPanel1Layout.setVerticalGroup(
             CheckInPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(CheckInPanel1Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 329, Short.MAX_VALUE)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 404, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
@@ -989,15 +1164,75 @@ NOT modify this code. The content of this method is always
         LogsLabel.setForeground(new java.awt.Color(0, 0, 0));
         LogsLabel.setText("Check-in Logs");
 
-        StudentCheckinLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
-        StudentCheckinLabel.setForeground(new java.awt.Color(0, 0, 0));
-        StudentCheckinLabel.setText("Student Check-in");
+        SentHomePanel.setBackground(new java.awt.Color(255, 255, 255));
 
-        ThemeToggle.setBackground(new java.awt.Color(255, 255, 255));
-        ThemeToggle.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
-        ThemeToggle.setForeground(new java.awt.Color(0, 0, 0));
-        ThemeToggle.setText("Mode");
-        ThemeToggle.addActionListener(this::ThemeToggleActionPerformed);
+        SentHomeFooterLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        SentHomeFooterLabel.setForeground(new java.awt.Color(0, 0, 0));
+        SentHomeFooterLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        SentHomeFooterLabel.setText("Sent Home");
+
+        SentHomeCount.setFont(new java.awt.Font("Yu Gothic UI", 1, 36)); // NOI18N
+        SentHomeCount.setForeground(new java.awt.Color(0, 0, 0));
+        SentHomeCount.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        SentHomeCount.setText("0");
+
+        javax.swing.GroupLayout SentHomePanelLayout = new javax.swing.GroupLayout(SentHomePanel);
+        SentHomePanel.setLayout(SentHomePanelLayout);
+        SentHomePanelLayout.setHorizontalGroup(
+            SentHomePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, SentHomePanelLayout.createSequentialGroup()
+                .addContainerGap(24, Short.MAX_VALUE)
+                .addGroup(SentHomePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(SentHomeFooterLabel, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 113, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, SentHomePanelLayout.createSequentialGroup()
+                        .addComponent(SentHomeCount, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(18, 18, 18)))
+                .addGap(44, 44, 44))
+        );
+        SentHomePanelLayout.setVerticalGroup(
+            SentHomePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(SentHomePanelLayout.createSequentialGroup()
+                .addGap(21, 21, 21)
+                .addComponent(SentHomeFooterLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(SentHomeCount, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+
+        VisitPanel.setBackground(new java.awt.Color(255, 255, 255));
+
+        jLabel1.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        jLabel1.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        jLabel1.setText("Today's Visits");
+
+        VisitCounter.setFont(new java.awt.Font("Yu Gothic UI", 1, 36)); // NOI18N
+        VisitCounter.setForeground(new java.awt.Color(0, 0, 0));
+        VisitCounter.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        VisitCounter.setText("0");
+
+        javax.swing.GroupLayout VisitPanelLayout = new javax.swing.GroupLayout(VisitPanel);
+        VisitPanel.setLayout(VisitPanelLayout);
+        VisitPanelLayout.setHorizontalGroup(
+            VisitPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(VisitPanelLayout.createSequentialGroup()
+                .addGap(49, 49, 49)
+                .addGroup(VisitPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 113, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(VisitPanelLayout.createSequentialGroup()
+                        .addGap(14, 14, 14)
+                        .addComponent(VisitCounter, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(29, Short.MAX_VALUE))
+        );
+        VisitPanelLayout.setVerticalGroup(
+            VisitPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(VisitPanelLayout.createSequentialGroup()
+                .addGap(31, 31, 31)
+                .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(VisitCounter, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(41, Short.MAX_VALUE))
+        );
 
         javax.swing.GroupLayout MainPanelLayout = new javax.swing.GroupLayout(MainPanel);
         MainPanel.setLayout(MainPanelLayout);
@@ -1005,136 +1240,63 @@ NOT modify this code. The content of this method is always
             MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addComponent(HeaderPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(MainPanelLayout.createSequentialGroup()
-                .addGap(183, 183, 183)
-                .addComponent(StudentCheckinLabel)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(LogsLabel)
-                .addGap(267, 267, 267))
-            .addGroup(MainPanelLayout.createSequentialGroup()
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(CheckInPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(MainPanelLayout.createSequentialGroup()
                         .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(MainPanelLayout.createSequentialGroup()
-                                .addGap(24, 24, 24)
-                                .addComponent(CounterPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addGap(285, 285, 285)
+                                .addComponent(OverviewLabel))
                             .addGroup(MainPanelLayout.createSequentialGroup()
-                                .addGap(220, 220, 220)
-                                .addComponent(OverviewLabel)))
-                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(MainPanelLayout.createSequentialGroup()
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 234, Short.MAX_VALUE)
-                                .addComponent(InventoryLabel)
-                                .addGap(235, 235, 235))
-                            .addGroup(MainPanelLayout.createSequentialGroup()
+                                .addGap(125, 125, 125)
+                                .addComponent(VisitPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(18, 18, 18)
-                                .addComponent(InventoryPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
-                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainPanelLayout.createSequentialGroup()
-                        .addGap(39, 39, 39)
-                        .addComponent(CheckInPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(18, 18, 18)
+                                .addComponent(SentHomePanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(CheckInPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MainPanelLayout.createSequentialGroup()
+                                .addComponent(InventoryPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(28, 28, 28))
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MainPanelLayout.createSequentialGroup()
+                                .addComponent(InventoryLabel)
+                                .addGap(210, 210, 210))))
+                    .addGroup(MainPanelLayout.createSequentialGroup()
+                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(MainPanelLayout.createSequentialGroup()
-                                .addGap(0, 0, Short.MAX_VALUE)
-                                .addComponent(ThemeToggle, javax.swing.GroupLayout.PREFERRED_SIZE, 141, javax.swing.GroupLayout.PREFERRED_SIZE)))))
-                .addGap(29, 29, 29))
+                                .addGap(23, 23, 23)
+                                .addComponent(CheckInPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(MainPanelLayout.createSequentialGroup()
+                                .addGap(569, 569, 569)
+                                .addComponent(LogsLabel)))
+                        .addContainerGap(28, Short.MAX_VALUE))))
         );
         MainPanelLayout.setVerticalGroup(
             MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(MainPanelLayout.createSequentialGroup()
                 .addComponent(HeaderPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(InventoryLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(OverviewLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(InventoryPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(CounterPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(StudentCheckinLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(LogsLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(MainPanelLayout.createSequentialGroup()
-                        .addComponent(CheckInPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(ThemeToggle, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(CheckInPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(12, Short.MAX_VALUE))
-        );
-
-        SentHomeInformationPanel.setBackground(new java.awt.Color(255, 255, 255));
-        SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED), javax.swing.BorderFactory.createTitledBorder(null, "Parent/Guardian Information", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Yu Gothic UI", 1, 18), new java.awt.Color(0, 0, 0)))); // NOI18N
-        SentHomeInformationPanel.setForeground(new java.awt.Color(0, 0, 0));
-
-        ParentGurdianName.setBackground(new java.awt.Color(227, 226, 226));
-        ParentGurdianName.setForeground(new java.awt.Color(0, 0, 0));
-
-        PGNameLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
-        PGNameLabel.setForeground(new java.awt.Color(0, 0, 0));
-        PGNameLabel.setText("Name :");
-
-        PNField.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
-        PNField.setForeground(new java.awt.Color(0, 0, 0));
-        PNField.setText("Phone Number :");
-
-        PhoneField.setBackground(new java.awt.Color(227, 226, 226));
-        PhoneField.setForeground(new java.awt.Color(0, 0, 0));
-
-        FinishBTN.setBackground(new java.awt.Color(0, 102, 204));
-        FinishBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
-        FinishBTN.setForeground(new java.awt.Color(255, 255, 255));
-        FinishBTN.setText("Finish");
-        FinishBTN.addActionListener(this::FinishBTNActionPerformed);
-
-        InformationBackBTN.setBackground(new java.awt.Color(153, 0, 0));
-        InformationBackBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
-        InformationBackBTN.setForeground(new java.awt.Color(255, 255, 255));
-        InformationBackBTN.setText("Back");
-        InformationBackBTN.addActionListener(this::InformationBackBTNActionPerformed);
-
-        javax.swing.GroupLayout SentHomeInformationPanelLayout = new javax.swing.GroupLayout(SentHomeInformationPanel);
-        SentHomeInformationPanel.setLayout(SentHomeInformationPanelLayout);
-        SentHomeInformationPanelLayout.setHorizontalGroup(
-            SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
-                .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
-                        .addGap(99, 99, 99)
-                        .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
-                                .addComponent(PNField)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(PhoneField, javax.swing.GroupLayout.PREFERRED_SIZE, 323, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
-                                .addComponent(PGNameLabel)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(ParentGurdianName, javax.swing.GroupLayout.PREFERRED_SIZE, 323, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                    .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
-                        .addGap(266, 266, 266)
-                        .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addComponent(InformationBackBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 124, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(FinishBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 124, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                .addContainerGap(128, Short.MAX_VALUE))
-        );
-        SentHomeInformationPanelLayout.setVerticalGroup(
-            SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
-                .addGap(67, 67, 67)
-                .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(ParentGurdianName, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(PGNameLabel))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(PhoneField, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(PNField))
-                .addGap(18, 18, 18)
-                .addComponent(FinishBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 43, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(InformationBackBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 43, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(51, Short.MAX_VALUE))
+                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(OverviewLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(InventoryLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(MainPanelLayout.createSequentialGroup()
+                                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(SentHomePanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                    .addComponent(VisitPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addGap(18, 18, 18)
+                                .addComponent(LogsLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(MainPanelLayout.createSequentialGroup()
+                                .addComponent(InventoryPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(0, 0, Short.MAX_VALUE)))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(CheckInPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(MainPanelLayout.createSequentialGroup()
+                        .addGap(0, 0, Short.MAX_VALUE)
+                        .addComponent(CheckInPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(19, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -1144,18 +1306,18 @@ NOT modify this code. The content of this method is always
             .addComponent(MainPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addGroup(layout.createSequentialGroup()
-                    .addGap(239, 239, 239)
+                    .addGap(438, 438, 438)
                     .addComponent(SentHomeInformationPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addContainerGap(240, Short.MAX_VALUE)))
+                    .addContainerGap(649, Short.MAX_VALUE)))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addComponent(MainPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addGroup(layout.createSequentialGroup()
-                    .addGap(217, 217, 217)
+                    .addGap(251, 251, 251)
                     .addComponent(SentHomeInformationPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addContainerGap(217, Short.MAX_VALUE)))
+                    .addContainerGap(211, Short.MAX_VALUE)))
         );
 
         pack();
@@ -1396,9 +1558,11 @@ NOT modify this code. The content of this method is always
         glassOverlay.setVisible(true);
 
         // 2. Center the popup panel relative to the window frame
-        int x = (getWidth() - SentHomeInformationPanel.getWidth()) / 2;
-        int y = (getHeight() - SentHomeInformationPanel.getHeight()) / 2;
-        SentHomeInformationPanel.setBounds(x, y, SentHomeInformationPanel.getWidth(), SentHomeInformationPanel.getHeight());
+        
+        java.awt.Dimension size = SentHomeInformationPanel.getPreferredSize();
+        int x = (getWidth() - size.width) / 2;
+        int y = (getHeight() - size.height) / 2;
+        SentHomeInformationPanel.setBounds(x, y, size.width, size.height);
         SentHomeInformationPanel.setVisible(true);
 
         // 3. Refresh the layered pane stack
@@ -1724,7 +1888,6 @@ NOT modify this code. The content of this method is always
     private javax.swing.JButton CheckInBTN;
     private javax.swing.JPanel CheckInPanel;
     private javax.swing.JPanel CheckInPanel1;
-    private javax.swing.JPanel CounterPanel;
     private javax.swing.JLabel DateTimeLabel;
     private javax.swing.JButton EditBTN;
     private javax.swing.JButton FinishBTN;
