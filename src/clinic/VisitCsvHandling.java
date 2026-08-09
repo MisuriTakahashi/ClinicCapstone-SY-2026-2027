@@ -24,7 +24,7 @@ public class VisitCsvHandling {
     //this is the Time formmatter which makes the date and time for the check in function 
     private final File csvFile;
     private static final DateTimeFormatter TIME_FORMAT = 
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm" );
+           DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a");
     
    //this is the path of the Csv
     public VisitCsvHandling(String path){

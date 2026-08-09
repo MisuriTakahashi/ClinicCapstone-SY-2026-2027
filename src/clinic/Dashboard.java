@@ -1780,7 +1780,7 @@ NOT modify this code. The content of this method is always
               
             }
             
-            String lrn = (String) ReasonTable.getValueAt(row, 2);
+            String lrn = (String) ReasonTable.getValueAt(row, 3);
             
             try{
                 
@@ -1809,27 +1809,47 @@ NOT modify this code. The content of this method is always
             } 
             
     }  
-   
-    private void printSentHomeSlip(CheckinSystem record) {
-            String slipText =
-            "CLINIC — SENT HOME SLIP\n" +
-        "====================================\n" +
-        "Name: " + record.getName() + "\n" +
-        "Grade/Section: " + record.getGradeSection() + "\n" +
-        "LRN: " + record.getLrn() + "\n" +
-        "Reason for record visit: " + record.getReason() + "\n" +
-        "Medicine Used: " + record.getMedUsed() + "\n" +
-        "Checked In: " + record.getCheckInTime() + "\n" +
-        "Sent Home: " + java.time.LocalDateTime.now().format(
-                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) + "\n";
+        //print layout
+        private void printSentHomeSlip(CheckinSystem record) {
 
-             JTextArea slip = new JTextArea(slipText);
-            try {
-                 slip.print();
-            } catch (java.awt.print.PrinterException ex) {
-                 JOptionPane.showMessageDialog(this, "Printing failed: " + ex.getMessage());
-    }   
-}
+         String sentHomeTime = java.time.LocalDateTime.now().format(
+                 java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a"));
+
+         StringBuilder sb = new StringBuilder();
+
+         sb.append("            CLINIC — STUDENT SENT HOME SLIP\n              ");
+         sb.append("========================================================\n\n");
+
+         sb.append(String.format("%-18s: %s%n", "Name", record.getName()));
+         sb.append(String.format("%-18s: %s%n", "Grade/Section", record.getGradeSection()));
+         sb.append(String.format("%-18s: %s%n", "LRN", record.getLrn()));
+         sb.append(String.format("%-18s: %s%n", "Reason for Visit", record.getReason()));
+         sb.append(String.format("%-18s: %s%n", "Medicine Used", record.getMedUsed()));
+         sb.append("\n--------------------------------------------------------\n\n");
+
+         sb.append(String.format("%-18s: %s%n", "Checked In", record.getCheckInTime()));
+         sb.append(String.format("%-18s: %s%n", "Sent Home", sentHomeTime));
+
+         sb.append("\n--------------------------------------------------------\n\n");
+
+         sb.append("Released to (Parent/Guardian):  ____________________________\n\n");
+         sb.append("Guardian Signature:             ____________________________\n\n");
+         sb.append("Nurse/Staff Signature:          ____________________________\n\n");
+
+         sb.append("\n========================================================\n");
+         sb.append("        Please keep this slip for your records.\n");
+
+         JTextArea slip = new JTextArea(sb.toString());
+         slip.setFont(new java.awt.Font("Consolas", java.awt.Font.PLAIN, 12)); // monospace = clean alignment
+         slip.setLineWrap(false);
+
+         try {
+             slip.print();
+         } catch (java.awt.print.PrinterException ex) {
+             JOptionPane.showMessageDialog(this, "Printing failed: " + ex.getMessage());
+         }
+     }
+        
     private void showTopAlertBanner(String message) {
     javax.swing.JLabel alert = new javax.swing.JLabel(message, javax.swing.SwingConstants.CENTER);
     alert.setOpaque(true);
