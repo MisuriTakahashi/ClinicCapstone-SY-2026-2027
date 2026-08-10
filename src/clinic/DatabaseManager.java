@@ -17,7 +17,7 @@ import java.sql.*;
 
 public class DatabaseManager {
 
-    private static final String DB_URL = "jdbc:h2:./data/Clinic_db;CIPHER=AES;AUTO_SERVER=TRUE";
+    private static final String DB_URL = "jdbc:h2:./data/Clinic_db;CIPHER=AES;";
     private static final String USER = "admin";
     
     private static final String FILE_ENCRYPTION_KEY = "TebanPo123";
