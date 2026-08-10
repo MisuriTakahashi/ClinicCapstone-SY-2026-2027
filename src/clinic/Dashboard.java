@@ -614,7 +614,7 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
              
              
             if (lowStockCount > 0) {
-                showTopAlertBanner( lowStockNames + " is low on stock: " + lowStockCount );
+                showTopAlertBanner( lowStockNames + " is low on stock: " + lowStockCount);
             }
              
         
