@@ -41,7 +41,7 @@ public class AdminPanel extends javax.swing.JFrame {
     private static final int CONTENT_X = SIDEBAR_WIDTH + CONTENT_GAP;
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(AdminPanel.class.getName());
-    private final MedicineCsvHandling productService = new MedicineCsvHandling("products.csv", "inventory_activity.log");
+    private final MedicineData  productService = new MedicineData ("inventory_activity.log");
     private ArrayList<Medicine> currentProducts = new ArrayList<>();
     private String selectedProductName = null;
     private AccountSystem loggedInAccount;
@@ -505,7 +505,7 @@ private void animateContentIn(JPanel panel) {
                 });
             }
             refreshActivityLogDisplay();
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage());
         }
     }
@@ -520,7 +520,7 @@ private void animateContentIn(JPanel panel) {
                 model.addRow(new Object[]{p.getStatus(), p.getname(), p.getquantity()});
             }
             refreshActivityLogDisplay();
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage());
         }  
     }
@@ -528,7 +528,7 @@ private void animateContentIn(JPanel panel) {
   private void loadStatistics() {
         try {
             
-            ArrayList<CheckinSystem> visits = new VisitCsvHandling("visits.csv").loadAll();
+            ArrayList<CheckinSystem> visits = new VisitData().loadAll();
 
             int weeklyCheckins = 0;
             int inClinic = 0;
@@ -1435,7 +1435,7 @@ private void animateContentIn(JPanel panel) {
             if (productService.nameExists(name)) {
                 JOptionPane.showMessageDialog(this, "A product with this name already exists. Use Edit to update its stock instead.");
                 return;
-            }       } catch (IOException ex) {
+            }       } catch (Exception ex) {
             System.getLogger(AdminPanel.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
         }
         
@@ -1458,7 +1458,7 @@ private void animateContentIn(JPanel panel) {
             refreshInventoryScreen();
             ClearBtnActionPerformed(null);
             showToastNotification("✓ Added " + name + " (" + quantity + " units) to inventory!", name, quantity, Color.decode("#10B981"));
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Error adding item: " + ex.getMessage());
         }
           
@@ -1518,7 +1518,7 @@ private void animateContentIn(JPanel panel) {
              refreshInventoryScreen();
              ClearBtnActionPerformed(null);
 
-         } catch (IOException ex) {
+         } catch (Exception ex) {
          JOptionPane.showMessageDialog(this, "Error deleting items: " + ex.getMessage());
          }
     }//GEN-LAST:event_DeleteBTNActionPerformed
@@ -1557,7 +1557,7 @@ private void animateContentIn(JPanel panel) {
                 ClearBtnActionPerformed(null);
                 showToastNotification("✎ Updated " + newName + " stock details successfully!", newName, newQuantity, Color.decode("#2563EB"));
             }
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Error editing item: " + ex.getMessage());
         }
     }//GEN-LAST:event_EditBtnActionPerformed
@@ -1653,7 +1653,7 @@ private void animateContentIn(JPanel panel) {
             // Refresh the table
             refreshAccountTable();
 
-        } catch (IOException ex) {
+        } catch (Exception ex) {
 
             JOptionPane.showMessageDialog(
                 this,
@@ -1672,7 +1672,7 @@ private void animateContentIn(JPanel panel) {
          createAccountFromForm("User");
     }//GEN-LAST:event_CUserBTNActionPerformed
         
-    private final AccountCsvHandling accountService = new AccountCsvHandling("accounts.csv");
+    private final AccountData accountService = new AccountData();
     
             //login for creation account
             private void createAccountFromForm(String role) {
@@ -1706,7 +1706,7 @@ private void animateContentIn(JPanel panel) {
                 ConfirmPasswordField.setText("");
                 refreshAccountTable();
 
-            } catch (IOException ex) {
+            } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error creating account: " + ex.getMessage());
             }
         }
@@ -1719,7 +1719,7 @@ private void animateContentIn(JPanel panel) {
                 for (AccountSystem a : accountService.loadAll()) {
                     model.addRow(new Object[]{a.GetName(), a.getRole()});
                 }
-            } catch (IOException ex) {
+            } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error loading accounts: " + ex.getMessage());
             }
         }

@@ -251,7 +251,7 @@ public class LoginUi extends javax.swing.JFrame {
               return;
           }
 
-          AccountCsvHandling accountService = new AccountCsvHandling("accounts.csv");
+          AccountData accountService = new AccountData();
 
           try {
 
@@ -266,7 +266,7 @@ public class LoginUi extends javax.swing.JFrame {
               fadeOutAndOpenDashboard(account);
               
 
-          } catch (IOException ex) {
+          } catch (Exception ex) {
 
               JOptionPane.showMessageDialog(this,
                       "Error reading accounts: " + ex.getMessage());

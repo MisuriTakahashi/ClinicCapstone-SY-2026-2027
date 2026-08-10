@@ -573,15 +573,15 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
             
             jComboBox1.setModel(model);
             
-        }catch(IOException ex){
+        }catch(Exception ex){
             JOptionPane.showMessageDialog(this, "Error Laoding message" + ex.getMessage());
         }
     }
 
 
     //ps this will help display the inventory on the "inventory status"
-    private VisitCsvHandling visitService = new VisitCsvHandling("visits.csv");
-    private MedicineCsvHandling productService = new MedicineCsvHandling("products.csv", "inventory_activity.log");
+    private VisitData visitService = new VisitData();
+    private MedicineData productService = new MedicineData("inventory_activity.log");
     
     private void refreshInventoryStatusDisplay(){
         try{
@@ -618,7 +618,7 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
             }
              
         
-        }catch(IOException ex){
+        }catch(Exception ex){
                JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage());
         }
     }
@@ -672,7 +672,7 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
                   SentHomeFooterLabel.setForeground(java.awt.Color.GRAY);
               }*/
 
-               } catch (IOException ex) {
+               } catch (Exception ex) {
 
                   JOptionPane.showMessageDialog(this, ex.getMessage());
           }
@@ -1473,7 +1473,7 @@ NOT modify this code. The content of this method is always
                    );
                }
 
-           } catch (IOException ex) {
+           } catch (Exception ex) {
 
                JOptionPane.showMessageDialog(
                        this,
@@ -1620,7 +1620,7 @@ NOT modify this code. The content of this method is always
    
     
     
-    }catch(IOException ex){
+    }catch(Exception ex){
         JOptionPane.showMessageDialog(this , "Error");
           return;
     }
@@ -1675,7 +1675,7 @@ NOT modify this code. The content of this method is always
         //testing kung gumagana yun Check btn
         System.out.println("Showing Guardian Panel...");
 
-        } catch (IOException ex) {
+        } catch (Exception ex) {
              showToast(CheckInPanel, "Error saving check-in: " + ex.getMessage(), false);
             }
         }
@@ -1793,7 +1793,7 @@ NOT modify this code. The content of this method is always
 
              showToast(CheckInPanel, name + " checked in successfully. Guardian info recorded.", true);
 
-         } catch (IOException ex) {
+         } catch (Exception ex) {
              showToast(CheckInPanel, "Error saving check-in: " + ex.getMessage(), false);
          }
     }//GEN-LAST:event_FinishBTNActionPerformed
@@ -1847,7 +1847,7 @@ NOT modify this code. The content of this method is always
                     JOptionPane.showMessageDialog(this, "Error... Unable to update the Student's Status");
                 }
                 
-            }catch(IOException ex){
+            }catch(Exception ex){
                  JOptionPane.showMessageDialog(this, "Error updating status: " + ex.getMessage());
             } 
             
