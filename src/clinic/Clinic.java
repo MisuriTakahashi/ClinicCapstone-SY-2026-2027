@@ -15,13 +15,16 @@ public class Clinic {
      */
     public static void main(String[] args) {
        // 
+       
        try {
             
             com.formdev.flatlaf.FlatLightLaf.setup();
         } catch (Exception ex) {
             System.err.println("Failed to initialize FlatLaf: " + ex.getMessage());
         }
-
+        DatabaseManager.initializeDatabase();
+        DatabaseManager.exportData();
+       DatabaseManager.testDatabaseConnection();
        
         javax.swing.UIManager.put("JTextField.placeholderText", "");
 

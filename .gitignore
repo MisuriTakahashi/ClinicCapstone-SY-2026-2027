@@ -21,3 +21,8 @@ release.properties
 # --- OS / System Files ---
 .DS_Store
 Thumbs.db
+# Ignore H2 database files
+/data/*.db
+/data/*.trace.db
+*.mv.db
+*.trace.db
