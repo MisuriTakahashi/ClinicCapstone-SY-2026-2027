@@ -22,9 +22,9 @@ public class Clinic {
         } catch (Exception ex) {
             System.err.println("Failed to initialize FlatLaf: " + ex.getMessage());
         }
-        DatabaseManager.initializeDatabase();
-        DatabaseManager.exportData();
-       DatabaseManager.testDatabaseConnection();
+      
+       DatabaseManager.initializeDatabase();
+       
        
         javax.swing.UIManager.put("JTextField.placeholderText", "");
 

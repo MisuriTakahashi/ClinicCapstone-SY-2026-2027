@@ -11,13 +11,10 @@ package clinic;
 import java.io.File;
 import java.sql.*;
 
-
-
-
-
 public class DatabaseManager {
 
-    private static final String DB_URL = "jdbc:h2:./data/Clinic_db;CIPHER=AES;";
+    private static final String DB_URL =
+    "jdbc:h2:./data/Clinic_db;CIPHER=AES;"; //jdbc:h2:~/Clinic_db;CIPHER=AES
     private static final String USER = "admin";
     
     private static final String FILE_ENCRYPTION_KEY = "TebanPo123";
@@ -32,13 +29,6 @@ public class DatabaseManager {
      * Initializes tables and imports seed data automatically if present.
      */
     public static void initializeDatabase() {
-        String createProductsTable = "CREATE TABLE IF NOT EXISTS PRODUCTS ("
-                + "id INT AUTO_INCREMENT PRIMARY KEY, "
-                + "name VARCHAR(255) UNIQUE NOT NULL, "
-                + "category VARCHAR(100) NOT NULL, "
-                + "price DOUBLE NOT NULL, "
-                + "stock INT NOT NULL"
-                + ");";
         
         String createAccountsTable = "CREATE TABLE IF NOT EXISTS ACCOUNTS ("
                 + "id INT AUTO_INCREMENT PRIMARY KEY, "
@@ -72,12 +62,28 @@ public class DatabaseManager {
 
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
+            System.out.println("WORKING DIRECTORY: "
+            + System.getProperty("user.dir"));
+
+            System.out.println("DATABASE URL: "
+            + getConnection().getMetaData().getURL());
+            
+            System.out.println("DATABASE URL: " + conn.getMetaData().getURL());
+            System.out.println("DATABASE USER: " + conn.getMetaData().getUserName());
             
             // 1. Create table structure
             stmt.execute(createAccountsTable);
-            stmt.execute(createProductsTable);
             stmt.execute(createMedicinesTable);
             stmt.execute(createVisitsTable);
+            
+            ResultSet rs = stmt.executeQuery(
+            "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES " +
+            "WHERE TABLE_SCHEMA = 'PUBLIC'"
+        );
+
+        while (rs.next()) {
+            System.out.println("TABLE FOUND: " + rs.getString("TABLE_NAME"));
+        }
             
             // 2. Automatically import data on new clones if seed_data.sql exists
             if (seedFile.exists()) {
