@@ -76,7 +76,12 @@ public class Dashboard extends javax.swing.JFrame {
             //this already shows the time and Table and Counters and display the inventoryStatus and medicinebox which is the comboBox
             startDateTimeClock();
             refreshTableAndCounters();
-            refreshInventoryStatusDisplay();
+            addComponentListener(new java.awt.event.ComponentAdapter() {
+                @Override
+                public void componentShown(java.awt.event.ComponentEvent e) {
+                    refreshInventoryStatusDisplay(); // now safe — frame is showing
+                }
+            });
             medicineBox();
             
             InventoryStatusArea.setEditable(false);
@@ -582,6 +587,8 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
         try{
              ArrayList<Medicine> medicine = productService.loadAll();
                  StringBuilder sb = new StringBuilder();
+                 StringBuilder lowStockNames = new StringBuilder();
+                 int lowStockCount = 0;
 
                  if (medicine.isEmpty()) {
                      sb.append("No items in inventory yet.");
@@ -591,12 +598,25 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
                           .append(" — ")
                           .append(p.getquantity())
                           .append(" pcs — ")
-                          .append(p.getStatus())
-                          .append("\n");
+                          .append(p.getStatus());
+                              
+                      if (p.isLowStock()) {
+                        sb.append(" --LOW STOCK-- ");
+                        lowStockCount++;
+                        if (lowStockNames.length() > 0) lowStockNames.append(", ");
+                        lowStockNames.append(p.getname());
+                    }
+                         sb.append("\n");
             }
         }
                  
              InventoryStatusArea.setText(sb.toString());
+             
+             
+            if (lowStockCount > 0) {
+                showTopAlertBanner( lowStockNames + " is low on stock: " + lowStockCount );
+            }
+             
         
         }catch(IOException ex){
                JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage());
@@ -1899,7 +1919,7 @@ NOT modify this code. The content of this method is always
     javax.swing.Timer slideTimer = new javax.swing.Timer(10, null);
     slideTimer.addActionListener(new java.awt.event.ActionListener() {
         int currentY = startY;
-
+        
         @Override
         public void actionPerformed(java.awt.event.ActionEvent e) {
             if (currentY < targetY) {
