@@ -39,6 +39,34 @@ public class DatabaseManager {
                 + "price DOUBLE NOT NULL, "
                 + "stock INT NOT NULL"
                 + ");";
+        
+        String createAccountsTable = "CREATE TABLE IF NOT EXISTS ACCOUNTS ("
+                + "id INT AUTO_INCREMENT PRIMARY KEY, "
+                + "name VARCHAR(255) UNIQUE NOT NULL, "
+                + "password VARCHAR(255) NOT NULL, "
+                + "role VARCHAR(50) NOT NULL"
+                + ");";
+
+        String createMedicinesTable = "CREATE TABLE IF NOT EXISTS MEDICINES ("
+                + "id INT AUTO_INCREMENT PRIMARY KEY, "
+                + "name VARCHAR(255) UNIQUE NOT NULL, "
+                + "exp_date VARCHAR(50) NOT NULL, "
+                + "quantity INT NOT NULL"
+                + ");";
+
+        String createVisitsTable = "CREATE TABLE IF NOT EXISTS VISITS ("
+                + "id INT AUTO_INCREMENT PRIMARY KEY, "
+                + "name VARCHAR(255) NOT NULL, "
+                + "grade_section VARCHAR(100) NOT NULL, "
+                + "lrn VARCHAR(50) NOT NULL, "
+                + "reason VARCHAR(500), "
+                + "med_used VARCHAR(255), "
+                + "meds_qty INT NOT NULL, "
+                + "check_in_time VARCHAR(50) NOT NULL, "
+                + "status VARCHAR(50) NOT NULL, "
+                + "guardian_name VARCHAR(255), "
+                + "guardian_phone VARCHAR(50)"
+                + ");";
 
         File seedFile = new File("./data/seed_data.sql");
 
@@ -46,7 +74,10 @@ public class DatabaseManager {
              Statement stmt = conn.createStatement()) {
             
             // 1. Create table structure
+            stmt.execute(createAccountsTable);
             stmt.execute(createProductsTable);
+            stmt.execute(createMedicinesTable);
+            stmt.execute(createVisitsTable);
             
             // 2. Automatically import data on new clones if seed_data.sql exists
             if (seedFile.exists()) {
