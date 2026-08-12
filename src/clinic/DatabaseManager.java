@@ -67,7 +67,10 @@ public class DatabaseManager {
             stmt.execute(createProductsTable);
             stmt.execute(createMedicinesTable);
             stmt.execute(createVisitsTable);
-
+            
+        // Migration: add 'archived' flag for the daily export/reset feature.
+        // Existing rows default to FALSE (still active) — no data is touched or lost.
+        stmt.execute("ALTER TABLE VISITS ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT FALSE;");
             if (seedFile.exists()) {
                 try {
                     stmt.execute("RUNSCRIPT FROM './data/seed_data.sql'");

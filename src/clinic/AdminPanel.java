@@ -22,6 +22,7 @@ import java.util.Map;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComponent;
+import java.sql.SQLException;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -833,6 +834,7 @@ private void animateContentIn(JPanel panel) {
         ExportBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 10)); // NOI18N
         ExportBTN.setForeground(new java.awt.Color(255, 255, 255));
         ExportBTN.setText("Export Data To CSV");
+        ExportBTN.addActionListener(this::ExportBTNActionPerformed);
 
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
@@ -1739,6 +1741,75 @@ private void animateContentIn(JPanel panel) {
     private void AccPasswordFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AccPasswordFieldActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_AccPasswordFieldActionPerformed
+   
+  
+    
+    private void ExportBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ExportBTNActionPerformed
+            // 1. Ask for the report date
+     javax.swing.JTextField dateField = new javax.swing.JTextField();
+     ((javax.swing.text.AbstractDocument) dateField.getDocument())
+             .setDocumentFilter(new DateInputFilter());
+     int result = JOptionPane.showConfirmDialog(this, dateField,
+             "Enter report date (YYYY-MM-DD):", JOptionPane.OK_CANCEL_OPTION);
+     if (result != JOptionPane.OK_OPTION) return;
+
+     LocalDate reportDate;
+     try {
+         reportDate = LocalDate.parse(normalizeDate(dateField.getText().trim()));
+     } catch (DateTimeParseException ex) {
+         JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2026-1-1 or 2026-01-01).");
+         return;
+     }
+
+     ReportExporter exporter = new ReportExporter(productService);
+
+     try {
+         // 2. Check for records BEFORE asking where to save
+         if (!exporter.hasRecordsForDate(reportDate)) {
+             JOptionPane.showMessageDialog(this, "No records found for this date.");
+             return;
+         }
+
+         // 3. Ask where to save
+         javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
+         String suggestedName = "Clinic_Report_" + reportDate + ".csv";
+         chooser.setSelectedFile(new java.io.File(suggestedName));
+         int choice = chooser.showSaveDialog(this);
+         if (choice != javax.swing.JFileChooser.APPROVE_OPTION) return;
+
+         java.io.File destination = chooser.getSelectedFile();
+         if (!destination.getName().toLowerCase().endsWith(".csv")) {
+             destination = new java.io.File(destination.getParentFile(), destination.getName() + ".csv");
+         }
+
+         // 4. Generate and save
+         exporter.writeDailyReport(reportDate, destination);
+
+         // 5. Success message
+         JOptionPane.showMessageDialog(this, "Report exported successfully:\n" + destination.getAbsolutePath());
+
+         // --- Archive/reset confirmation (only after a successful, confirmed export) ---
+         int archiveChoice = JOptionPane.showConfirmDialog(this,
+                 "Report exported successfully. Do you want to archive and reset the daily check-in records?",
+                 "Archive Check-in Records", JOptionPane.YES_NO_OPTION);
+
+         if (archiveChoice == JOptionPane.YES_OPTION) {
+             VisitData visitData = new VisitData();
+             int archivedCount = visitData.archiveDate(reportDate.toString());
+             JOptionPane.showMessageDialog(this,
+                     archivedCount + " check-in record(s) for " + reportDate + " were archived.\n"
+                     + "They remain in the database for reports and statistics, "
+                     + "but no longer appear as active on the Dashboard.");
+         }
+
+     } catch (SQLException ex) {
+         JOptionPane.showMessageDialog(this, "Database error while exporting report: " + ex.getMessage(),
+                 "Export Failed", JOptionPane.ERROR_MESSAGE);
+     } catch (IOException ex) {
+         JOptionPane.showMessageDialog(this, "File error while exporting report: " + ex.getMessage(),
+                 "Export Failed", JOptionPane.ERROR_MESSAGE);
+     }
+    }//GEN-LAST:event_ExportBTNActionPerformed
 
     /**
      * @param args the command line arguments

@@ -4,6 +4,10 @@
  */
 package clinic;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -83,4 +87,33 @@ public class AccountData {
                return ps.executeUpdate() > 0;
            }
        }
+       
+       public int migrateFromCsv(String csvPath) throws SQLException, IOException {
+        File file = new File(csvPath);
+        if (!file.exists()) {
+            return 0; // nothing to migrate
+        }
+
+        int migratedCount = 0;
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+
+                String[] parts = line.split("\",\"");
+                if (parts.length < 3) continue; // skip malformed lines
+
+                String name = parts[0].replaceAll("^\"|\"$", "");
+                String password = parts[1].replaceAll("^\"|\"$", "");
+                String role = parts[2].replaceAll("^\"|\"$", "");
+
+                if (!nameExists(name)) {
+                    createAccount(name, password, role);
+                    migratedCount++;
+                }
+            }
+        }
+        return migratedCount;
+    }
 }

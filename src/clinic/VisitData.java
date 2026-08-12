@@ -73,7 +73,7 @@ public class VisitData {
     }
 
     public boolean isCurrentlyCheckedIn(String lrn) throws SQLException {
-        String sql = "SELECT 1 FROM VISITS WHERE lrn = ? AND status = 'In Clinic'";
+         String sql = "SELECT 1 FROM VISITS WHERE lrn = ? AND status = 'In Clinic' AND archived = FALSE";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, lrn);
@@ -84,9 +84,9 @@ public class VisitData {
     }
 
     public boolean markSentHome(String lrn) throws SQLException {
-        String sql = "UPDATE VISITS SET status = 'Sent Home' "
-                + "WHERE id = (SELECT id FROM VISITS WHERE lrn = ? AND status = 'In Clinic' "
-                + "ORDER BY id ASC LIMIT 1)";
+       String sql = "UPDATE VISITS SET status = 'Sent Home' "
+            + "WHERE id = (SELECT id FROM VISITS WHERE lrn = ? AND status = 'In Clinic' AND archived = FALSE "
+            + "ORDER BY id ASC LIMIT 1)";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -108,11 +108,64 @@ public class VisitData {
         }
         return new int[]{totalToday, sentHomeToday};
     }
-
-    public CheckinSystem findActiveVisit(String lrn) throws SQLException {
+    
+    public ArrayList<CheckinSystem> getVisitsByDate(String dateIso) throws SQLException {
+        ArrayList<CheckinSystem> visits = new ArrayList<>();
         String sql = "SELECT name, grade_section, lrn, reason, med_used, meds_qty, "
                 + "check_in_time, status, guardian_name, guardian_phone FROM VISITS "
-                + "WHERE lrn = ? AND status = 'In Clinic'";
+                + "WHERE check_in_time LIKE ? ORDER BY id ASC";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, dateIso + "%"); // dateIso = "yyyy-MM-dd"
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    visits.add(new CheckinSystem(
+                            rs.getString("name"), rs.getString("grade_section"), rs.getString("lrn"),
+                            rs.getString("reason"), rs.getString("med_used"), rs.getInt("meds_qty"),
+                            rs.getString("check_in_time"), rs.getString("status"),
+                            rs.getString("guardian_name"), rs.getString("guardian_phone")
+                    ));
+                }
+            }
+        }
+        return visits;
+    }
+    
+    /** Marks all visits for the given date as archived. Does NOT delete any rows. */
+    public int archiveDate(String dateIso) throws SQLException {
+        String sql = "UPDATE VISITS SET archived = TRUE WHERE check_in_time LIKE ? AND archived = FALSE";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, dateIso + "%");
+            return ps.executeUpdate(); // returns how many rows were archived
+        }
+}
+    
+    /** Same as loadAll(), but excludes archived visits — used for the "current" check-in view. */
+    public ArrayList<CheckinSystem> loadActive() throws SQLException {
+        ArrayList<CheckinSystem> visits = new ArrayList<>();
+        String sql = "SELECT name, grade_section, lrn, reason, med_used, meds_qty, "
+                + "check_in_time, status, guardian_name, guardian_phone FROM VISITS WHERE archived = FALSE";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                visits.add(new CheckinSystem(
+                        rs.getString("name"), rs.getString("grade_section"), rs.getString("lrn"),
+                        rs.getString("reason"), rs.getString("med_used"), rs.getInt("meds_qty"),
+                        rs.getString("check_in_time"), rs.getString("status"),
+                        rs.getString("guardian_name"), rs.getString("guardian_phone")
+                ));
+            }
+        }
+        return visits;
+}
+
+    public CheckinSystem findActiveVisit(String lrn) throws SQLException {
+         String sql = "SELECT name, grade_section, lrn, reason, med_used, meds_qty, "
+            + "check_in_time, status, guardian_name, guardian_phone FROM VISITS "
+            + "WHERE lrn = ? AND status = 'In Clinic' AND archived = FALSE";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

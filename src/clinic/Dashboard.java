@@ -625,13 +625,13 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
     private void refreshTableAndCounters(){
           try {
                  
-              currentVisits = visitService.loadAll();
+              currentVisits = visitService.loadActive(); 
               
          DefaultTableModel model = (DefaultTableModel) ReasonTable.getModel();
 
          model.setRowCount(0);
 
-         for (CheckinSystem v : visitService.loadAll()) {
+         for (CheckinSystem v : visitService.loadActive()) {
 
                    model.addRow(new Object[]{
                     v.getStatus(),
