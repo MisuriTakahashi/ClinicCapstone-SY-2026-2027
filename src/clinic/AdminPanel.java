@@ -125,6 +125,7 @@ public class AdminPanel extends javax.swing.JFrame {
     configureSidebarHover(jButton6);
     configureSidebarHover(AccManageBTN);
     
+    stylePrimaryButton(ExportBTN, "Export DB", Color.decode("#7C3AED"));
     stylePrimaryButton(AddBTN, "Add item", primary);
     styleSecondaryButton(EditBtn, "Edit");
     styleDangerButton(DeleteBTN, "Delete");
@@ -161,28 +162,31 @@ public class AdminPanel extends javax.swing.JFrame {
 }
     private void styleSidebarButton(JButton btn, String text, boolean active) {
     btn.setText(text);
-    // Keep selected buttons enabled. Disabled FlatLaf buttons use the light
-    // default disabled color, which breaks the sidebar's dark active state.
-    btn.setEnabled(true);
     btn.setFocusPainted(false);
     btn.setFont(new Font("Segoe UI", active ? Font.BOLD : Font.PLAIN, 13));
-    btn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
     btn.setHorizontalAlignment(SwingConstants.LEFT);
     btn.setOpaque(true);
     btn.setContentAreaFilled(true);
     btn.putClientProperty("sidebar.active", active);
-    
-    // Remove 'arc' from STYLE — not supported in your FlatLaf version
-    btn.putClientProperty(FlatClientProperties.STYLE, null);
-    
+
     if (active) {
+        // Disable so the current page can't be re-clicked,
+        // and override FlatLaf's disabled colors to keep the dark active look.
+        btn.setEnabled(false);
+        btn.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
+        btn.putClientProperty(FlatClientProperties.STYLE,
+                "disabledBackground: #1E293B; disabledText: #F8FAFC;");
         btn.setBackground(Color.decode("#1E293B"));
         btn.setForeground(Color.decode("#F8FAFC"));
         btn.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 3, 0, 0, Color.decode("#2563EB")),
-            BorderFactory.createEmptyBorder(10, 13, 10, 16)
+                BorderFactory.createMatteBorder(0, 3, 0, 0, Color.decode("#2563EB")),
+                BorderFactory.createEmptyBorder(10, 13, 10, 16)
         ));
     } else {
+        // Inactive buttons stay enabled, clickable, and keep the hover effect
+        btn.setEnabled(true);
+        btn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        btn.putClientProperty(FlatClientProperties.STYLE, null);
         btn.setBackground(Color.decode("#0F172A"));
         btn.setForeground(Color.decode("#94A3B8"));
         btn.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
@@ -318,7 +322,7 @@ private void configureAccountManagementUi() {
     jScrollPane3.setBorder(BorderFactory.createEmptyBorder());
 
     // ---------- Form fields ----------
-    AccNameField.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "e.g. nurse_jane");
+    AccNameField.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "e.g. nurse_Teban");
     AccNameField.putClientProperty(FlatClientProperties.STYLE, "arc: 10; margin: 6,10,6,10");
     AccNameField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
     AccNameField.setText("");                 // remove "jTextField1"
@@ -714,6 +718,7 @@ private void animateContentIn(JPanel panel) {
         jButton6 = new javax.swing.JButton();
         jButton7 = new javax.swing.JButton();
         AccManageBTN = new javax.swing.JButton();
+        ExportBTN = new javax.swing.JButton();
         AccountManagementPanel = new javax.swing.JPanel();
         jScrollPane3 = new javax.swing.JScrollPane();
         ACTTable = new javax.swing.JTable();
@@ -826,6 +831,10 @@ private void animateContentIn(JPanel panel) {
         AccManageBTN.setForeground(new java.awt.Color(255, 255, 255));
         AccManageBTN.setText("Account Management");
 
+        ExportBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 10)); // NOI18N
+        ExportBTN.setForeground(new java.awt.Color(255, 255, 255));
+        ExportBTN.setText("Export Data To CSV");
+
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
         jPanel3Layout.setHorizontalGroup(
@@ -837,7 +846,8 @@ private void animateContentIn(JPanel panel) {
                     .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                         .addComponent(jButton6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(jButton5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(AccManageBTN, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                        .addComponent(AccManageBTN, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(ExportBTN, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addContainerGap(13, Short.MAX_VALUE))
         );
         jPanel3Layout.setVerticalGroup(
@@ -849,7 +859,9 @@ private void animateContentIn(JPanel panel) {
                 .addComponent(jButton6, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(AccManageBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 295, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(ExportBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 197, Short.MAX_VALUE)
                 .addComponent(jButton7, javax.swing.GroupLayout.PREFERRED_SIZE, 48, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(23, 23, 23))
         );
@@ -1760,6 +1772,7 @@ private void animateContentIn(JPanel panel) {
     private javax.swing.JButton DeleteBTN;
     private javax.swing.JButton EditBtn;
     private javax.swing.JTextField ExpDate;
+    private javax.swing.JButton ExportBTN;
     private javax.swing.JTextArea InventoryLogs;
     private javax.swing.JTextField ProductName;
     private javax.swing.JTextField Qty;
