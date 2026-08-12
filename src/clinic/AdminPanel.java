@@ -290,7 +290,8 @@ private void configureSidebarHover(JButton btn) {
     jPanel6.setVisible(false);
     jLabel1.setVisible(false);
     jLabel6.setVisible(false);
-
+    
+    loadStatistics();
     statisticsContainer.setLocation(1200, 30);
     statisticsContainer.setVisible(true);
 
@@ -553,7 +554,7 @@ private void animateContentIn(JPanel panel) {
             LocalDate fridayOfWeek = today.with(DayOfWeek.FRIDAY);
 
             DateTimeFormatter formatter =
-                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+                     DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a");
 
 
             lblMondayDate.setText(
