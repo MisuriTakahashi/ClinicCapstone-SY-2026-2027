@@ -6,14 +6,8 @@ package clinic;
 
 
 import java.awt.Component;
-import java.awt.Graphics2D;
-import java.awt.print.Printable;
-import java.awt.print.PrinterException;
-import java.awt.print.PrinterJob;
 import net.miginfocom.swing.MigLayout;
-import java.io.IOException;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JOptionPane;
@@ -1383,103 +1377,173 @@ NOT modify this code. The content of this method is always
     //edit btn
     private void EditBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditBTNActionPerformed
             
-                if (selectedVisitLrn == null) {
-               JOptionPane.showMessageDialog(
-                       this,
-                       "Select a student from the table first."
-               );
-               return;
-           }
+        String newName = NameCheckIn.getText().trim();
+String newGradeSection = GSCheckIn.getText().trim();
+String newReason = ReasonArea.getText().trim();
+Object selectedMed = jComboBox1.getSelectedItem();
 
-           String newName = NameCheckIn.getText().trim();
-           String newGradeSection = GSCheckIn.getText().trim();
-           String newReason = ReasonArea.getText().trim();
-           Object selectedMed = jComboBox1.getSelectedItem();
+if (newName.isEmpty() || newGradeSection.isEmpty()) {
+    JOptionPane.showMessageDialog(
+            this,
+            "Name and Grade/Section cannot be empty."
+    );
+    return;
+}
 
-           if (newName.isEmpty() || newGradeSection.isEmpty()) {
-               JOptionPane.showMessageDialog(
-                       this,
-                       "Name and Grade/Section cannot be empty."
-               );
-               return;
-           }
+if (selectedMed == null) {
+    JOptionPane.showMessageDialog(
+            this,
+            "Your inventory of medicine might be empty, please check first."
+    );
+    return;
+}
 
-           if (selectedMed == null) {
-               JOptionPane.showMessageDialog(
-                       this,
-                       "Your inventory of medicine might be empty, please check first."
-               );
-               return;
-           }
+String newMedUsed = selectedMed.toString();
+boolean medicineChanged = !newMedUsed.equalsIgnoreCase(selectedOldMedUsed);
 
-           String newMedUsed = selectedMed.toString();
+// Confirm with the nurse first if they actually picked a different medicine
+if (medicineChanged) {
+    String fromLabel = selectedOldMedUsed.equalsIgnoreCase("None") ? "no medicine" : selectedOldMedUsed;
+    String toLabel = newMedUsed.equalsIgnoreCase("None") ? "no medicine" : newMedUsed;
 
-           // Ask for the new medicine quantity
-           int newMedsQty = 0;
+    int confirmChange = JOptionPane.showConfirmDialog(
+            this,
+            "Change this student's medicine from \"" + fromLabel + "\" to \"" + toLabel + "\"?",
+            "Confirm Medicine Change",
+            JOptionPane.YES_NO_OPTION
+    );
 
-           if (!newMedUsed.equalsIgnoreCase("None")) {
+    if (confirmChange != JOptionPane.YES_OPTION) {
+        return; // nurse backed out, leave everything untouched
+    }
+}
 
-               String qtyInput = JOptionPane.showInputDialog(
-                       this,
-                       "How many pills of " + newMedUsed + "?",
-                       "Medicine Quantity",
-                       JOptionPane.QUESTION_MESSAGE
-               );
+// Ask for the new medicine quantity
+int newMedsQty = 0;
 
-               // User pressed Cancel
-               if (qtyInput == null) {
-                   return;
-               }
+if (!newMedUsed.equalsIgnoreCase("None")) {
 
-               try {
-                   newMedsQty = Integer.parseInt(qtyInput.trim());
+    try {
+        Medicine medProduct = productService.findByName(newMedUsed);
 
-                   if (newMedsQty <= 0) {
-                       JOptionPane.showMessageDialog(
-                               this,
-                               "Medicine quantity must be greater than 0."
-                       );
-                       return;
-                   }
+                if (medProduct != null && medProduct.isExpired()) {
+                    JOptionPane.showMessageDialog(
+                            this,
+                            newMedUsed + " is expired and cannot be given. Please choose another medicine."
+                    );
+                    return;
+                }
 
-               } catch (NumberFormatException ex) {
-                   JOptionPane.showMessageDialog(
-                           this,
-                           "Please enter a valid number for the medicine quantity."
-                   );
-                   return;
-               }
-           }
+                // If the medicine wasn't changed, the old pills are about to be returned
+                // to stock, so they should count as available for the new amount too.
+                int availableStock = (medProduct != null) ? medProduct.getquantity() : 0;
+                if (!medicineChanged) {
+                    availableStock += selectedOldMedsQty;
+                }
 
-           try {
+                String defaultQty = !medicineChanged ? String.valueOf(selectedOldMedsQty) : "1";
 
-               boolean success = visitService.editVisit(  selectedVisitLrn, newName, newGradeSection, newReason, newMedUsed, newMedsQty);
+                String qtyInput = JOptionPane.showInputDialog(
+                        this,
+                        "How many pills of " + newMedUsed + "? (" + availableStock + " available)",
+                        defaultQty
+                );
 
-               if (!success) {
+                // User pressed Cancel
+                if (qtyInput == null) {
+                    return;
+                }
 
-                   JOptionPane.showMessageDialog(
-                           this,
-                           "Could not find that student's record."
-                   );
+                newMedsQty = Integer.parseInt(qtyInput.trim());
 
-               } else {
+                if (newMedsQty <= 0) {
+                    JOptionPane.showMessageDialog(
+                            this,
+                            "Medicine quantity must be greater than 0."
+                    );
+                    return;
+                }
 
-                   refreshTableAndCounters();
-                   clearCheckInForm();
+                if (newMedsQty > availableStock) {
+                    JOptionPane.showMessageDialog(
+                            this,
+                            newMedUsed + " only has " + availableStock + " pcs available. Please enter a smaller amount."
+                    );
+                    return;
+                }
 
-                   JOptionPane.showMessageDialog(
-                           this,
-                           "Student record updated."
-                   );
-               }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Please enter a valid number for the medicine quantity."
+                );
+                return;
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Error checking medicine stock: " + ex.getMessage()
+                );
+                return;
+            }
+        }
 
-           } catch (Exception ex) {
+          // Ask if the guardian's info needs updating too
+            int changeGuardian = JOptionPane.showConfirmDialog(this,
+                    "Do you also want to update the guardian's name and phone number?",
+                    "Update Guardian Info",
+                    JOptionPane.YES_NO_OPTION);
 
-               JOptionPane.showMessageDialog(
-                       this,
-                       "Error editing record: " + ex.getMessage()
-               );
-           }
+            String newGuardianName = selectedGuardianName;
+            String newGuardianPhone = selectedGuardianPhone;
+
+            if (changeGuardian == JOptionPane.YES_OPTION) {
+                String guardianNameInput = JOptionPane.showInputDialog(this, "Guardian's Name:", selectedGuardianName);
+                if (guardianNameInput == null) return; // cancelled
+                guardianNameInput = guardianNameInput.trim();
+                if (!guardianNameInput.matches("[\\p{L} .'-]+")) {
+                    JOptionPane.showMessageDialog(this, "Please enter a valid guardian name.");
+                    return;
+                }
+
+                String guardianPhoneInput = JOptionPane.showInputDialog(this, "Guardian's Phone Number:", selectedGuardianPhone);
+                if (guardianPhoneInput == null) return; // cancelled
+                guardianPhoneInput = guardianPhoneInput.trim();
+                if (!guardianPhoneInput.matches("^09\\d{9}$")) {
+                    JOptionPane.showMessageDialog(this, "Phone number must start with 09 and contain exactly 11 digits.");
+                    return;
+                }
+
+                newGuardianName = guardianNameInput;
+                newGuardianPhone = guardianPhoneInput;
+            }
+
+        try {
+            // Reconcile medicine stock: return the old medicine, deduct the new one
+            if (!selectedOldMedUsed.equalsIgnoreCase("None") && selectedOldMedsQty > 0) {
+                productService.restockMedicine(selectedOldMedUsed, selectedOldMedsQty);
+            }
+            if (!newMedUsed.equalsIgnoreCase("None") && newMedsQty > 0) {
+                boolean deducted = productService.useMedicine(newMedUsed, newName, newMedsQty);
+                if (!deducted) {
+                    showToast(CheckInPanel, "Warning: " + newMedUsed + " is out of stock. Stock was not deducted.", false);
+                }
+            }
+
+            boolean success = visitService.editVisit(selectedVisitLrn, newName, newGradeSection,
+                    newReason, newMedUsed, newMedsQty, newGuardianName, newGuardianPhone);
+
+            if (!success) {
+                JOptionPane.showMessageDialog(this, "Could not find that student's record.");
+            } else {
+                refreshTableAndCounters();
+                refreshInventoryStatusDisplay();
+                clearCheckInForm();
+                JOptionPane.showMessageDialog(this, "Student record updated.");
+            }
+
+} catch (Exception ex) {
+    JOptionPane.showMessageDialog(this, "Error editing record: " + ex.getMessage());
+}
        }
 
         private void clearCheckInForm() {
@@ -1515,7 +1579,7 @@ NOT modify this code. The content of this method is always
      String gradeSection = GSCheckIn.getText().trim();
      String lrn = LRNField.getText().trim();
      String reason = ReasonArea.getText().trim();
-     String medUsed = jComboBox1.getSelectedItem().toString();
+     
      
    
         //if else if statement for feilds 
@@ -1569,116 +1633,107 @@ NOT modify this code. The content of this method is always
     }
 
 
-    int wantsMed = JOptionPane.showConfirmDialog(this,
-        "Would this student like to take medicine?",
-        "Medicine",
-        JOptionPane.YES_NO_OPTION);
+         int wantsMed = JOptionPane.showConfirmDialog(this,
+             "Would this student like to take medicine?",
+             "Medicine",
+             JOptionPane.YES_NO_OPTION);
 
-    if (wantsMed == JOptionPane.YES_OPTION) {
-        Object selectedMed = jComboBox1.getSelectedItem();
+         if (wantsMed == JOptionPane.CLOSED_OPTION) {
+             return; // nurse closed the dialog without choosing, cancel check-in
+         }
 
-        if (selectedMed == null) {
-            showToast(MainPanel, "Your inventory of medicine might be empty, please check first.", false);
-            return;
-        }   
-        
-        pendingmedUsed  = selectedMed.toString();
-        
-   
-    try{
-        
-    Medicine medProduct = productService.findByName(pendingmedUsed);
+         if (wantsMed == JOptionPane.YES_OPTION) {
+             Object selectedMed = jComboBox1.getSelectedItem();
 
-    if (medProduct != null && medProduct.isExpired()) {
-        showToast(MainPanel, medUsed + " is expired and cannot be given. Please choose another medicine.", false);
-        return;
-    }
+             if (selectedMed == null) {
+                 showToast(MainPanel, "Your inventory of medicine might be empty, please check first.", false);
+                 return;
+             }
 
-    String qtyInput = JOptionPane.showInputDialog(this, "How many pills of " + pendingmedUsed + "?", "1");
+             pendingmedUsed = selectedMed.toString();
 
-    if (qtyInput == null) {
-        return; // nurse cancelled
-    }
+             try {
+                 Medicine medProduct = productService.findByName(pendingmedUsed);
 
-    try {
-        pendingmedsQty = Integer.parseInt(qtyInput.trim());
-    } catch (NumberFormatException ex) {
-        showToast(MainPanel, "Please enter a valid whole number for pill quantity.", false);
-        return;
-    }
+                 if (medProduct != null && medProduct.isExpired()) {
+                     showToast(MainPanel, pendingmedUsed + " is expired and cannot be given. Please choose another medicine.", false);
+                     return;
+                 }
 
-    if (pendingmedsQty <= 0) {
-        showToast(MainPanel, "Pill quantity must be at least 1.", false);
-        return;
-    }
+                 String qtyInput = JOptionPane.showInputDialog(this, "How many pills of " + pendingmedUsed + "?", "1");
+                 if (qtyInput == null) {
+                     return; // nurse cancelled
+                 }
 
-    if (medProduct != null && medProduct.getquantity() < pendingmedsQty) {
-        showToast(MainPanel, pendingmedUsed + " only has " + medProduct.getquantity() + " pcs left. Please enter a smaller amount.", false);
-        return;
-        }
-     
-   
-    
-    
-    }catch(Exception ex){
-        JOptionPane.showMessageDialog(this , "Error");
-          return;
-    }
-    try {
-        String existingName = visitService.findNameForLrn(lrn);
-        
-        if (existingName != null && !existingName.equalsIgnoreCase(name)) {
-        JOptionPane.showMessageDialog(this,
-            "This LRN is already registered under the name \"" + existingName + "\". Please verify the LRN or name.");
-        return;
-    }
-        //Duplicate Check-in Check
-         if (visitService.isCurrentlyCheckedIn(lrn)) {
-        JOptionPane.showMessageDialog(this, "This student is already checked in.");
-        return;
-    }      
-        
-        //Refresh Displays and Clear Form
-        refreshTableAndCounters();
-        refreshInventoryStatusDisplay();
+                 try {
+                     pendingmedsQty = Integer.parseInt(qtyInput.trim());
+                 } catch (NumberFormatException ex) {
+                     showToast(MainPanel, "Please enter a valid whole number for pill quantity.", false);
+                     return;
+                 }
 
-       
-        ParentGurdianName.setText("");
-        PhoneField.setText("");
-        if (SentHomeInformationPanel.getParent() != null) {
-        SentHomeInformationPanel.getParent().setComponentZOrder(SentHomeInformationPanel, 0);
-    }
-        glassOverlay.setBounds(0, 0, getWidth(), getHeight());
-    
-    // Optional: If using Option 2 (True Blur), capture screenshot here:
-    // glassOverlay.setBlurImage(getBlurredSnapshot());
-    
-        glassOverlay.setVisible(true);
+                 if (pendingmedsQty <= 0) {
+                     showToast(MainPanel, "Pill quantity must be at least 1.", false);
+                     return;
+                 }
 
-        // 2. Center the popup panel relative to the window frame
-        
-        java.awt.Dimension size = SentHomeInformationPanel.getPreferredSize();
-        int x = (getWidth() - size.width) / 2;
-        int y = (getHeight() - size.height) / 2;
-        SentHomeInformationPanel.setBounds(x, y, size.width, size.height);
-        SentHomeInformationPanel.setVisible(true);
+                 if (medProduct != null && medProduct.getquantity() < pendingmedsQty) {
+                     showToast(MainPanel, pendingmedUsed + " only has " + medProduct.getquantity() + " pcs left. Please enter a smaller amount.", false);
+                     return;
+                 }
 
-        // 3. Refresh the layered pane stack
-        getLayeredPane().revalidate();
-        getLayeredPane().repaint();
+             } catch (Exception ex) {
+                 JOptionPane.showMessageDialog(this, "Error");
+                 return;
+             }
 
-        // 2. Make it visible and refresh rendering
-        SentHomeInformationPanel.setVisible(true);
-        this.revalidate();
-        this.repaint();
-        
-        //testing kung gumagana yun Check btn
-        System.out.println("Showing Guardian Panel...");
+         } else {
+             // NO_OPTION: student doesn't need medicine
+             pendingmedUsed = "None";
+             pendingmedsQty = 0;
+         }
 
-        } catch (Exception ex) {
+         // This part now runs for BOTH yes and no, not just yes
+         try {
+             String existingName = visitService.findNameForLrn(lrn);
+
+             if (existingName != null && !existingName.equalsIgnoreCase(name)) {
+                 JOptionPane.showMessageDialog(this,
+                     "This LRN is already registered under the name \"" + existingName + "\". Please verify the LRN or name.");
+                 return;
+             }
+
+             if (visitService.isCurrentlyCheckedIn(lrn)) {
+                 JOptionPane.showMessageDialog(this, "This student is already checked in.");
+                 return;
+             }
+
+             refreshTableAndCounters();
+             refreshInventoryStatusDisplay();
+
+             ParentGurdianName.setText("");
+             PhoneField.setText("");
+             if (SentHomeInformationPanel.getParent() != null) {
+                 SentHomeInformationPanel.getParent().setComponentZOrder(SentHomeInformationPanel, 0);
+             }
+             glassOverlay.setBounds(0, 0, getWidth(), getHeight());
+             glassOverlay.setVisible(true);
+
+             java.awt.Dimension size = SentHomeInformationPanel.getPreferredSize();
+             int x = (getWidth() - size.width) / 2;
+             int y = (getHeight() - size.height) / 2;
+             SentHomeInformationPanel.setBounds(x, y, size.width, size.height);
+             SentHomeInformationPanel.setVisible(true);
+
+             getLayeredPane().revalidate();
+             getLayeredPane().repaint();
+
+             this.revalidate();
+             this.repaint();
+
+         } catch (Exception ex) {
              showToast(CheckInPanel, "Error saving check-in: " + ex.getMessage(), false);
-            }
-        }
+         }
     }//GEN-LAST:event_CheckInBTNActionPerformed
  
     
@@ -1702,19 +1757,31 @@ NOT modify this code. The content of this method is always
             }
              
     }//GEN-LAST:event_LRNFieldKeyTyped
-
+   
+    private String selectedOldMedUsed = "None";
+    private int selectedOldMedsQty = 0;
+    private String selectedGuardianName = "";
+    private String selectedGuardianPhone = "";
+    
     private void ReasonTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_ReasonTableMouseClicked
+       
         int row = ReasonTable.getSelectedRow();
         if (row == -1) return;
 
         CheckinSystem selected = currentVisits.get(row);
 
         selectedVisitLrn = selected.getLrn();
+        selectedOldMedUsed = selected.getMedUsed();
+        selectedOldMedsQty = selected.getmedsQty();
+        selectedGuardianName = selected.getGuardianName();
+        selectedGuardianPhone = selected.getGuardianPhoneNums();
+
         NameCheckIn.setText(selected.getName());
         GSCheckIn.setText(selected.getGradeSection());
         LRNField.setText(selected.getLrn());
         ReasonArea.setText(selected.getReason());
         jComboBox1.setSelectedItem(selected.getMedUsed());
+         
     
     }//GEN-LAST:event_ReasonTableMouseClicked
 
@@ -1730,7 +1797,7 @@ NOT modify this code. The content of this method is always
     private void FinishBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_FinishBTNActionPerformed
             String guardianName = ParentGurdianName.getText().trim();
             String guardianPhone = PhoneField.getText().trim();
-
+           
             if (guardianName.isEmpty()) {
                 showToast(SentHomeInformationPanel,
                         "Guardian name is required.",
@@ -1765,7 +1832,8 @@ NOT modify this code. The content of this method is always
          String gradeSection = GSCheckIn.getText().trim();
          String lrn = LRNField.getText().trim();
          String reason = ReasonArea.getText().trim();
-         String medUsed = jComboBox1.getSelectedItem().toString();
+         String medUsed = pendingmedUsed;
+
          
 
          try {

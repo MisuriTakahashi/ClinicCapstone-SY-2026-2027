@@ -144,6 +144,25 @@ public class MedicineData {
         logActivity("Student " + studentName + " Used " + quantity + "x " + productName);
         return true;
     }
+    
+    public boolean restockMedicine(String productName, int quantity) throws SQLException, IOException {
+        if (productName == null || productName.equalsIgnoreCase("None") || quantity <= 0) {
+            return false;
+        }
+
+        String sql = "UPDATE MEDICINES SET quantity = quantity + ? WHERE name = ?";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, quantity);
+            ps.setString(2, productName);
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                logActivity("Returned " + quantity + "x " + productName + " (visit edited)");
+                return true;
+            }
+            return false;
+        }
+    }
 
     public boolean nameExists(String name) throws SQLException {
         String sql = "SELECT 1 FROM MEDICINES WHERE name = ?";

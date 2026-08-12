@@ -10,8 +10,6 @@ package clinic;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -22,9 +20,13 @@ public class DatabaseManager {
     private static final String FILE_ENCRYPTION_KEY = "TebanPo123";
     private static final String USER_PASSWORD = "admin123";
     private static final String FULL_PASSWORD = FILE_ENCRYPTION_KEY + " " + USER_PASSWORD;
+    private static Connection sharedConnection;
 
     public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(DB_URL, USER, FULL_PASSWORD);
+        if (sharedConnection == null || sharedConnection.isClosed()) {
+            sharedConnection = DriverManager.getConnection(DB_URL, USER, FULL_PASSWORD);
+        }
+        return sharedConnection;
     }
 
     public static void initializeDatabase() {

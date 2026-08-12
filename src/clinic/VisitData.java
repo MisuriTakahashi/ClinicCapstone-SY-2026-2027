@@ -138,21 +138,24 @@ public class VisitData {
     }
 
     public boolean editVisit(String lrn, String newName, String newGradeSection,
-                              String newReason, String newMedUsed, int newMedsQty) throws SQLException {
+                          String newReason, String newMedUsed, int newMedsQty,
+                          String newGuardianName, String newGuardianPhone) throws SQLException {
 
-        String sql = "UPDATE VISITS SET name = ?, grade_section = ?, reason = ?, "
-                + "med_used = ?, meds_qty = ? WHERE lrn = ?";
+            String sql = "UPDATE VISITS SET name = ?, grade_section = ?, reason = ?, "
+                    + "med_used = ?, meds_qty = ?, guardian_name = ?, guardian_phone = ? WHERE lrn = ?";
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, newName);
-            ps.setString(2, newGradeSection);
-            ps.setString(3, newReason);
-            ps.setString(4, newMedUsed);
-            ps.setInt(5, newMedsQty);
-            ps.setString(6, lrn);
-            return ps.executeUpdate() > 0;
-        }
+            try (Connection conn = DatabaseManager.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, newName);
+                ps.setString(2, newGradeSection);
+                ps.setString(3, newReason);
+                ps.setString(4, newMedUsed);
+                ps.setInt(5, newMedsQty);
+                ps.setString(6, newGuardianName);
+                ps.setString(7, newGuardianPhone);
+                ps.setString(8, lrn);
+                return ps.executeUpdate() > 0;
+            }
     }
 
     public String findNameForLrn(String lrn) throws SQLException {
