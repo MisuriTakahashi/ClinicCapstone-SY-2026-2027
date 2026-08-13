@@ -116,4 +116,22 @@ public class AccountData {
         }
         return migratedCount;
     }
+       
+       public AccountSystem findByName(String name) throws SQLException {
+        String sql = "SELECT name, password, role FROM ACCOUNTS WHERE name = ?";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new AccountSystem(
+                            rs.getString("name"),
+                            rs.getString("password"),
+                            rs.getString("role")
+                    );
+                }
+                return null;
+            }
+        }
+    }
 }

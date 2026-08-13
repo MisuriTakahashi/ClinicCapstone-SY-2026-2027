@@ -52,6 +52,14 @@ public class AdminPanel extends javax.swing.JFrame {
     public AdminPanel(AccountSystem account) {
         com.formdev.flatlaf.FlatLightLaf.setup();
         initComponents();
+        // Window X (not Return/Logout): remember this session for auto-restore next launch.
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                SessionManager.saveSession(account);
+            }
+        });
+        
         configureFlatLafUi();
         statisticsContainer.setVisible(false);
         AccountManagementPanel.setVisible(false);

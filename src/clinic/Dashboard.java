@@ -14,6 +14,8 @@ import javax.swing.JOptionPane;
 import javax.swing.JTextArea;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.text.AbstractDocument;
+import java.sql.SQLException;
+import java.io.IOException;
 
 /**
  *
@@ -52,6 +54,16 @@ public class Dashboard extends javax.swing.JFrame {
             this.loggedInAccount = account;
             
             initComponents();
+            
+            // Window X (not Logout): remember this session so the user is
+            // auto-logged-in next launch, instead of being forced to log in again.
+            addWindowListener(new java.awt.event.WindowAdapter() {
+                @Override
+                public void windowClosing(java.awt.event.WindowEvent e) {
+                    SessionManager.saveSession(loggedInAccount);
+                }
+            });
+            
             applyMigLayouts();
             
             this.setSize(1366, 800);             // Sets a standard HD laptop size
@@ -234,7 +246,7 @@ public class Dashboard extends javax.swing.JFrame {
         HeaderPanel.add(ThemeToggle, "split 3, aligny center, gapleft 20, w 50!"); 
 
         HeaderPanel.add(jButton1, "gapleft 10");
-        HeaderPanel.add(jButton2, "gapleft 10");
+        HeaderPanel.add(Logout, "gapleft 10");
 
     // ================= LEFT SIDEBAR (FORM) =================
     CheckInPanel.removeAll();
@@ -382,7 +394,7 @@ private void applyTheme() {
 
         // --- HEADER BUTTONS (Reliable Styling) ---
         // We use standard methods for colors to ensure they stick and are readable
-        javax.swing.JButton[] headerButtons = {jButton1, jButton2};
+        javax.swing.JButton[] headerButtons = {jButton1, Logout};
         for (javax.swing.JButton btn : headerButtons) {
             btn.putClientProperty("JButton.buttonType", "roundRect");
             btn.putClientProperty("JComponent.arc", 15);
@@ -775,7 +787,7 @@ NOT modify this code. The content of this method is always
         jLabel3 = new javax.swing.JLabel();
         jButton1 = new javax.swing.JButton();
         DateTimeLabel = new javax.swing.JLabel();
-        jButton2 = new javax.swing.JButton();
+        Logout = new javax.swing.JButton();
         ThemeToggle = new javax.swing.JToggleButton();
         CheckInPanel = new javax.swing.JPanel();
         NameCheckIn = new javax.swing.JTextField();
@@ -901,11 +913,11 @@ NOT modify this code. The content of this method is always
 
         DateTimeLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 24)); // NOI18N
 
-        jButton2.setBackground(new java.awt.Color(255, 255, 255));
-        jButton2.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        jButton2.setForeground(new java.awt.Color(0, 0, 0));
-        jButton2.setText("Logout");
-        jButton2.addActionListener(this::jButton2ActionPerformed);
+        Logout.setBackground(new java.awt.Color(255, 255, 255));
+        Logout.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        Logout.setForeground(new java.awt.Color(0, 0, 0));
+        Logout.setText("Logout");
+        Logout.addActionListener(this::LogoutActionPerformed);
 
         ThemeToggle.setBackground(new java.awt.Color(255, 255, 255));
         ThemeToggle.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
@@ -927,7 +939,7 @@ NOT modify this code. The content of this method is always
                 .addGap(18, 18, 18)
                 .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 141, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jButton2)
+                .addComponent(Logout)
                 .addGap(30, 30, 30))
         );
         HeaderPanelLayout.setVerticalGroup(
@@ -938,7 +950,7 @@ NOT modify this code. The content of this method is always
                     .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                         .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(Logout, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addComponent(ThemeToggle, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addComponent(jLabel3)))
                 .addGap(0, 23, Short.MAX_VALUE))
@@ -1556,21 +1568,84 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
             
     }//GEN-LAST:event_EditBTNActionPerformed
 
-    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+    private void LogoutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_LogoutActionPerformed
        
-        int choice = JOptionPane.showConfirmDialog(
-        this,
-        "Are you sure you want to log out?",
-        "Confirm logout",
-        JOptionPane.YES_NO_OPTION
-    );
+         Object[] options = {"Export & Logout", "Logout", "Cancel"};
+        int choice = JOptionPane.showOptionDialog(
+                this,
+                "Would you like to export your check-in logs before logging out?",
+                "Export Check-in Logs?",
+                JOptionPane.YES_NO_CANCEL_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]
+        );
 
-    if (choice == JOptionPane.YES_OPTION) {
+        // Esc key or closing the dialog itself -> treat the same as Cancel
+        if (choice == JOptionPane.CLOSED_OPTION || choice == 2) {
+            return;
+        }
+
+        if (choice == 0) { // Export & Logout
+            boolean exported = exportTodaysCheckinLogs();
+            if (!exported) {
+                return; // exportTodaysCheckinLogs() already explained why - stay logged in
+            }
+        }
+
+        // Reaches here for: choice == 1 (plain Logout), or choice == 0 after a successful export
+        SessionManager.clearSession();
         new LoginUi().setVisible(true);
         this.dispose();
+
+    }//GEN-LAST:event_jButton2ActionPerformed
+
+    /** Exports today's check-in logs only (no inventory). Returns true only if the export actually succeeded. */
+    private boolean exportTodaysCheckinLogs() {
+        LocalDate today = LocalDate.now();
+        ReportExporter exporter = new ReportExporter(productService);
+
+        try {
+            if (!exporter.hasCheckinRecordsForDate(today)) {
+                int proceed = JOptionPane.showConfirmDialog(this,
+                        "There are no check-in records for today. Log out without exporting?",
+                        "Nothing to Export",
+                        JOptionPane.YES_NO_OPTION);
+                return proceed == JOptionPane.YES_OPTION;
+            }
+
+            javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
+            String suggestedName = "CheckIn_Log_" + today + ".csv";
+            chooser.setSelectedFile(new java.io.File(suggestedName));
+            int saveChoice = chooser.showSaveDialog(this);
+            if (saveChoice != javax.swing.JFileChooser.APPROVE_OPTION) {
+                return false; // user cancelled the Save dialog - stay logged in
+            }
+
+            java.io.File destination = chooser.getSelectedFile();
+            if (!destination.getName().toLowerCase().endsWith(".csv")) {
+                destination = new java.io.File(destination.getParentFile(), destination.getName() + ".csv");
+            }
+
+            exporter.writeCheckinReport(today, destination);
+
+            JOptionPane.showMessageDialog(this, "Check-in logs exported successfully:\n" + destination.getAbsolutePath());
+            return true;
+
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "The Check-in Logs could not be exported.\nYou have not been logged out.\n\nDatabase error: " + ex.getMessage(),
+                    "Export Failed", JOptionPane.ERROR_MESSAGE);
+            return false;
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "The Check-in Logs could not be exported.\nYou have not been logged out.\n\nFile error: " + ex.getMessage(),
+                    "Export Failed", JOptionPane.ERROR_MESSAGE);
+            return false;
         }
     
-    }//GEN-LAST:event_jButton2ActionPerformed
+    }//GEN-LAST:event_LogoutActionPerformed
     
     
     private void CheckInBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CheckInBTNActionPerformed
@@ -2099,6 +2174,7 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
     private javax.swing.JTextArea InventoryStatusArea;
     private javax.swing.JTextField LRNField;
     private javax.swing.JLabel LRNLabel;
+    private javax.swing.JButton Logout;
     private javax.swing.JLabel LogsLabel;
     private javax.swing.JPanel MainPanel;
     private javax.swing.JTextField NameCheckIn;
@@ -2119,7 +2195,6 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
     private javax.swing.JLabel VisitCounter;
     private javax.swing.JPanel VisitPanel;
     private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton2;
     private javax.swing.JComboBox<String> jComboBox1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel11;

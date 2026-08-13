@@ -83,4 +83,35 @@ public class ReportExporter {
         if (value == null) value = "";
         return "\"" + value.replace("\"", "\"\"") + "\"";
     }
+    
+    /** Returns true if there is at least one check-in record for the date (ignores inventory). */
+        public boolean hasCheckinRecordsForDate(LocalDate date) throws SQLException {
+            return !visitData.getVisitsByDate(date.toString()).isEmpty();
+        }
+
+        /** Writes a Check-in-ONLY CSV report (no inventory) for the given date. */
+        public void writeCheckinReport(LocalDate date, File destination) throws SQLException, IOException {
+            String iso = date.toString();
+            ArrayList<CheckinSystem> visits = visitData.getVisitsByDate(iso);
+
+            try (PrintWriter out = new PrintWriter(destination, "UTF-8")) {
+                String prettyDate = date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy"))
+                        + " - " + date.getDayOfWeek().toString().substring(0, 1)
+                        + date.getDayOfWeek().toString().substring(1).toLowerCase();
+                out.println("Student Check-in Log Report");
+                out.println("Date: " + prettyDate);
+                out.println();
+
+                out.println("CHECK-IN LOGS");
+                out.println("Student Name,Grade/Section,LRN,Check-in Date/Time,Reason,"
+                        + "Medicine Used,Medicine Quantity,Status,Guardian Name,Guardian Phone");
+                for (CheckinSystem v : visits) {
+                    out.println(csv(v.getName()) + "," + csv(v.getGradeSection()) + "," + csv(v.getLrn()) + ","
+                            + csv(v.getCheckInTime()) + "," + csv(v.getReason()) + "," + csv(v.getMedUsed()) + ","
+                            + v.getmedsQty() + "," + csv(v.getStatus()) + ","
+                            + csv(v.getGuardianName()) + "," + csv(v.getGuardianPhoneNums()));
+                }
+                if (visits.isEmpty()) out.println("No check-in records for this date.");
+            }
+        }
 }

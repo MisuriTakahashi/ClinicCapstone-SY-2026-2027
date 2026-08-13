@@ -47,10 +47,15 @@ public class Clinic {
         javax.swing.UIManager.put("JTextField.placeholderText", "");
 
        
-        java.awt.EventQueue.invokeLater(() -> {
-            //new Dashboard().setVisible(true);
-            new LoginUi().setVisible(true);
-           
+            java.awt.EventQueue.invokeLater(() -> {
+            AccountSystem restoredAccount = SessionManager.loadSession();
+
+            if (restoredAccount != null) {
+                // A previous session was left open via the window X - skip the login screen.
+                new Dashboard(restoredAccount).setVisible(true);
+            } else {
+                new LoginUi().setVisible(true);
+            }
         });
         
     }
