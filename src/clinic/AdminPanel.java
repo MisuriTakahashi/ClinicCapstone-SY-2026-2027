@@ -517,11 +517,11 @@ private void animateContentIn(JPanel panel) {
     
     private void refreshInventoryScreen() {
         try {
-            ArrayList<Medicine> medicine = productService.loadAll();
+            currentProducts = productService.loadAll();
             DefaultTableModel model = (DefaultTableModel) stockTable.getModel();
             model.setRowCount(0);
 
-            for (Medicine p : medicine) {
+            for (Medicine p : currentProducts) {
                 model.addRow(new Object[]{p.getStatus(), p.getname(), p.getquantity()});
             }
             refreshActivityLogDisplay();
@@ -1487,10 +1487,17 @@ private void animateContentIn(JPanel panel) {
     }//GEN-LAST:event_ClearBtnActionPerformed
 
     private void stockTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_stockTableMouseClicked
-       int row = stockTable.getSelectedRow();
-       if (row == -1) return;
+       int viewRow = stockTable.getSelectedRow();
+        if (viewRow == -1) return;
 
-        Medicine selected = currentProducts.get(row); // real object, correct types guaranteed - DJJ - ps I DON'T KNOW WHAT THIS DO BUT DO NOT REMOVE IT
+        int modelRow = stockTable.convertRowIndexToModel(viewRow);
+        if (modelRow < 0 || modelRow >= currentProducts.size()) {
+            // Table and currentProducts are out of sync - refresh instead of crashing.
+            refreshInventoryScreen();
+            return;
+        }
+
+        Medicine selected = currentProducts.get(modelRow); // real object, correct types guaranteed - DJJ - ps I DON'T KNOW WHAT THIS DO BUT DO NOT REMOVE IT
 
         selectedProductName = selected.getname();
         ProductName.setText(selected.getname());
@@ -1500,41 +1507,52 @@ private void animateContentIn(JPanel panel) {
     }//GEN-LAST:event_stockTableMouseClicked
 
     private void DeleteBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DeleteBTNActionPerformed
-        int[] selectedRows = stockTable.getSelectedRows();
+         int[] selectedRows = stockTable.getSelectedRows();
 
-         if (selectedRows.length == 0) {
-             JOptionPane.showMessageDialog(this, "Select at least one product to delete.");
-             return;
-            }
-
-        StringBuilder namesPreview = new StringBuilder();
-        
-           for (int row : selectedRows) {
-               namesPreview.append("- ").append(currentProducts.get(row).getname()).append("\n");
-           }
-
-        int confirm = JOptionPane.showConfirmDialog(this,
-            "Are you sure you want to delete the following medicine pills?\n\n" + namesPreview,
-            "Confirm Delete",
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.WARNING_MESSAGE);
-
-         if (confirm != JOptionPane.YES_OPTION) {
-            return;
+     if (selectedRows.length == 0) {
+         JOptionPane.showMessageDialog(this, "Select at least one product to delete.");
+         return;
         }
 
-         try {
-          for (int row : selectedRows) {
-              String name = currentProducts.get(row).getname();
-              productService.deleteItem(name);
-            }
-             
-             refreshInventoryScreen();
-             ClearBtnActionPerformed(null);
+    for (int row : selectedRows) {
+        int modelRow = stockTable.convertRowIndexToModel(row);
+        if (modelRow < 0 || modelRow >= currentProducts.size()) {
+            JOptionPane.showMessageDialog(this, "Table is out of sync - please try again.");
+            refreshInventoryScreen();
+            return;
+        }
+    }
 
-         } catch (Exception ex) {
-         JOptionPane.showMessageDialog(this, "Error deleting items: " + ex.getMessage());
+    StringBuilder namesPreview = new StringBuilder();
+    
+       for (int row : selectedRows) {
+           int modelRow = stockTable.convertRowIndexToModel(row);
+           namesPreview.append("- ").append(currentProducts.get(modelRow).getname()).append("\n");
+            }
+
+         int confirm = JOptionPane.showConfirmDialog(this,
+             "Are you sure you want to delete the following medicine pills?\n\n" + namesPreview,
+             "Confirm Delete",
+             JOptionPane.YES_NO_OPTION,
+             JOptionPane.WARNING_MESSAGE);
+
+          if (confirm != JOptionPane.YES_OPTION) {
+             return;
          }
+
+          try {
+           for (int row : selectedRows) {
+               int modelRow = stockTable.convertRowIndexToModel(row);
+               String name = currentProducts.get(modelRow).getname();
+               productService.deleteItem(name);
+             }
+
+              refreshInventoryScreen();
+              ClearBtnActionPerformed(null);
+
+          } catch (Exception ex) {
+          JOptionPane.showMessageDialog(this, "Error deleting items: " + ex.getMessage());
+          }
     }//GEN-LAST:event_DeleteBTNActionPerformed
 
     private void EditBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditBtnActionPerformed
