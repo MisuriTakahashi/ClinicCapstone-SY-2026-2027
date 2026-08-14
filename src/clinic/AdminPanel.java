@@ -1773,11 +1773,12 @@ private void animateContentIn(JPanel panel) {
     
     private void ExportBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ExportBTNActionPerformed
             // 1. Ask for the report date
-     javax.swing.JTextField dateField = new javax.swing.JTextField();
+      javax.swing.JTextField dateField = new javax.swing.JTextField(LocalDate.now().toString());
      ((javax.swing.text.AbstractDocument) dateField.getDocument())
              .setDocumentFilter(new DateInputFilter());
      int result = JOptionPane.showConfirmDialog(this, dateField,
-             "Enter report date (YYYY-MM-DD):", JOptionPane.OK_CANCEL_OPTION);
+             "Report date (edit if you need a different day, e.g. 2026-1-1 or 2026-01-01):",
+             JOptionPane.OK_CANCEL_OPTION);
      if (result != JOptionPane.OK_OPTION) return;
 
      LocalDate reportDate;

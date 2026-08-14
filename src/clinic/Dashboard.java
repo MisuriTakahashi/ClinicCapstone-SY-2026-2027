@@ -8,6 +8,8 @@ package clinic;
 import java.awt.Component;
 import net.miginfocom.swing.MigLayout;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JOptionPane;
@@ -1568,7 +1570,7 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
             
     }//GEN-LAST:event_EditBTNActionPerformed
 
-    private void LogoutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_LogoutActionPerformed
+    private void LogoutActionPerformed(java.awt.event.ActionEvent evt) {                                       
        
          Object[] options = {"Export & Logout", "Logout", "Cancel"};
         int choice = JOptionPane.showOptionDialog(
@@ -1599,24 +1601,59 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
         new LoginUi().setVisible(true);
         this.dispose();
 
-    }//GEN-LAST:event_jButton2ActionPerformed
+    }                                        
 
-    /** Exports today's check-in logs only (no inventory). Returns true only if the export actually succeeded. */
+     /** Turns "1-1-2026" / "2026-1-1" style input into a strict "yyyy-MM-dd" string. */
+    private String normalizeDate(String input) throws DateTimeParseException {
+        DateTimeFormatter looseFormat = DateTimeFormatter.ofPattern("yyyy-M-d");
+        LocalDate date = LocalDate.parse(input, looseFormat);
+        return date.format(DateTimeFormatter.ISO_LOCAL_DATE);
+    }
+
+    /** Shows a date field PREFILLED with today's date so the user can confirm or edit it.
+     *  Returns the confirmed date, or null if the user cancelled. */
+    private LocalDate confirmReportDate() {
+        javax.swing.JTextField dateField = new javax.swing.JTextField(LocalDate.now().toString());
+        ((javax.swing.text.AbstractDocument) dateField.getDocument())
+                .setDocumentFilter(new DateInputFilter());
+
+        while (true) {
+            int result = JOptionPane.showConfirmDialog(this, dateField,
+                    "Report date (edit if you need a different day, e.g. 2026-1-1 or 2026-01-01):",
+                    JOptionPane.OK_CANCEL_OPTION);
+            if (result != JOptionPane.OK_OPTION) {
+                return null; // user cancelled
+            }
+            try {
+                return LocalDate.parse(normalizeDate(dateField.getText().trim()));
+            } catch (DateTimeParseException ex) {
+                JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2026-1-1 or 2026-01-01).");
+                // loop back so they can fix it instead of losing their place
+            }
+        }
+    }
+
+    /** Exports check-in logs for a confirmed date, then archives & resets the active list.
+     *  Returns true only if the export actually succeeded (and the user did not cancel). */
     private boolean exportTodaysCheckinLogs() {
-        LocalDate today = LocalDate.now();
+        LocalDate reportDate = confirmReportDate();
+        if (reportDate == null) {
+            return false; // user cancelled the date confirmation - stay logged in
+        }
+
         ReportExporter exporter = new ReportExporter(productService);
 
         try {
-            if (!exporter.hasCheckinRecordsForDate(today)) {
+            if (!exporter.hasCheckinRecordsForDate(reportDate)) {
                 int proceed = JOptionPane.showConfirmDialog(this,
-                        "There are no check-in records for today. Log out without exporting?",
+                        "There are no check-in records for " + reportDate + ". Log out without exporting?",
                         "Nothing to Export",
                         JOptionPane.YES_NO_OPTION);
                 return proceed == JOptionPane.YES_OPTION;
             }
 
             javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
-            String suggestedName = "CheckIn_Log_" + today + ".csv";
+            String suggestedName = "CheckIn_Log_" + reportDate + ".csv";
             chooser.setSelectedFile(new java.io.File(suggestedName));
             int saveChoice = chooser.showSaveDialog(this);
             if (saveChoice != javax.swing.JFileChooser.APPROVE_OPTION) {
@@ -1628,24 +1665,38 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
                 destination = new java.io.File(destination.getParentFile(), destination.getName() + ".csv");
             }
 
-            exporter.writeCheckinReport(today, destination);
+            // Export first. Only if this line completes without throwing do we move on.
+            exporter.writeCheckinReport(reportDate, destination);
 
-            JOptionPane.showMessageDialog(this, "Check-in logs exported successfully:\n" + destination.getAbsolutePath());
-            return true;
+            // Export succeeded -> now archive & reset the active daily check-in list for this date.
+            try {
+                int archivedCount = visitService.archiveDate(reportDate.toString());
+                JOptionPane.showMessageDialog(this,
+                        "Check-in logs exported and archived successfully:\n" + destination.getAbsolutePath()
+                        + "\n\n" + archivedCount + " check-in record(s) for " + reportDate + " were archived.\n"
+                        + "The daily Check-in Logs have been reset for the next day.");
+                return true;
+            } catch (SQLException archiveEx) {
+                JOptionPane.showMessageDialog(this,
+                        "Check-in logs were exported successfully, but they could not be archived/reset:\n"
+                        + archiveEx.getMessage() + "\n\nYou have not been logged out.",
+                        "Archive Failed", JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
 
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this,
-                    "The Check-in Logs could not be exported.\nYou have not been logged out.\n\nDatabase error: " + ex.getMessage(),
+                    "The Check-in Logs could not be exported.\nNo records were archived or reset.\nYou have not been logged out.\n\nDatabase error: " + ex.getMessage(),
                     "Export Failed", JOptionPane.ERROR_MESSAGE);
             return false;
         } catch (IOException ex) {
             JOptionPane.showMessageDialog(this,
-                    "The Check-in Logs could not be exported.\nYou have not been logged out.\n\nFile error: " + ex.getMessage(),
+                    "The Check-in Logs could not be exported.\nNo records were archived or reset.\nYou have not been logged out.\n\nFile error: " + ex.getMessage(),
                     "Export Failed", JOptionPane.ERROR_MESSAGE);
             return false;
         }
-    
-    }//GEN-LAST:event_LogoutActionPerformed
+
+    }                     
     
     
     private void CheckInBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CheckInBTNActionPerformed
