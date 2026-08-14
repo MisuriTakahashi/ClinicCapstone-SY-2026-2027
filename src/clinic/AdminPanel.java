@@ -1800,13 +1800,13 @@ private void animateContentIn(JPanel panel) {
 
          // 3. Ask where to save
          javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
-         String suggestedName = "Clinic_Report_" + reportDate + ".csv";
+         String suggestedName = "Clinic_Report_" + reportDate + ".xlsx";
          chooser.setSelectedFile(new java.io.File(suggestedName));
          int choice = chooser.showSaveDialog(this);
          if (choice != javax.swing.JFileChooser.APPROVE_OPTION) return;
 
          java.io.File destination = chooser.getSelectedFile();
-         if (!destination.getName().toLowerCase().endsWith(".csv")) {
+         if (!destination.getName().toLowerCase().endsWith(".xlsx")) {
              destination = new java.io.File(destination.getParentFile(), destination.getName() + ".csv");
          }
 

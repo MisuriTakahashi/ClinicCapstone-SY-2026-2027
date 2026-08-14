@@ -1653,7 +1653,7 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
             }
 
             javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
-            String suggestedName = "CheckIn_Log_" + reportDate + ".csv";
+            String suggestedName = "CheckIn_Log_" + reportDate + ".xlsx";
             chooser.setSelectedFile(new java.io.File(suggestedName));
             int saveChoice = chooser.showSaveDialog(this);
             if (saveChoice != javax.swing.JFileChooser.APPROVE_OPTION) {
@@ -1661,7 +1661,7 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
             }
 
             java.io.File destination = chooser.getSelectedFile();
-            if (!destination.getName().toLowerCase().endsWith(".csv")) {
+            if (!destination.getName().toLowerCase().endsWith(".xlsx")) {
                 destination = new java.io.File(destination.getParentFile(), destination.getName() + ".csv");
             }
 
