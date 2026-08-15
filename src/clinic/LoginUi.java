@@ -23,6 +23,7 @@ public class LoginUi extends javax.swing.JFrame {
      * Creates new form LoginUi
      */
     public LoginUi() {
+        com.formdev.flatlaf.FlatLightLaf.setup();
         setUndecorated(true);
         initComponents();
         setLocationRelativeTo(null);
