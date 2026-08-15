@@ -78,7 +78,7 @@ public class AccountData {
                }
            }
        }
-
+       //RAAAAAAAH
        public boolean deleteAccount(String name) throws SQLException {
            String sql = "DELETE FROM ACCOUNTS WHERE name = ?";
            try (Connection conn = DatabaseManager.getConnection();
