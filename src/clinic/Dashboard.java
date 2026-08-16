@@ -1662,7 +1662,7 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
 
             java.io.File destination = chooser.getSelectedFile();
             if (!destination.getName().toLowerCase().endsWith(".xlsx")) {
-                destination = new java.io.File(destination.getParentFile(), destination.getName() + ".csv");
+                destination = new java.io.File(destination.getParentFile(), destination.getName() + ".xlsx");
             }
 
             // Export first. Only if this line completes without throwing do we move on.

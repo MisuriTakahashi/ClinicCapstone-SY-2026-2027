@@ -121,26 +121,17 @@ public class MedicineData {
     public boolean useMedicine(String productName, String studentName, int quantity)
             throws SQLException, IOException {
 
-        String selectSql = "SELECT quantity FROM MEDICINES WHERE name = ?";
-        String updateSql = "UPDATE MEDICINES SET quantity = ? WHERE name = ?";
+        String sql = "UPDATE MEDICINES SET quantity = quantity - ? WHERE name = ? AND quantity >= ?";
 
-        try (Connection conn = DatabaseManager.getConnection()) {
-            int currentQty;
-            try (PreparedStatement ps = conn.prepareStatement(selectSql)) {
-                ps.setString(1, productName);
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (!rs.next()) return false;
-                    currentQty = rs.getInt("quantity");
-                }
-            }
-            if (currentQty < quantity) return false;
-
-            try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
-                ps.setInt(1, currentQty - quantity);
-                ps.setString(2, productName);
-                ps.executeUpdate();
-            }
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, quantity);
+            ps.setString(2, productName);
+            ps.setInt(3, quantity);
+            int rows = ps.executeUpdate();
+            if (rows == 0) return false; // medicine doesn't exist, or not enough stock
         }
+
         logActivity("Student " + studentName + " Used " + quantity + "x " + productName);
         return true;
     }

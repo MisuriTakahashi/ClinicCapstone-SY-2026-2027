@@ -1807,7 +1807,7 @@ private void animateContentIn(JPanel panel) {
 
          java.io.File destination = chooser.getSelectedFile();
          if (!destination.getName().toLowerCase().endsWith(".xlsx")) {
-             destination = new java.io.File(destination.getParentFile(), destination.getName() + ".csv");
+             destination = new java.io.File(destination.getParentFile(), destination.getName() + ".xlsx");
          }
 
          // 4. Generate and save

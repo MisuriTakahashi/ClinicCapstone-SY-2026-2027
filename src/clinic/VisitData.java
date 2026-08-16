@@ -100,10 +100,15 @@ public class VisitData {
         int totalToday = 0;
         int sentHomeToday = 0;
 
-        for (CheckinSystem v : loadAll()) {
-            if (v.getCheckInTime().startsWith(today)) {
-                totalToday++;
-                if (v.getStatus().equals("Sent Home")) sentHomeToday++;
+        String sql = "SELECT status FROM VISITS WHERE check_in_time LIKE ? AND archived = FALSE";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, today + "%");
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    totalToday++;
+                    if ("Sent Home".equals(rs.getString("status"))) sentHomeToday++;
+                }
             }
         }
         return new int[]{totalToday, sentHomeToday};
@@ -195,7 +200,8 @@ public class VisitData {
                           String newGuardianName, String newGuardianPhone) throws SQLException {
 
             String sql = "UPDATE VISITS SET name = ?, grade_section = ?, reason = ?, "
-                    + "med_used = ?, meds_qty = ?, guardian_name = ?, guardian_phone = ? WHERE lrn = ?";
+                + "med_used = ?, meds_qty = ?, guardian_name = ?, guardian_phone = ? "
+                + "WHERE lrn = ? AND archived = FALSE";
 
             try (Connection conn = DatabaseManager.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
