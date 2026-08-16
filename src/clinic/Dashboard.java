@@ -6,20 +6,18 @@ package clinic;
 
 
 import java.awt.Component;
-import java.awt.Graphics2D;
-import java.awt.print.Printable;
-import java.awt.print.PrinterException;
-import java.awt.print.PrinterJob;
 import net.miginfocom.swing.MigLayout;
-import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JOptionPane;
 import javax.swing.JTextArea;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.text.AbstractDocument;
+import java.sql.SQLException;
+import java.io.IOException;
 
 /**
  *
@@ -58,6 +56,16 @@ public class Dashboard extends javax.swing.JFrame {
             this.loggedInAccount = account;
             
             initComponents();
+            
+            // Window X (not Logout): remember this session so the user is
+            // auto-logged-in next launch, instead of being forced to log in again.
+            addWindowListener(new java.awt.event.WindowAdapter() {
+                @Override
+                public void windowClosing(java.awt.event.WindowEvent e) {
+                    SessionManager.saveSession(loggedInAccount);
+                }
+            });
+            
             applyMigLayouts();
             
             this.setSize(1366, 800);             // Sets a standard HD laptop size
@@ -240,7 +248,7 @@ public class Dashboard extends javax.swing.JFrame {
         HeaderPanel.add(ThemeToggle, "split 3, aligny center, gapleft 20, w 50!"); 
 
         HeaderPanel.add(jButton1, "gapleft 10");
-        HeaderPanel.add(jButton2, "gapleft 10");
+        HeaderPanel.add(Logout, "gapleft 10");
 
     // ================= LEFT SIDEBAR (FORM) =================
     CheckInPanel.removeAll();
@@ -388,7 +396,7 @@ private void applyTheme() {
 
         // --- HEADER BUTTONS (Reliable Styling) ---
         // We use standard methods for colors to ensure they stick and are readable
-        javax.swing.JButton[] headerButtons = {jButton1, jButton2};
+        javax.swing.JButton[] headerButtons = {jButton1, Logout};
         for (javax.swing.JButton btn : headerButtons) {
             btn.putClientProperty("JButton.buttonType", "roundRect");
             btn.putClientProperty("JComponent.arc", 15);
@@ -573,15 +581,15 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
             
             jComboBox1.setModel(model);
             
-        }catch(IOException ex){
+        }catch(Exception ex){
             JOptionPane.showMessageDialog(this, "Error Laoding message" + ex.getMessage());
         }
     }
 
 
     //ps this will help display the inventory on the "inventory status"
-    private VisitCsvHandling visitService = new VisitCsvHandling("visits.csv");
-    private MedicineCsvHandling productService = new MedicineCsvHandling("products.csv", "inventory_activity.log");
+    private VisitData visitService = new VisitData();
+    private MedicineData productService = new MedicineData("inventory_activity.log");
     
     private void refreshInventoryStatusDisplay(){
         try{
@@ -618,7 +626,7 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
             }
              
         
-        }catch(IOException ex){
+        }catch(Exception ex){
                JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage());
         }
     }
@@ -631,13 +639,13 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
     private void refreshTableAndCounters(){
           try {
                  
-              currentVisits = visitService.loadAll();
+              currentVisits = visitService.loadActive(); 
               
          DefaultTableModel model = (DefaultTableModel) ReasonTable.getModel();
 
          model.setRowCount(0);
 
-         for (CheckinSystem v : visitService.loadAll()) {
+         for (CheckinSystem v : visitService.loadActive()) {
 
                    model.addRow(new Object[]{
                     v.getStatus(),
@@ -672,7 +680,7 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
                   SentHomeFooterLabel.setForeground(java.awt.Color.GRAY);
               }*/
 
-               } catch (IOException ex) {
+               } catch (Exception ex) {
 
                   JOptionPane.showMessageDialog(this, ex.getMessage());
           }
@@ -781,7 +789,7 @@ NOT modify this code. The content of this method is always
         jLabel3 = new javax.swing.JLabel();
         jButton1 = new javax.swing.JButton();
         DateTimeLabel = new javax.swing.JLabel();
-        jButton2 = new javax.swing.JButton();
+        Logout = new javax.swing.JButton();
         ThemeToggle = new javax.swing.JToggleButton();
         CheckInPanel = new javax.swing.JPanel();
         NameCheckIn = new javax.swing.JTextField();
@@ -907,11 +915,11 @@ NOT modify this code. The content of this method is always
 
         DateTimeLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 24)); // NOI18N
 
-        jButton2.setBackground(new java.awt.Color(255, 255, 255));
-        jButton2.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        jButton2.setForeground(new java.awt.Color(0, 0, 0));
-        jButton2.setText("Logout");
-        jButton2.addActionListener(this::jButton2ActionPerformed);
+        Logout.setBackground(new java.awt.Color(255, 255, 255));
+        Logout.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        Logout.setForeground(new java.awt.Color(0, 0, 0));
+        Logout.setText("Logout");
+        Logout.addActionListener(this::LogoutActionPerformed);
 
         ThemeToggle.setBackground(new java.awt.Color(255, 255, 255));
         ThemeToggle.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
@@ -933,7 +941,7 @@ NOT modify this code. The content of this method is always
                 .addGap(18, 18, 18)
                 .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 141, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jButton2)
+                .addComponent(Logout)
                 .addGap(30, 30, 30))
         );
         HeaderPanelLayout.setVerticalGroup(
@@ -944,7 +952,7 @@ NOT modify this code. The content of this method is always
                     .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                         .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(Logout, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addComponent(ThemeToggle, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addComponent(jLabel3)))
                 .addGap(0, 23, Short.MAX_VALUE))
@@ -1383,103 +1391,173 @@ NOT modify this code. The content of this method is always
     //edit btn
     private void EditBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditBTNActionPerformed
             
-                if (selectedVisitLrn == null) {
-               JOptionPane.showMessageDialog(
-                       this,
-                       "Select a student from the table first."
-               );
-               return;
-           }
+        String newName = NameCheckIn.getText().trim();
+String newGradeSection = GSCheckIn.getText().trim();
+String newReason = ReasonArea.getText().trim();
+Object selectedMed = jComboBox1.getSelectedItem();
 
-           String newName = NameCheckIn.getText().trim();
-           String newGradeSection = GSCheckIn.getText().trim();
-           String newReason = ReasonArea.getText().trim();
-           Object selectedMed = jComboBox1.getSelectedItem();
+if (newName.isEmpty() || newGradeSection.isEmpty()) {
+    JOptionPane.showMessageDialog(
+            this,
+            "Name and Grade/Section cannot be empty."
+    );
+    return;
+}
 
-           if (newName.isEmpty() || newGradeSection.isEmpty()) {
-               JOptionPane.showMessageDialog(
-                       this,
-                       "Name and Grade/Section cannot be empty."
-               );
-               return;
-           }
+if (selectedMed == null) {
+    JOptionPane.showMessageDialog(
+            this,
+            "Your inventory of medicine might be empty, please check first."
+    );
+    return;
+}
 
-           if (selectedMed == null) {
-               JOptionPane.showMessageDialog(
-                       this,
-                       "Your inventory of medicine might be empty, please check first."
-               );
-               return;
-           }
+String newMedUsed = selectedMed.toString();
+boolean medicineChanged = !newMedUsed.equalsIgnoreCase(selectedOldMedUsed);
 
-           String newMedUsed = selectedMed.toString();
+// Confirm with the nurse first if they actually picked a different medicine
+if (medicineChanged) {
+    String fromLabel = selectedOldMedUsed.equalsIgnoreCase("None") ? "no medicine" : selectedOldMedUsed;
+    String toLabel = newMedUsed.equalsIgnoreCase("None") ? "no medicine" : newMedUsed;
 
-           // Ask for the new medicine quantity
-           int newMedsQty = 0;
+    int confirmChange = JOptionPane.showConfirmDialog(
+            this,
+            "Change this student's medicine from \"" + fromLabel + "\" to \"" + toLabel + "\"?",
+            "Confirm Medicine Change",
+            JOptionPane.YES_NO_OPTION
+    );
 
-           if (!newMedUsed.equalsIgnoreCase("None")) {
+    if (confirmChange != JOptionPane.YES_OPTION) {
+        return; // nurse backed out, leave everything untouched
+    }
+}
 
-               String qtyInput = JOptionPane.showInputDialog(
-                       this,
-                       "How many pills of " + newMedUsed + "?",
-                       "Medicine Quantity",
-                       JOptionPane.QUESTION_MESSAGE
-               );
+// Ask for the new medicine quantity
+int newMedsQty = 0;
 
-               // User pressed Cancel
-               if (qtyInput == null) {
-                   return;
-               }
+if (!newMedUsed.equalsIgnoreCase("None")) {
 
-               try {
-                   newMedsQty = Integer.parseInt(qtyInput.trim());
+    try {
+        Medicine medProduct = productService.findByName(newMedUsed);
 
-                   if (newMedsQty <= 0) {
-                       JOptionPane.showMessageDialog(
-                               this,
-                               "Medicine quantity must be greater than 0."
-                       );
-                       return;
-                   }
+                if (medProduct != null && medProduct.isExpired()) {
+                    JOptionPane.showMessageDialog(
+                            this,
+                            newMedUsed + " is expired and cannot be given. Please choose another medicine."
+                    );
+                    return;
+                }
 
-               } catch (NumberFormatException ex) {
-                   JOptionPane.showMessageDialog(
-                           this,
-                           "Please enter a valid number for the medicine quantity."
-                   );
-                   return;
-               }
-           }
+                // If the medicine wasn't changed, the old pills are about to be returned
+                // to stock, so they should count as available for the new amount too.
+                int availableStock = (medProduct != null) ? medProduct.getquantity() : 0;
+                if (!medicineChanged) {
+                    availableStock += selectedOldMedsQty;
+                }
 
-           try {
+                String defaultQty = !medicineChanged ? String.valueOf(selectedOldMedsQty) : "1";
 
-               boolean success = visitService.editVisit(  selectedVisitLrn, newName, newGradeSection, newReason, newMedUsed, newMedsQty);
+                String qtyInput = JOptionPane.showInputDialog(
+                        this,
+                        "How many pills of " + newMedUsed + "? (" + availableStock + " available)",
+                        defaultQty
+                );
 
-               if (!success) {
+                // User pressed Cancel
+                if (qtyInput == null) {
+                    return;
+                }
 
-                   JOptionPane.showMessageDialog(
-                           this,
-                           "Could not find that student's record."
-                   );
+                newMedsQty = Integer.parseInt(qtyInput.trim());
 
-               } else {
+                if (newMedsQty <= 0) {
+                    JOptionPane.showMessageDialog(
+                            this,
+                            "Medicine quantity must be greater than 0."
+                    );
+                    return;
+                }
 
-                   refreshTableAndCounters();
-                   clearCheckInForm();
+                if (newMedsQty > availableStock) {
+                    JOptionPane.showMessageDialog(
+                            this,
+                            newMedUsed + " only has " + availableStock + " pcs available. Please enter a smaller amount."
+                    );
+                    return;
+                }
 
-                   JOptionPane.showMessageDialog(
-                           this,
-                           "Student record updated."
-                   );
-               }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Please enter a valid number for the medicine quantity."
+                );
+                return;
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Error checking medicine stock: " + ex.getMessage()
+                );
+                return;
+            }
+        }
 
-           } catch (IOException ex) {
+          // Ask if the guardian's info needs updating too
+            int changeGuardian = JOptionPane.showConfirmDialog(this,
+                    "Do you also want to update the guardian's name and phone number?",
+                    "Update Guardian Info",
+                    JOptionPane.YES_NO_OPTION);
 
-               JOptionPane.showMessageDialog(
-                       this,
-                       "Error editing record: " + ex.getMessage()
-               );
-           }
+            String newGuardianName = selectedGuardianName;
+            String newGuardianPhone = selectedGuardianPhone;
+
+            if (changeGuardian == JOptionPane.YES_OPTION) {
+                String guardianNameInput = JOptionPane.showInputDialog(this, "Guardian's Name:", selectedGuardianName);
+                if (guardianNameInput == null) return; // cancelled
+                guardianNameInput = guardianNameInput.trim();
+                if (!guardianNameInput.matches("[\\p{L} .'-]+")) {
+                    JOptionPane.showMessageDialog(this, "Please enter a valid guardian name.");
+                    return;
+                }
+
+                String guardianPhoneInput = JOptionPane.showInputDialog(this, "Guardian's Phone Number:", selectedGuardianPhone);
+                if (guardianPhoneInput == null) return; // cancelled
+                guardianPhoneInput = guardianPhoneInput.trim();
+                if (!guardianPhoneInput.matches("^09\\d{9}$")) {
+                    JOptionPane.showMessageDialog(this, "Phone number must start with 09 and contain exactly 11 digits.");
+                    return;
+                }
+
+                newGuardianName = guardianNameInput;
+                newGuardianPhone = guardianPhoneInput;
+            }
+
+        try {
+            // Reconcile medicine stock: return the old medicine, deduct the new one
+            if (!selectedOldMedUsed.equalsIgnoreCase("None") && selectedOldMedsQty > 0) {
+                productService.restockMedicine(selectedOldMedUsed, selectedOldMedsQty);
+            }
+            if (!newMedUsed.equalsIgnoreCase("None") && newMedsQty > 0) {
+                boolean deducted = productService.useMedicine(newMedUsed, newName, newMedsQty);
+                if (!deducted) {
+                    showToast(CheckInPanel, "Warning: " + newMedUsed + " is out of stock. Stock was not deducted.", false);
+                }
+            }
+
+            boolean success = visitService.editVisit(selectedVisitLrn, newName, newGradeSection,
+                    newReason, newMedUsed, newMedsQty, newGuardianName, newGuardianPhone);
+
+            if (!success) {
+                JOptionPane.showMessageDialog(this, "Could not find that student's record.");
+            } else {
+                refreshTableAndCounters();
+                refreshInventoryStatusDisplay();
+                clearCheckInForm();
+                JOptionPane.showMessageDialog(this, "Student record updated.");
+            }
+
+} catch (Exception ex) {
+    JOptionPane.showMessageDialog(this, "Error editing record: " + ex.getMessage());
+}
        }
 
         private void clearCheckInForm() {
@@ -1492,21 +1570,133 @@ NOT modify this code. The content of this method is always
             
     }//GEN-LAST:event_EditBTNActionPerformed
 
-    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+    private void LogoutActionPerformed(java.awt.event.ActionEvent evt) {                                       
        
-        int choice = JOptionPane.showConfirmDialog(
-        this,
-        "Are you sure you want to log out?",
-        "Confirm logout",
-        JOptionPane.YES_NO_OPTION
-    );
+         Object[] options = {"Export & Logout", "Logout", "Cancel"};
+        int choice = JOptionPane.showOptionDialog(
+                this,
+                "Would you like to export your check-in logs before logging out?",
+                "Export Check-in Logs?",
+                JOptionPane.YES_NO_CANCEL_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]
+        );
 
-    if (choice == JOptionPane.YES_OPTION) {
+        // Esc key or closing the dialog itself -> treat the same as Cancel
+        if (choice == JOptionPane.CLOSED_OPTION || choice == 2) {
+            return;
+        }
+
+        if (choice == 0) { // Export & Logout
+            boolean exported = exportTodaysCheckinLogs();
+            if (!exported) {
+                return; // exportTodaysCheckinLogs() already explained why - stay logged in
+            }
+        }
+
+        // Reaches here for: choice == 1 (plain Logout), or choice == 0 after a successful export
+        SessionManager.clearSession();
         new LoginUi().setVisible(true);
         this.dispose();
+
+    }                                        
+
+     /** Turns "1-1-2026" / "2026-1-1" style input into a strict "yyyy-MM-dd" string. */
+    private String normalizeDate(String input) throws DateTimeParseException {
+        DateTimeFormatter looseFormat = DateTimeFormatter.ofPattern("yyyy-M-d");
+        LocalDate date = LocalDate.parse(input, looseFormat);
+        return date.format(DateTimeFormatter.ISO_LOCAL_DATE);
+    }
+
+    /** Shows a date field PREFILLED with today's date so the user can confirm or edit it.
+     *  Returns the confirmed date, or null if the user cancelled. */
+    private LocalDate confirmReportDate() {
+        javax.swing.JTextField dateField = new javax.swing.JTextField(LocalDate.now().toString());
+        ((javax.swing.text.AbstractDocument) dateField.getDocument())
+                .setDocumentFilter(new DateInputFilter());
+
+        while (true) {
+            int result = JOptionPane.showConfirmDialog(this, dateField,
+                    "Report date (edit if you need a different day, e.g. 2026-1-1 or 2026-01-01):",
+                    JOptionPane.OK_CANCEL_OPTION);
+            if (result != JOptionPane.OK_OPTION) {
+                return null; // user cancelled
+            }
+            try {
+                return LocalDate.parse(normalizeDate(dateField.getText().trim()));
+            } catch (DateTimeParseException ex) {
+                JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2026-1-1 or 2026-01-01).");
+                // loop back so they can fix it instead of losing their place
+            }
         }
-    
-    }//GEN-LAST:event_jButton2ActionPerformed
+    }
+
+    /** Exports check-in logs for a confirmed date, then archives & resets the active list.
+     *  Returns true only if the export actually succeeded (and the user did not cancel). */
+    private boolean exportTodaysCheckinLogs() {
+        LocalDate reportDate = confirmReportDate();
+        if (reportDate == null) {
+            return false; // user cancelled the date confirmation - stay logged in
+        }
+
+        ReportExporter exporter = new ReportExporter(productService);
+
+        try {
+            if (!exporter.hasCheckinRecordsForDate(reportDate)) {
+                int proceed = JOptionPane.showConfirmDialog(this,
+                        "There are no check-in records for " + reportDate + ". Log out without exporting?",
+                        "Nothing to Export",
+                        JOptionPane.YES_NO_OPTION);
+                return proceed == JOptionPane.YES_OPTION;
+            }
+
+            javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
+            String suggestedName = "CheckIn_Log_" + reportDate + ".xlsx";
+            chooser.setSelectedFile(new java.io.File(suggestedName));
+            int saveChoice = chooser.showSaveDialog(this);
+            if (saveChoice != javax.swing.JFileChooser.APPROVE_OPTION) {
+                return false; // user cancelled the Save dialog - stay logged in
+            }
+
+            java.io.File destination = chooser.getSelectedFile();
+            if (!destination.getName().toLowerCase().endsWith(".xlsx")) {
+                destination = new java.io.File(destination.getParentFile(), destination.getName() + ".xlsx");
+            }
+
+            // Export first. Only if this line completes without throwing do we move on.
+            exporter.writeCheckinReport(reportDate, destination);
+
+            // Export succeeded -> now archive & reset the active daily check-in list for this date.
+            try {
+                int archivedCount = visitService.archiveDate(reportDate.toString());
+                JOptionPane.showMessageDialog(this,
+                        "Check-in logs exported and archived successfully:\n" + destination.getAbsolutePath()
+                        + "\n\n" + archivedCount + " check-in record(s) for " + reportDate + " were archived.\n"
+                        + "The daily Check-in Logs have been reset for the next day.");
+                return true;
+            } catch (SQLException archiveEx) {
+                JOptionPane.showMessageDialog(this,
+                        "Check-in logs were exported successfully, but they could not be archived/reset:\n"
+                        + archiveEx.getMessage() + "\n\nYou have not been logged out.",
+                        "Archive Failed", JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
+
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "The Check-in Logs could not be exported.\nNo records were archived or reset.\nYou have not been logged out.\n\nDatabase error: " + ex.getMessage(),
+                    "Export Failed", JOptionPane.ERROR_MESSAGE);
+            return false;
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "The Check-in Logs could not be exported.\nNo records were archived or reset.\nYou have not been logged out.\n\nFile error: " + ex.getMessage(),
+                    "Export Failed", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+
+    }                     
     
     
     private void CheckInBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CheckInBTNActionPerformed
@@ -1515,7 +1705,7 @@ NOT modify this code. The content of this method is always
      String gradeSection = GSCheckIn.getText().trim();
      String lrn = LRNField.getText().trim();
      String reason = ReasonArea.getText().trim();
-     String medUsed = jComboBox1.getSelectedItem().toString();
+     
      
    
         //if else if statement for feilds 
@@ -1569,116 +1759,107 @@ NOT modify this code. The content of this method is always
     }
 
 
-    int wantsMed = JOptionPane.showConfirmDialog(this,
-        "Would this student like to take medicine?",
-        "Medicine",
-        JOptionPane.YES_NO_OPTION);
+         int wantsMed = JOptionPane.showConfirmDialog(this,
+             "Would this student like to take medicine?",
+             "Medicine",
+             JOptionPane.YES_NO_OPTION);
 
-    if (wantsMed == JOptionPane.YES_OPTION) {
-        Object selectedMed = jComboBox1.getSelectedItem();
+         if (wantsMed == JOptionPane.CLOSED_OPTION) {
+             return; // nurse closed the dialog without choosing, cancel check-in
+         }
 
-        if (selectedMed == null) {
-            showToast(MainPanel, "Your inventory of medicine might be empty, please check first.", false);
-            return;
-        }   
-        
-        pendingmedUsed  = selectedMed.toString();
-        
-   
-    try{
-        
-    Medicine medProduct = productService.findByName(pendingmedUsed);
+         if (wantsMed == JOptionPane.YES_OPTION) {
+             Object selectedMed = jComboBox1.getSelectedItem();
 
-    if (medProduct != null && medProduct.isExpired()) {
-        showToast(MainPanel, medUsed + " is expired and cannot be given. Please choose another medicine.", false);
-        return;
-    }
+             if (selectedMed == null) {
+                 showToast(MainPanel, "Your inventory of medicine might be empty, please check first.", false);
+                 return;
+             }
 
-    String qtyInput = JOptionPane.showInputDialog(this, "How many pills of " + pendingmedUsed + "?", "1");
+             pendingmedUsed = selectedMed.toString();
 
-    if (qtyInput == null) {
-        return; // nurse cancelled
-    }
+             try {
+                 Medicine medProduct = productService.findByName(pendingmedUsed);
 
-    try {
-        pendingmedsQty = Integer.parseInt(qtyInput.trim());
-    } catch (NumberFormatException ex) {
-        showToast(MainPanel, "Please enter a valid whole number for pill quantity.", false);
-        return;
-    }
+                 if (medProduct != null && medProduct.isExpired()) {
+                     showToast(MainPanel, pendingmedUsed + " is expired and cannot be given. Please choose another medicine.", false);
+                     return;
+                 }
 
-    if (pendingmedsQty <= 0) {
-        showToast(MainPanel, "Pill quantity must be at least 1.", false);
-        return;
-    }
+                 String qtyInput = JOptionPane.showInputDialog(this, "How many pills of " + pendingmedUsed + "?", "1");
+                 if (qtyInput == null) {
+                     return; // nurse cancelled
+                 }
 
-    if (medProduct != null && medProduct.getquantity() < pendingmedsQty) {
-        showToast(MainPanel, pendingmedUsed + " only has " + medProduct.getquantity() + " pcs left. Please enter a smaller amount.", false);
-        return;
-        }
-     
-   
-    
-    
-    }catch(IOException ex){
-        JOptionPane.showMessageDialog(this , "Error");
-          return;
-    }
-    try {
-        String existingName = visitService.findNameForLrn(lrn);
-        
-        if (existingName != null && !existingName.equalsIgnoreCase(name)) {
-        JOptionPane.showMessageDialog(this,
-            "This LRN is already registered under the name \"" + existingName + "\". Please verify the LRN or name.");
-        return;
-    }
-        //Duplicate Check-in Check
-         if (visitService.isCurrentlyCheckedIn(lrn)) {
-        JOptionPane.showMessageDialog(this, "This student is already checked in.");
-        return;
-    }      
-        
-        //Refresh Displays and Clear Form
-        refreshTableAndCounters();
-        refreshInventoryStatusDisplay();
+                 try {
+                     pendingmedsQty = Integer.parseInt(qtyInput.trim());
+                 } catch (NumberFormatException ex) {
+                     showToast(MainPanel, "Please enter a valid whole number for pill quantity.", false);
+                     return;
+                 }
 
-       
-        ParentGurdianName.setText("");
-        PhoneField.setText("");
-        if (SentHomeInformationPanel.getParent() != null) {
-        SentHomeInformationPanel.getParent().setComponentZOrder(SentHomeInformationPanel, 0);
-    }
-        glassOverlay.setBounds(0, 0, getWidth(), getHeight());
-    
-    // Optional: If using Option 2 (True Blur), capture screenshot here:
-    // glassOverlay.setBlurImage(getBlurredSnapshot());
-    
-        glassOverlay.setVisible(true);
+                 if (pendingmedsQty <= 0) {
+                     showToast(MainPanel, "Pill quantity must be at least 1.", false);
+                     return;
+                 }
 
-        // 2. Center the popup panel relative to the window frame
-        
-        java.awt.Dimension size = SentHomeInformationPanel.getPreferredSize();
-        int x = (getWidth() - size.width) / 2;
-        int y = (getHeight() - size.height) / 2;
-        SentHomeInformationPanel.setBounds(x, y, size.width, size.height);
-        SentHomeInformationPanel.setVisible(true);
+                 if (medProduct != null && medProduct.getquantity() < pendingmedsQty) {
+                     showToast(MainPanel, pendingmedUsed + " only has " + medProduct.getquantity() + " pcs left. Please enter a smaller amount.", false);
+                     return;
+                 }
 
-        // 3. Refresh the layered pane stack
-        getLayeredPane().revalidate();
-        getLayeredPane().repaint();
+             } catch (Exception ex) {
+                 JOptionPane.showMessageDialog(this, "Error");
+                 return;
+             }
 
-        // 2. Make it visible and refresh rendering
-        SentHomeInformationPanel.setVisible(true);
-        this.revalidate();
-        this.repaint();
-        
-        //testing kung gumagana yun Check btn
-        System.out.println("Showing Guardian Panel...");
+         } else {
+             // NO_OPTION: student doesn't need medicine
+             pendingmedUsed = "None";
+             pendingmedsQty = 0;
+         }
 
-        } catch (IOException ex) {
+         // This part now runs for BOTH yes and no, not just yes
+         try {
+             String existingName = visitService.findNameForLrn(lrn);
+
+             if (existingName != null && !existingName.equalsIgnoreCase(name)) {
+                 JOptionPane.showMessageDialog(this,
+                     "This LRN is already registered under the name \"" + existingName + "\". Please verify the LRN or name.");
+                 return;
+             }
+
+             if (visitService.isCurrentlyCheckedIn(lrn)) {
+                 JOptionPane.showMessageDialog(this, "This student is already checked in.");
+                 return;
+             }
+
+             refreshTableAndCounters();
+             refreshInventoryStatusDisplay();
+
+             ParentGurdianName.setText("");
+             PhoneField.setText("");
+             if (SentHomeInformationPanel.getParent() != null) {
+                 SentHomeInformationPanel.getParent().setComponentZOrder(SentHomeInformationPanel, 0);
+             }
+             glassOverlay.setBounds(0, 0, getWidth(), getHeight());
+             glassOverlay.setVisible(true);
+
+             java.awt.Dimension size = SentHomeInformationPanel.getPreferredSize();
+             int x = (getWidth() - size.width) / 2;
+             int y = (getHeight() - size.height) / 2;
+             SentHomeInformationPanel.setBounds(x, y, size.width, size.height);
+             SentHomeInformationPanel.setVisible(true);
+
+             getLayeredPane().revalidate();
+             getLayeredPane().repaint();
+
+             this.revalidate();
+             this.repaint();
+
+         } catch (Exception ex) {
              showToast(CheckInPanel, "Error saving check-in: " + ex.getMessage(), false);
-            }
-        }
+         }
     }//GEN-LAST:event_CheckInBTNActionPerformed
  
     
@@ -1702,19 +1883,31 @@ NOT modify this code. The content of this method is always
             }
              
     }//GEN-LAST:event_LRNFieldKeyTyped
-
+   
+    private String selectedOldMedUsed = "None";
+    private int selectedOldMedsQty = 0;
+    private String selectedGuardianName = "";
+    private String selectedGuardianPhone = "";
+    
     private void ReasonTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_ReasonTableMouseClicked
+       
         int row = ReasonTable.getSelectedRow();
         if (row == -1) return;
 
         CheckinSystem selected = currentVisits.get(row);
 
         selectedVisitLrn = selected.getLrn();
+        selectedOldMedUsed = selected.getMedUsed();
+        selectedOldMedsQty = selected.getmedsQty();
+        selectedGuardianName = selected.getGuardianName();
+        selectedGuardianPhone = selected.getGuardianPhoneNums();
+
         NameCheckIn.setText(selected.getName());
         GSCheckIn.setText(selected.getGradeSection());
         LRNField.setText(selected.getLrn());
         ReasonArea.setText(selected.getReason());
         jComboBox1.setSelectedItem(selected.getMedUsed());
+         
     
     }//GEN-LAST:event_ReasonTableMouseClicked
 
@@ -1730,7 +1923,7 @@ NOT modify this code. The content of this method is always
     private void FinishBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_FinishBTNActionPerformed
             String guardianName = ParentGurdianName.getText().trim();
             String guardianPhone = PhoneField.getText().trim();
-
+           
             if (guardianName.isEmpty()) {
                 showToast(SentHomeInformationPanel,
                         "Guardian name is required.",
@@ -1765,7 +1958,8 @@ NOT modify this code. The content of this method is always
          String gradeSection = GSCheckIn.getText().trim();
          String lrn = LRNField.getText().trim();
          String reason = ReasonArea.getText().trim();
-         String medUsed = jComboBox1.getSelectedItem().toString();
+         String medUsed = pendingmedUsed;
+
          
 
          try {
@@ -1793,7 +1987,7 @@ NOT modify this code. The content of this method is always
 
              showToast(CheckInPanel, name + " checked in successfully. Guardian info recorded.", true);
 
-         } catch (IOException ex) {
+         } catch (Exception ex) {
              showToast(CheckInPanel, "Error saving check-in: " + ex.getMessage(), false);
          }
     }//GEN-LAST:event_FinishBTNActionPerformed
@@ -1847,7 +2041,7 @@ NOT modify this code. The content of this method is always
                     JOptionPane.showMessageDialog(this, "Error... Unable to update the Student's Status");
                 }
                 
-            }catch(IOException ex){
+            }catch(Exception ex){
                  JOptionPane.showMessageDialog(this, "Error updating status: " + ex.getMessage());
             } 
             
@@ -2031,6 +2225,7 @@ NOT modify this code. The content of this method is always
     private javax.swing.JTextArea InventoryStatusArea;
     private javax.swing.JTextField LRNField;
     private javax.swing.JLabel LRNLabel;
+    private javax.swing.JButton Logout;
     private javax.swing.JLabel LogsLabel;
     private javax.swing.JPanel MainPanel;
     private javax.swing.JTextField NameCheckIn;
@@ -2051,7 +2246,6 @@ NOT modify this code. The content of this method is always
     private javax.swing.JLabel VisitCounter;
     private javax.swing.JPanel VisitPanel;
     private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton2;
     private javax.swing.JComboBox<String> jComboBox1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel11;

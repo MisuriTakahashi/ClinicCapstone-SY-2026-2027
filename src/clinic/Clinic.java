@@ -22,17 +22,40 @@ public class Clinic {
         } catch (Exception ex) {
             System.err.println("Failed to initialize FlatLaf: " + ex.getMessage());
         }
-        DatabaseManager.initializeDatabase();
-        DatabaseManager.exportData();
-       DatabaseManager.testDatabaseConnection();
+      
+       DatabaseManager.initializeDatabase();
+      
+       // TEMPORARY — run once to archive old pre-existing records, then remove this block.
+       /*try (java.sql.Connection conn = DatabaseManager.getConnection();
+          java.sql.Statement stmt = conn.createStatement()) {
+           int rows = stmt.executeUpdate(
+               "UPDATE VISITS SET archived = TRUE WHERE check_in_time < '" + java.time.LocalDate.now() + "' AND archived = FALSE");
+           System.out.println("Archived " + rows + " old record(s).");
+       } catch (java.sql.SQLException e) {
+           e.printStackTrace();
+       }*/
+       
+       // TEMPORARY — run once to migrate old accounts.csv into H2, then remove this block.
+       
+      /*try {
+            int migrated = new AccountData().migrateFromCsv("accounts.csv");
+           System.out.println("Migrated " + migrated + " account(s) from accounts.csv.");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }*/
        
         javax.swing.UIManager.put("JTextField.placeholderText", "");
 
        
-        java.awt.EventQueue.invokeLater(() -> {
-            //new Dashboard().setVisible(true);
-            new LoginUi().setVisible(true);
-           
+            java.awt.EventQueue.invokeLater(() -> {
+            AccountSystem restoredAccount = SessionManager.loadSession();
+
+            if (restoredAccount != null) {
+                // A previous session was left open via the window X - skip the login screen.
+                new Dashboard(restoredAccount).setVisible(true);
+            } else {
+                new LoginUi().setVisible(true);
+            }
         });
         
     }

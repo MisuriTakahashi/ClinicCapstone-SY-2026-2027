@@ -8,7 +8,6 @@ import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.FlatClientProperties;
 import java.awt.Color;
 import java.awt.BorderLayout;
-import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.io.IOException;
@@ -23,6 +22,7 @@ import java.util.Map;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComponent;
+import java.sql.SQLException;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -41,7 +41,7 @@ public class AdminPanel extends javax.swing.JFrame {
     private static final int CONTENT_X = SIDEBAR_WIDTH + CONTENT_GAP;
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(AdminPanel.class.getName());
-    private final MedicineCsvHandling productService = new MedicineCsvHandling("products.csv", "inventory_activity.log");
+    private final MedicineData  productService = new MedicineData ("inventory_activity.log");
     private ArrayList<Medicine> currentProducts = new ArrayList<>();
     private String selectedProductName = null;
     private AccountSystem loggedInAccount;
@@ -52,6 +52,14 @@ public class AdminPanel extends javax.swing.JFrame {
     public AdminPanel(AccountSystem account) {
         com.formdev.flatlaf.FlatLightLaf.setup();
         initComponents();
+        // Window X (not Return/Logout): remember this session for auto-restore next launch.
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                SessionManager.saveSession(account);
+            }
+        });
+        
         configureFlatLafUi();
         statisticsContainer.setVisible(false);
         AccountManagementPanel.setVisible(false);
@@ -125,6 +133,7 @@ public class AdminPanel extends javax.swing.JFrame {
     configureSidebarHover(jButton6);
     configureSidebarHover(AccManageBTN);
     
+    stylePrimaryButton(ExportBTN, "Export DB", Color.decode("#7C3AED"));
     stylePrimaryButton(AddBTN, "Add item", primary);
     styleSecondaryButton(EditBtn, "Edit");
     styleDangerButton(DeleteBTN, "Delete");
@@ -161,28 +170,31 @@ public class AdminPanel extends javax.swing.JFrame {
 }
     private void styleSidebarButton(JButton btn, String text, boolean active) {
     btn.setText(text);
-    // Keep selected buttons enabled. Disabled FlatLaf buttons use the light
-    // default disabled color, which breaks the sidebar's dark active state.
-    btn.setEnabled(true);
     btn.setFocusPainted(false);
     btn.setFont(new Font("Segoe UI", active ? Font.BOLD : Font.PLAIN, 13));
-    btn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
     btn.setHorizontalAlignment(SwingConstants.LEFT);
     btn.setOpaque(true);
     btn.setContentAreaFilled(true);
     btn.putClientProperty("sidebar.active", active);
-    
-    // Remove 'arc' from STYLE — not supported in your FlatLaf version
-    btn.putClientProperty(FlatClientProperties.STYLE, null);
-    
+
     if (active) {
+        // Disable so the current page can't be re-clicked,
+        // and override FlatLaf's disabled colors to keep the dark active look.
+        btn.setEnabled(false);
+        btn.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
+        btn.putClientProperty(FlatClientProperties.STYLE,
+                "disabledBackground: #1E293B; disabledText: #F8FAFC;");
         btn.setBackground(Color.decode("#1E293B"));
         btn.setForeground(Color.decode("#F8FAFC"));
         btn.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 3, 0, 0, Color.decode("#2563EB")),
-            BorderFactory.createEmptyBorder(10, 13, 10, 16)
+                BorderFactory.createMatteBorder(0, 3, 0, 0, Color.decode("#2563EB")),
+                BorderFactory.createEmptyBorder(10, 13, 10, 16)
         ));
     } else {
+        // Inactive buttons stay enabled, clickable, and keep the hover effect
+        btn.setEnabled(true);
+        btn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        btn.putClientProperty(FlatClientProperties.STYLE, null);
         btn.setBackground(Color.decode("#0F172A"));
         btn.setForeground(Color.decode("#94A3B8"));
         btn.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
@@ -286,7 +298,8 @@ private void configureSidebarHover(JButton btn) {
     jPanel6.setVisible(false);
     jLabel1.setVisible(false);
     jLabel6.setVisible(false);
-
+    
+    loadStatistics();
     statisticsContainer.setLocation(1200, 30);
     statisticsContainer.setVisible(true);
 
@@ -318,7 +331,7 @@ private void configureAccountManagementUi() {
     jScrollPane3.setBorder(BorderFactory.createEmptyBorder());
 
     // ---------- Form fields ----------
-    AccNameField.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "e.g. nurse_jane");
+    AccNameField.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "e.g. nurse_Teban");
     AccNameField.putClientProperty(FlatClientProperties.STYLE, "arc: 10; margin: 6,10,6,10");
     AccNameField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
     AccNameField.setText("");                 // remove "jTextField1"
@@ -505,22 +518,22 @@ private void animateContentIn(JPanel panel) {
                 });
             }
             refreshActivityLogDisplay();
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage());
         }
     }
     
     private void refreshInventoryScreen() {
         try {
-            ArrayList<Medicine> medicine = productService.loadAll();
+            currentProducts = productService.loadAll();
             DefaultTableModel model = (DefaultTableModel) stockTable.getModel();
             model.setRowCount(0);
 
-            for (Medicine p : medicine) {
+            for (Medicine p : currentProducts) {
                 model.addRow(new Object[]{p.getStatus(), p.getname(), p.getquantity()});
             }
             refreshActivityLogDisplay();
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage());
         }  
     }
@@ -528,7 +541,7 @@ private void animateContentIn(JPanel panel) {
   private void loadStatistics() {
         try {
             
-            ArrayList<CheckinSystem> visits = new VisitCsvHandling("visits.csv").loadAll();
+            ArrayList<CheckinSystem> visits = new VisitData().loadAll();
 
             int weeklyCheckins = 0;
             int inClinic = 0;
@@ -549,7 +562,7 @@ private void animateContentIn(JPanel panel) {
             LocalDate fridayOfWeek = today.with(DayOfWeek.FRIDAY);
 
             DateTimeFormatter formatter =
-                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+                     DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a");
 
 
             lblMondayDate.setText(
@@ -714,6 +727,7 @@ private void animateContentIn(JPanel panel) {
         jButton6 = new javax.swing.JButton();
         jButton7 = new javax.swing.JButton();
         AccManageBTN = new javax.swing.JButton();
+        ExportBTN = new javax.swing.JButton();
         AccountManagementPanel = new javax.swing.JPanel();
         jScrollPane3 = new javax.swing.JScrollPane();
         ACTTable = new javax.swing.JTable();
@@ -826,6 +840,11 @@ private void animateContentIn(JPanel panel) {
         AccManageBTN.setForeground(new java.awt.Color(255, 255, 255));
         AccManageBTN.setText("Account Management");
 
+        ExportBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 10)); // NOI18N
+        ExportBTN.setForeground(new java.awt.Color(255, 255, 255));
+        ExportBTN.setText("Export Data To CSV");
+        ExportBTN.addActionListener(this::ExportBTNActionPerformed);
+
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
         jPanel3Layout.setHorizontalGroup(
@@ -837,7 +856,8 @@ private void animateContentIn(JPanel panel) {
                     .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                         .addComponent(jButton6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(jButton5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(AccManageBTN, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                        .addComponent(AccManageBTN, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(ExportBTN, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addContainerGap(13, Short.MAX_VALUE))
         );
         jPanel3Layout.setVerticalGroup(
@@ -849,7 +869,9 @@ private void animateContentIn(JPanel panel) {
                 .addComponent(jButton6, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(AccManageBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 295, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(ExportBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 197, Short.MAX_VALUE)
                 .addComponent(jButton7, javax.swing.GroupLayout.PREFERRED_SIZE, 48, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(23, 23, 23))
         );
@@ -1435,7 +1457,7 @@ private void animateContentIn(JPanel panel) {
             if (productService.nameExists(name)) {
                 JOptionPane.showMessageDialog(this, "A product with this name already exists. Use Edit to update its stock instead.");
                 return;
-            }       } catch (IOException ex) {
+            }       } catch (Exception ex) {
             System.getLogger(AdminPanel.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
         }
         
@@ -1458,7 +1480,7 @@ private void animateContentIn(JPanel panel) {
             refreshInventoryScreen();
             ClearBtnActionPerformed(null);
             showToastNotification("✓ Added " + name + " (" + quantity + " units) to inventory!", name, quantity, Color.decode("#10B981"));
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Error adding item: " + ex.getMessage());
         }
           
@@ -1473,10 +1495,17 @@ private void animateContentIn(JPanel panel) {
     }//GEN-LAST:event_ClearBtnActionPerformed
 
     private void stockTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_stockTableMouseClicked
-       int row = stockTable.getSelectedRow();
-       if (row == -1) return;
+       int viewRow = stockTable.getSelectedRow();
+        if (viewRow == -1) return;
 
-        Medicine selected = currentProducts.get(row); // real object, correct types guaranteed - DJJ - ps I DON'T KNOW WHAT THIS DO BUT DO NOT REMOVE IT
+        int modelRow = stockTable.convertRowIndexToModel(viewRow);
+        if (modelRow < 0 || modelRow >= currentProducts.size()) {
+            // Table and currentProducts are out of sync - refresh instead of crashing.
+            refreshInventoryScreen();
+            return;
+        }
+
+        Medicine selected = currentProducts.get(modelRow); // real object, correct types guaranteed - DJJ - ps I DON'T KNOW WHAT THIS DO BUT DO NOT REMOVE IT
 
         selectedProductName = selected.getname();
         ProductName.setText(selected.getname());
@@ -1486,41 +1515,52 @@ private void animateContentIn(JPanel panel) {
     }//GEN-LAST:event_stockTableMouseClicked
 
     private void DeleteBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DeleteBTNActionPerformed
-        int[] selectedRows = stockTable.getSelectedRows();
+         int[] selectedRows = stockTable.getSelectedRows();
 
-         if (selectedRows.length == 0) {
-             JOptionPane.showMessageDialog(this, "Select at least one product to delete.");
-             return;
-            }
-
-        StringBuilder namesPreview = new StringBuilder();
-        
-           for (int row : selectedRows) {
-               namesPreview.append("- ").append(currentProducts.get(row).getname()).append("\n");
-           }
-
-        int confirm = JOptionPane.showConfirmDialog(this,
-            "Are you sure you want to delete the following medicine pills?\n\n" + namesPreview,
-            "Confirm Delete",
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.WARNING_MESSAGE);
-
-         if (confirm != JOptionPane.YES_OPTION) {
-            return;
+     if (selectedRows.length == 0) {
+         JOptionPane.showMessageDialog(this, "Select at least one product to delete.");
+         return;
         }
 
-         try {
-          for (int row : selectedRows) {
-              String name = currentProducts.get(row).getname();
-              productService.deleteItem(name);
-            }
-             
-             refreshInventoryScreen();
-             ClearBtnActionPerformed(null);
+    for (int row : selectedRows) {
+        int modelRow = stockTable.convertRowIndexToModel(row);
+        if (modelRow < 0 || modelRow >= currentProducts.size()) {
+            JOptionPane.showMessageDialog(this, "Table is out of sync - please try again.");
+            refreshInventoryScreen();
+            return;
+        }
+    }
 
-         } catch (IOException ex) {
-         JOptionPane.showMessageDialog(this, "Error deleting items: " + ex.getMessage());
+    StringBuilder namesPreview = new StringBuilder();
+    
+       for (int row : selectedRows) {
+           int modelRow = stockTable.convertRowIndexToModel(row);
+           namesPreview.append("- ").append(currentProducts.get(modelRow).getname()).append("\n");
+            }
+
+         int confirm = JOptionPane.showConfirmDialog(this,
+             "Are you sure you want to delete the following medicine pills?\n\n" + namesPreview,
+             "Confirm Delete",
+             JOptionPane.YES_NO_OPTION,
+             JOptionPane.WARNING_MESSAGE);
+
+          if (confirm != JOptionPane.YES_OPTION) {
+             return;
          }
+
+          try {
+           for (int row : selectedRows) {
+               int modelRow = stockTable.convertRowIndexToModel(row);
+               String name = currentProducts.get(modelRow).getname();
+               productService.deleteItem(name);
+             }
+
+              refreshInventoryScreen();
+              ClearBtnActionPerformed(null);
+
+          } catch (Exception ex) {
+          JOptionPane.showMessageDialog(this, "Error deleting items: " + ex.getMessage());
+          }
     }//GEN-LAST:event_DeleteBTNActionPerformed
 
     private void EditBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditBtnActionPerformed
@@ -1557,7 +1597,7 @@ private void animateContentIn(JPanel panel) {
                 ClearBtnActionPerformed(null);
                 showToastNotification("✎ Updated " + newName + " stock details successfully!", newName, newQuantity, Color.decode("#2563EB"));
             }
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Error editing item: " + ex.getMessage());
         }
     }//GEN-LAST:event_EditBtnActionPerformed
@@ -1653,7 +1693,7 @@ private void animateContentIn(JPanel panel) {
             // Refresh the table
             refreshAccountTable();
 
-        } catch (IOException ex) {
+        } catch (Exception ex) {
 
             JOptionPane.showMessageDialog(
                 this,
@@ -1672,7 +1712,7 @@ private void animateContentIn(JPanel panel) {
          createAccountFromForm("User");
     }//GEN-LAST:event_CUserBTNActionPerformed
         
-    private final AccountCsvHandling accountService = new AccountCsvHandling("accounts.csv");
+    private final AccountData accountService = new AccountData();
     
             //login for creation account
             private void createAccountFromForm(String role) {
@@ -1706,7 +1746,7 @@ private void animateContentIn(JPanel panel) {
                 ConfirmPasswordField.setText("");
                 refreshAccountTable();
 
-            } catch (IOException ex) {
+            } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error creating account: " + ex.getMessage());
             }
         }
@@ -1719,7 +1759,7 @@ private void animateContentIn(JPanel panel) {
                 for (AccountSystem a : accountService.loadAll()) {
                     model.addRow(new Object[]{a.GetName(), a.getRole()});
                 }
-            } catch (IOException ex) {
+            } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error loading accounts: " + ex.getMessage());
             }
         }
@@ -1728,6 +1768,76 @@ private void animateContentIn(JPanel panel) {
     private void AccPasswordFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AccPasswordFieldActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_AccPasswordFieldActionPerformed
+   
+  
+    
+    private void ExportBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ExportBTNActionPerformed
+            // 1. Ask for the report date
+      javax.swing.JTextField dateField = new javax.swing.JTextField(LocalDate.now().toString());
+     ((javax.swing.text.AbstractDocument) dateField.getDocument())
+             .setDocumentFilter(new DateInputFilter());
+     int result = JOptionPane.showConfirmDialog(this, dateField,
+             "Report date (edit if you need a different day, e.g. 2026-1-1 or 2026-01-01):",
+             JOptionPane.OK_CANCEL_OPTION);
+     if (result != JOptionPane.OK_OPTION) return;
+
+     LocalDate reportDate;
+     try {
+         reportDate = LocalDate.parse(normalizeDate(dateField.getText().trim()));
+     } catch (DateTimeParseException ex) {
+         JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2026-1-1 or 2026-01-01).");
+         return;
+     }
+
+     ReportExporter exporter = new ReportExporter(productService);
+
+     try {
+         // 2. Check for records BEFORE asking where to save
+         if (!exporter.hasRecordsForDate(reportDate)) {
+             JOptionPane.showMessageDialog(this, "No records found for this date.");
+             return;
+         }
+
+         // 3. Ask where to save
+         javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
+         String suggestedName = "Clinic_Report_" + reportDate + ".xlsx";
+         chooser.setSelectedFile(new java.io.File(suggestedName));
+         int choice = chooser.showSaveDialog(this);
+         if (choice != javax.swing.JFileChooser.APPROVE_OPTION) return;
+
+         java.io.File destination = chooser.getSelectedFile();
+         if (!destination.getName().toLowerCase().endsWith(".xlsx")) {
+             destination = new java.io.File(destination.getParentFile(), destination.getName() + ".xlsx");
+         }
+
+         // 4. Generate and save
+         exporter.writeDailyReport(reportDate, destination);
+
+         // 5. Success message
+         JOptionPane.showMessageDialog(this, "Report exported successfully:\n" + destination.getAbsolutePath());
+
+         // --- Archive/reset confirmation (only after a successful, confirmed export) ---
+         int archiveChoice = JOptionPane.showConfirmDialog(this,
+                 "Report exported successfully. Do you want to archive and reset the daily check-in records?",
+                 "Archive Check-in Records", JOptionPane.YES_NO_OPTION);
+
+         if (archiveChoice == JOptionPane.YES_OPTION) {
+             VisitData visitData = new VisitData();
+             int archivedCount = visitData.archiveDate(reportDate.toString());
+             JOptionPane.showMessageDialog(this,
+                     archivedCount + " check-in record(s) for " + reportDate + " were archived.\n"
+                     + "They remain in the database for reports and statistics, "
+                     + "but no longer appear as active on the Dashboard.");
+         }
+
+     } catch (SQLException ex) {
+         JOptionPane.showMessageDialog(this, "Database error while exporting report: " + ex.getMessage(),
+                 "Export Failed", JOptionPane.ERROR_MESSAGE);
+     } catch (IOException ex) {
+         JOptionPane.showMessageDialog(this, "File error while exporting report: " + ex.getMessage(),
+                 "Export Failed", JOptionPane.ERROR_MESSAGE);
+     }
+    }//GEN-LAST:event_ExportBTNActionPerformed
 
     /**
      * @param args the command line arguments
@@ -1760,6 +1870,7 @@ private void animateContentIn(JPanel panel) {
     private javax.swing.JButton DeleteBTN;
     private javax.swing.JButton EditBtn;
     private javax.swing.JTextField ExpDate;
+    private javax.swing.JButton ExportBTN;
     private javax.swing.JTextArea InventoryLogs;
     private javax.swing.JTextField ProductName;
     private javax.swing.JTextField Qty;
