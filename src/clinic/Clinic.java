@@ -38,12 +38,12 @@ public class Clinic {
        
        // TEMPORARY — run once to migrate old accounts.csv into H2, then remove this block.
        
-      /*try {
+      try {
             int migrated = new AccountData().migrateFromCsv("accounts.csv");
            System.out.println("Migrated " + migrated + " account(s) from accounts.csv.");
         } catch (Exception e) {
             e.printStackTrace();
-        }*/
+        }
        
         javax.swing.UIManager.put("JTextField.placeholderText", "");
 
