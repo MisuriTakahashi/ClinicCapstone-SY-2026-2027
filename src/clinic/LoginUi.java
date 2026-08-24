@@ -25,7 +25,8 @@ public class LoginUi extends javax.swing.JFrame {
     public LoginUi() {
         com.formdev.flatlaf.FlatLightLaf.setup();
         setUndecorated(true);
-        initComponents();
+        initComponents();           
+        setIconImage(AppIcon.getIcon());
         setLocationRelativeTo(null);
     
         // Panels

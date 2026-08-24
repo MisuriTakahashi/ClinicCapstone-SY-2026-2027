@@ -16,6 +16,7 @@ public class Clinic {
     public static void main(String[] args) {
        // 
        
+       
        try {
             
             com.formdev.flatlaf.FlatLightLaf.setup();

@@ -55,7 +55,9 @@ public class Dashboard extends javax.swing.JFrame {
         public Dashboard(AccountSystem account) {
             this.loggedInAccount = account;
             
-            initComponents();
+            initComponents();                
+            setIconImage(AppIcon.getIcon());
+
             
             // Window X (not Logout): remember this session so the user is
             // auto-logged-in next launch, instead of being forced to log in again.

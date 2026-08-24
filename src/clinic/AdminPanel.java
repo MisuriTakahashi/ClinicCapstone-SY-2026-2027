@@ -52,6 +52,8 @@ public class AdminPanel extends javax.swing.JFrame {
     public AdminPanel(AccountSystem account) {
         com.formdev.flatlaf.FlatLightLaf.setup();
         initComponents();
+        setIconImage(AppIcon.getIcon());
+
         // Window X (not Return/Logout): remember this session for auto-restore next launch.
         addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
