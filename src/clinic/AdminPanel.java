@@ -70,6 +70,8 @@ public class AdminPanel extends javax.swing.JFrame {
         ((AbstractDocument) ExpDate.getDocument()).setDocumentFilter(new DateInputFilter());
         setLocationRelativeTo(null);
         refreshInventoryScreen();
+        refreshActivityLogDisplay();
+        refreshInventoryTable();
         loadStatistics();
         refreshAccountTable();
     }
@@ -94,6 +96,44 @@ public class AdminPanel extends javax.swing.JFrame {
     styleCard(jPanel6, surface, border);
     jPanel5.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(border), BorderFactory.createEmptyBorder(18, 18, 18, 18)));
+    
+    // --- Statistics Cards Styling ---
+// 1. Apply the white card styling to all statistics panels
+javax.swing.JPanel[] statCards = {
+    cardWeeklyCheckIns, jPanel10, jPanel11, 
+    CommonReasonPanel, FrequentlyUsedPanel, jPanel7
+};
+for (javax.swing.JPanel card : statCards) {
+    styleCard(card, surface, border);
+}
+
+// 2. Standardize the subtitle fonts and colors (e.g., "Common Reason")
+java.awt.Color textSecondary = Color.decode("#475569");
+javax.swing.JLabel[] statTitles = {
+    lblWeeklyTitle, lblInClinicTitle, lblSentHomeTitle, 
+    CommonReasonTitle, FrequentlyUsedTitle, jLabel11
+};
+for (javax.swing.JLabel lbl : statTitles) {
+    lbl.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+    lbl.setForeground(textSecondary);
+    lbl.setHorizontalAlignment(SwingConstants.CENTER);
+}
+
+// 3. Standardize the big number/value fonts and colors
+javax.swing.JLabel[] statValues = {
+    lblWeeklyCheckInsValue, lblInClinicValue, lblSentHomeValue, 
+    CommonReasonLabel, FrequentlyUsedLabel
+};
+for (javax.swing.JLabel lbl : statValues) {
+    lbl.setFont(new Font("Segoe UI", Font.BOLD, 30));
+    lbl.setForeground(primary); // Uses your modern blue (#2563EB)
+    lbl.setHorizontalAlignment(SwingConstants.CENTER);
+}
+    
+    
+    
+    
+    
 
     jLabel6.setText("Stock overview");
     jLabel1.setText("Inventory activity");
@@ -538,183 +578,212 @@ private void animateContentIn(JPanel panel) {
         }  
     }
     
-private void loadStatistics() {
-    DbExecutor.run(
-        () -> new VisitData().loadAll(),
-        this::buildStatisticsUi,
-        ex -> JOptionPane.showMessageDialog(
-                this,
-                "Error loading statistics: " + ex.getMessage(),
-                "Statistics Error",
-                JOptionPane.ERROR_MESSAGE
-        )
-    );
-}
+  private void loadStatistics() {
+        try {
+            
+            ArrayList<CheckinSystem> visits = new VisitData().loadAll();
 
-    private void buildStatisticsUi(ArrayList<CheckinSystem> visits) {
+            int weeklyCheckins = 0;
+            int inClinic = 0;
+            int sentHome = 0;
 
-        int weeklyCheckins = 0;
-        int inClinic = 0;
-        int sentHome = 0;
+            int monday = 0;
+            int tuesday = 0;
+            int wednesday = 0;
+            int thursday = 0;
+            int friday = 0;
 
-        int monday = 0;
-        int tuesday = 0;
-        int wednesday = 0;
-        int thursday = 0;
-        int friday = 0;
+            Map<String, Integer> reasonCount = new HashMap<>();
+            Map<String, Integer> medicineCount = new HashMap<>();
 
-        Map<String, Integer> reasonCount = new HashMap<>();
-        Map<String, Integer> medicineCount = new HashMap<>();
+            // Get the current week's Monday and Friday
+            LocalDate today = LocalDate.now();
+            LocalDate mondayOfWeek = today.with(DayOfWeek.MONDAY);
+            LocalDate fridayOfWeek = today.with(DayOfWeek.FRIDAY);
 
-        // Get the current week's Monday and Friday
-        LocalDate today = LocalDate.now();
-        LocalDate mondayOfWeek = today.with(DayOfWeek.MONDAY);
-        LocalDate fridayOfWeek = today.with(DayOfWeek.FRIDAY);
-
-        DateTimeFormatter formatter =
-                 DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a");
+            DateTimeFormatter formatter =
+                     DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a");
 
 
-        lblMondayDate.setText(
-                String.valueOf(mondayOfWeek.getDayOfMonth())
-        );
+            lblMondayDate.setText(
+                    String.valueOf(mondayOfWeek.getDayOfMonth())
+            );
 
-        lblTuesdayDate.setText(
-                String.valueOf(mondayOfWeek.plusDays(1).getDayOfMonth())
-        );
+            lblTuesdayDate.setText(
+                    String.valueOf(mondayOfWeek.plusDays(1).getDayOfMonth())
+            );
 
-        lblWednesdayDate.setText(
-                String.valueOf(mondayOfWeek.plusDays(2).getDayOfMonth())
-        );
+            lblWednesdayDate.setText(
+                    String.valueOf(mondayOfWeek.plusDays(2).getDayOfMonth())
+            );
 
-        lblThursdayDate.setText(
-                String.valueOf(mondayOfWeek.plusDays(3).getDayOfMonth())
-        );
+            lblThursdayDate.setText(
+                    String.valueOf(mondayOfWeek.plusDays(3).getDayOfMonth())
+            );
 
-        lblFridayDate.setText(
-                String.valueOf(mondayOfWeek.plusDays(4).getDayOfMonth())
-        );
+            lblFridayDate.setText(
+                    String.valueOf(mondayOfWeek.plusDays(4).getDayOfMonth())
+            );
 
 
-        for (CheckinSystem v : visits) {
+            for (CheckinSystem v : visits) {
+                
+                LocalDate visitDate;
 
-            LocalDate visitDate;
+                try {
+                    visitDate = LocalDateTime
+                            .parse(v.getCheckInTime(), formatter)
+                            .toLocalDate();
 
-            try {
-                visitDate = LocalDateTime
-                        .parse(v.getCheckInTime(), formatter)
-                        .toLocalDate();
+                } catch (DateTimeParseException ex) {
 
-            } catch (DateTimeParseException ex) {
+                    continue;
+                }
 
-                continue;
-            }
+                if (!visitDate.isBefore(mondayOfWeek)
+                        && !visitDate.isAfter(fridayOfWeek)) {
 
-            if (!visitDate.isBefore(mondayOfWeek)
-                    && !visitDate.isAfter(fridayOfWeek)) {
+                    weeklyCheckins++;
 
-                weeklyCheckins++;
+                    switch (visitDate.getDayOfWeek()) {
 
-                switch (visitDate.getDayOfWeek()) {
+                        case MONDAY:
+                            monday++;
+                            break;
 
-                    case MONDAY:
-                        monday++;
-                        break;
+                        case TUESDAY:
+                            tuesday++;
+                            break;
 
-                    case TUESDAY:
-                        tuesday++;
-                        break;
+                        case WEDNESDAY:
+                            wednesday++;
+                            break;
 
-                    case WEDNESDAY:
-                        wednesday++;
-                        break;
+                        case THURSDAY:
+                            thursday++;
+                            break;
 
-                    case THURSDAY:
-                        thursday++;
-                        break;
+                        case FRIDAY:
+                            friday++;
+                            break;
 
-                    case FRIDAY:
-                        friday++;
-                        break;
+                        default:
+                            break;
+                    }
+                }
 
-                    default:
-                        break;
+
+                if ("In Clinic".equalsIgnoreCase(v.getStatus())) {
+                    inClinic++;
+                }
+
+                if ("Sent Home".equalsIgnoreCase(v.getStatus())) {
+                    sentHome++;
+                }
+
+
+                if (v.getReason() != null && !v.getReason().isBlank()) {
+                    reasonCount.put(
+                            v.getReason(),
+                            reasonCount.getOrDefault(v.getReason(), 0) + 1
+                    );
+                }
+
+
+                if (v.getMedUsed() != null && !v.getMedUsed().isBlank()) {
+                    medicineCount.put(
+                            v.getMedUsed(),
+                            medicineCount.getOrDefault(v.getMedUsed(), 0) + 1
+                    );
                 }
             }
-
-
-            if ("In Clinic".equalsIgnoreCase(v.getStatus())) {
-                inClinic++;
-            }
-
-            if ("Sent Home".equalsIgnoreCase(v.getStatus())) {
-                sentHome++;
-            }
-
-
-            if (v.getReason() != null && !v.getReason().isBlank()) {
-                reasonCount.put(
-                        v.getReason(),
-                        reasonCount.getOrDefault(v.getReason(), 0) + 1
-                );
-            }
-
-
-            if (v.getMedUsed() != null && !v.getMedUsed().isBlank()) {
-                medicineCount.put(
-                        v.getMedUsed(),
-                        medicineCount.getOrDefault(v.getMedUsed(), 0) + 1
-                );
-            }
-        }
-
-        lblWeeklyCheckInsValue.setText(
-                String.valueOf(weeklyCheckins)
-        );
-
-        lblInClinicValue.setText(
-                String.valueOf(inClinic)
-        );
-
-        lblSentHomeValue.setText(
-                String.valueOf(sentHome)
-        );
-
-        lblMondayCount.setText(
-                String.valueOf(monday)
-        );
-
-        lblTuesdayCount.setText(
-                String.valueOf(tuesday)
-        );
-
-        lblWednesdayCount.setText(
-                String.valueOf(wednesday)
-        );
-
-        lblThursdayCount.setText(
-                String.valueOf(thursday)
-        );
-
-        lblFridayCount.setText(
-                String.valueOf(friday)
-        );
-
-        DateTimeFormatter displayFormatter =
-                DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-        lblReportingPeriod.setText(
-                "Reporting period: "
-                + mondayOfWeek.format(displayFormatter)
-                + " to "
-                + fridayOfWeek.format(displayFormatter)
-        );
+            // --- Calculate Most Common Reason ---
+String topReason = "N/A";
+int maxReasonCount = 0;
+for (Map.Entry<String, Integer> entry : reasonCount.entrySet()) {
+    if (entry.getValue() > maxReasonCount) {
+        maxReasonCount = entry.getValue();
+        topReason = entry.getKey();
     }
-        /**
-         * This method is called from within the constructor to initialize the form.
-         * WARNING: Do NOT modify this code. The content of this method is always
-         * regenerated by the Form Editor.
-         */
+}
+
+// --- Calculate Most Frequently Used Medicine ---
+String topMedicine = "N/A";
+int maxMedCount = 0;
+for (Map.Entry<String, Integer> entry : medicineCount.entrySet()) {
+    if (entry.getValue() > maxMedCount) {
+        maxMedCount = entry.getValue();
+        topMedicine = entry.getKey();
+    }
+}
+
+// Clean up "None" or empty medicine entries so it looks professional
+if (topMedicine.equalsIgnoreCase("None") || topMedicine.trim().isEmpty()) {
+    topMedicine = "No medicine used";
+}
+
+// --- Update the UI Labels ---
+CommonReasonLabel.setText(topReason);
+FrequentlyUsedLabel.setText(topMedicine);
+
+            lblWeeklyCheckInsValue.setText(
+                    String.valueOf(weeklyCheckins)
+            );
+
+            lblInClinicValue.setText(
+                    String.valueOf(inClinic)
+            );
+
+            lblSentHomeValue.setText(
+                    String.valueOf(sentHome)
+            );
+
+            lblMondayCount.setText(
+                    String.valueOf(monday)
+            );
+
+            lblTuesdayCount.setText(
+                    String.valueOf(tuesday)
+            );
+
+            lblWednesdayCount.setText(
+                    String.valueOf(wednesday)
+            );
+
+            lblThursdayCount.setText(
+                    String.valueOf(thursday)
+            );
+
+            lblFridayCount.setText(
+                    String.valueOf(friday)
+            );
+
+            DateTimeFormatter displayFormatter =
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+            lblReportingPeriod.setText(
+                    "Reporting period: "
+                    + mondayOfWeek.format(displayFormatter)
+                    + " to "
+                    + fridayOfWeek.format(displayFormatter)
+            );
+
+        } catch (Exception ex) {
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Error loading statistics: " + ex.getMessage(),
+                    "Statistics Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -754,6 +823,12 @@ private void loadStatistics() {
         lblSentHomeTitle = new javax.swing.JLabel();
         lblSentHomeValue = new javax.swing.JLabel();
         jLabel10 = new javax.swing.JLabel();
+        CommonReasonPanel = new javax.swing.JPanel();
+        CommonReasonTitle = new javax.swing.JLabel();
+        CommonReasonLabel = new javax.swing.JLabel();
+        FrequentlyUsedPanel = new javax.swing.JPanel();
+        FrequentlyUsedTitle = new javax.swing.JLabel();
+        FrequentlyUsedLabel = new javax.swing.JLabel();
         jPanel7 = new javax.swing.JPanel();
         jLabel11 = new javax.swing.JLabel();
         jPanel8 = new javax.swing.JPanel();
@@ -1021,20 +1096,20 @@ private void loadStatistics() {
         lblWeeklyTitle.setForeground(new java.awt.Color(71, 85, 105));
         lblWeeklyTitle.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         lblWeeklyTitle.setText("Weekly check-ins");
-        cardWeeklyCheckIns.add(lblWeeklyTitle, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 18, 275, 17));
+        cardWeeklyCheckIns.add(lblWeeklyTitle, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 18, 180, 17));
 
         lblWeeklyCheckInsValue.setFont(new java.awt.Font("Segoe UI", 1, 30)); // NOI18N
         lblWeeklyCheckInsValue.setForeground(new java.awt.Color(29, 78, 216));
         lblWeeklyCheckInsValue.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         lblWeeklyCheckInsValue.setText("0");
-        cardWeeklyCheckIns.add(lblWeeklyCheckInsValue, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 75, 275, 36));
+        cardWeeklyCheckIns.add(lblWeeklyCheckInsValue, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 75, 180, 36));
 
         jLabel8.setForeground(new java.awt.Color(148, 163, 184));
         jLabel8.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel8.setText("Student Checkin This week");
-        cardWeeklyCheckIns.add(jLabel8, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 155, 275, 16));
+        cardWeeklyCheckIns.add(jLabel8, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 155, 180, 16));
 
-        statisticsContainer.add(cardWeeklyCheckIns, new org.netbeans.lib.awtextra.AbsoluteConstraints(8, 64, 310, 308));
+        statisticsContainer.add(cardWeeklyCheckIns, new org.netbeans.lib.awtextra.AbsoluteConstraints(8, 64, 210, 308));
         cardWeeklyCheckIns.getAccessibleContext().setAccessibleName("");
 
         jPanel10.setBackground(new java.awt.Color(255, 255, 255));
@@ -1045,20 +1120,20 @@ private void loadStatistics() {
         lblInClinicTitle.setForeground(new java.awt.Color(71, 85, 105));
         lblInClinicTitle.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         lblInClinicTitle.setText("Currently in Clinic");
-        jPanel10.add(lblInClinicTitle, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 18, 275, 17));
+        jPanel10.add(lblInClinicTitle, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 18, 180, 17));
 
         lblInClinicValue.setFont(new java.awt.Font("Segoe UI", 1, 30)); // NOI18N
         lblInClinicValue.setForeground(new java.awt.Color(29, 78, 216));
         lblInClinicValue.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         lblInClinicValue.setText("0");
-        jPanel10.add(lblInClinicValue, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 75, 275, 36));
+        jPanel10.add(lblInClinicValue, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 75, 180, 36));
 
         jLabel9.setForeground(new java.awt.Color(148, 163, 184));
         jLabel9.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel9.setText("Student Waiting for release");
-        jPanel10.add(jLabel9, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 155, 275, 16));
+        jPanel10.add(jLabel9, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 155, 180, 16));
 
-        statisticsContainer.add(jPanel10, new org.netbeans.lib.awtextra.AbsoluteConstraints(334, 64, 319, 308));
+        statisticsContainer.add(jPanel10, new org.netbeans.lib.awtextra.AbsoluteConstraints(230, 64, 210, 308));
 
         jPanel11.setBackground(new java.awt.Color(255, 255, 255));
         jPanel11.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(226, 232, 240)));
@@ -1068,20 +1143,56 @@ private void loadStatistics() {
         lblSentHomeTitle.setForeground(new java.awt.Color(71, 85, 105));
         lblSentHomeTitle.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         lblSentHomeTitle.setText("Sent Home");
-        jPanel11.add(lblSentHomeTitle, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 18, 275, 17));
+        jPanel11.add(lblSentHomeTitle, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 18, 180, 17));
 
         lblSentHomeValue.setFont(new java.awt.Font("Segoe UI", 1, 30)); // NOI18N
         lblSentHomeValue.setForeground(new java.awt.Color(29, 78, 216));
         lblSentHomeValue.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         lblSentHomeValue.setText("0");
-        jPanel11.add(lblSentHomeValue, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 75, 275, 36));
+        jPanel11.add(lblSentHomeValue, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 75, 180, 36));
 
         jLabel10.setForeground(new java.awt.Color(148, 163, 184));
         jLabel10.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel10.setText("Student Sent home this week");
-        jPanel11.add(jLabel10, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 155, 275, 16));
+        jPanel11.add(jLabel10, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 155, 170, 16));
 
-        statisticsContainer.add(jPanel11, new org.netbeans.lib.awtextra.AbsoluteConstraints(669, 64, 319, 308));
+        statisticsContainer.add(jPanel11, new org.netbeans.lib.awtextra.AbsoluteConstraints(450, 64, 210, 308));
+
+        CommonReasonPanel.setBackground(new java.awt.Color(255, 255, 255));
+        CommonReasonPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(226, 232, 240)));
+        CommonReasonPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        CommonReasonTitle.setFont(new java.awt.Font("Segoe UI", 0, 13)); // NOI18N
+        CommonReasonTitle.setForeground(new java.awt.Color(71, 85, 105));
+        CommonReasonTitle.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        CommonReasonTitle.setText("Common Reason");
+        CommonReasonPanel.add(CommonReasonTitle, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 18, 280, 17));
+
+        CommonReasonLabel.setFont(new java.awt.Font("Segoe UI", 1, 30)); // NOI18N
+        CommonReasonLabel.setForeground(new java.awt.Color(29, 78, 216));
+        CommonReasonLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        CommonReasonLabel.setText("N/A");
+        CommonReasonPanel.add(CommonReasonLabel, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 60, 290, 36));
+
+        statisticsContainer.add(CommonReasonPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(670, 220, 320, 150));
+
+        FrequentlyUsedPanel.setBackground(new java.awt.Color(255, 255, 255));
+        FrequentlyUsedPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(226, 232, 240)));
+        FrequentlyUsedPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        FrequentlyUsedTitle.setFont(new java.awt.Font("Segoe UI", 0, 13)); // NOI18N
+        FrequentlyUsedTitle.setForeground(new java.awt.Color(71, 85, 105));
+        FrequentlyUsedTitle.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        FrequentlyUsedTitle.setText("Frequently Used Medicine");
+        FrequentlyUsedPanel.add(FrequentlyUsedTitle, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 18, 280, 17));
+
+        FrequentlyUsedLabel.setFont(new java.awt.Font("Segoe UI", 1, 30)); // NOI18N
+        FrequentlyUsedLabel.setForeground(new java.awt.Color(29, 78, 216));
+        FrequentlyUsedLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        FrequentlyUsedLabel.setText("N/A");
+        FrequentlyUsedPanel.add(FrequentlyUsedLabel, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 60, 290, 36));
+
+        statisticsContainer.add(FrequentlyUsedPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(670, 64, 320, 150));
 
         jPanel7.setBackground(new java.awt.Color(248, 250, 252));
         jPanel7.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(226, 232, 240)));
@@ -1864,12 +1975,18 @@ private void loadStatistics() {
     private javax.swing.JButton CAdminBTN;
     private javax.swing.JButton CUserBTN;
     private javax.swing.JButton ClearBtn;
+    private javax.swing.JLabel CommonReasonLabel;
+    private javax.swing.JPanel CommonReasonPanel;
+    private javax.swing.JLabel CommonReasonTitle;
     private javax.swing.JPasswordField ConfirmPasswordField;
     private javax.swing.JLabel ConfirmPasswordLabel;
     private javax.swing.JButton DeleteBTN;
     private javax.swing.JButton EditBtn;
     private javax.swing.JTextField ExpDate;
     private javax.swing.JButton ExportBTN;
+    private javax.swing.JLabel FrequentlyUsedLabel;
+    private javax.swing.JPanel FrequentlyUsedPanel;
+    private javax.swing.JLabel FrequentlyUsedTitle;
     private javax.swing.JTextArea InventoryLogs;
     private javax.swing.JTextField ProductName;
     private javax.swing.JTextField Qty;

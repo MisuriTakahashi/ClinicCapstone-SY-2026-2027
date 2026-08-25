@@ -22,49 +22,12 @@ public class DatabaseManager {
     private static final String FULL_PASSWORD = FILE_ENCRYPTION_KEY + " " + USER_PASSWORD;
     private static Connection sharedConnection;
 
-    /**
-    * Returns the single shared application connection, wrapped so that a
-    * caller's try-with-resources block (Connection implements AutoCloseable)
-    * cannot actually close it. All DAO classes call this exactly the way they
-    * already do — nothing else in the project needs to change.
-    *
-    * Real close happens only via shutdown(), called on application exit.
-    */
-   public static synchronized Connection getConnection() throws SQLException {
-       if (sharedConnection == null || sharedConnection.isClosed()) {
-           Connection real = DriverManager.getConnection(DB_URL, USER, FULL_PASSWORD);
-           sharedConnection = (Connection) java.lang.reflect.Proxy.newProxyInstance(
-                   Connection.class.getClassLoader(),
-                   new Class<?>[]{Connection.class},
-                   (proxy, method, args) -> {
-                       if ("close".equals(method.getName())) {
-                           return null; // ignore — connection is shared and reused
-                       }
-                       if ("isClosed".equals(method.getName()) && real.isClosed()) {
-                           return true; // stay honest if the real connection died
-                       }
-                       try {
-                           return method.invoke(real, args);
-                       } catch (java.lang.reflect.InvocationTargetException e) {
-                           throw e.getCause();
-                       }
-                   });
-       }
-       return sharedConnection;
-   }
-
-   /** Actually closes the underlying connection. Call this once, on app exit. */
-   public static synchronized void shutdown() {
-       try {
-           if (sharedConnection != null && !sharedConnection.isClosed()) {
-               sharedConnection.close();
-           }
-       } catch (SQLException e) {
-           e.printStackTrace();
-       } finally {
-           sharedConnection = null;
-       }
-   }
+    public static Connection getConnection() throws SQLException {
+        if (sharedConnection == null || sharedConnection.isClosed()) {
+            sharedConnection = DriverManager.getConnection(DB_URL, USER, FULL_PASSWORD);
+        }
+        return sharedConnection;
+    }
 
     public static void initializeDatabase() {
         new File("./data").mkdirs(); // make sure the folder exists before H2 writes
