@@ -214,6 +214,21 @@ public class Dashboard extends javax.swing.JFrame {
             LRNField.setText("");
             LRNField.putClientProperty("JComponent.roundRect", true);
             LRNField.putClientProperty("JTextField.placeholderText", "e.g., 10940900001");
+            
+            // --- Search Bar Styling ---
+            SearchField.putClientProperty("JComponent.roundRect", true);
+            SearchField.putClientProperty("JTextField.placeholderText", "Search name, LRN, reason...");
+            SearchField.putClientProperty("JTextField.showClearButton", true);
+            SearchBTN.putClientProperty("JButton.buttonType", "roundRect");
+
+            // Live search: filter as the user types
+            SearchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+                public void insertUpdate(javax.swing.event.DocumentEvent e)  { applySearchFilter(); }
+                public void removeUpdate(javax.swing.event.DocumentEvent e) { applySearchFilter(); }
+                public void changedUpdate(javax.swing.event.DocumentEvent e){ applySearchFilter(); }
+});
+            
+            
 
             // --- 4. Round Modern Component Elements ---
             CheckInBTN.putClientProperty("JButton.buttonType", "roundRect");
@@ -327,7 +342,9 @@ public class Dashboard extends javax.swing.JFrame {
     MainPanel.add(InventoryPanel, "grow, wrap");
 
     // Row 4: Logs Label (Spans Cols 2 & 3)
-    MainPanel.add(LogsLabel, "spanx 2, alignx center, wrap");
+    MainPanel.add(LogsLabel,   "alignx center");
+    MainPanel.add(SearchField, "split 2, alignx right, gapleft push, w 220!, h 34!");
+    MainPanel.add(SearchBTN,   "h 34!, wrap");
 
     // Row 5: The Table (Spans Cols 2 & 3, Grows to fill height)
     MainPanel.add(CheckInPanel1, "spanx 2, grow, wrap");
@@ -420,7 +437,8 @@ private void applyTheme() {
         ThemeToggle.setBackground(java.awt.Color.WHITE);
         ThemeToggle.setForeground(java.awt.Color.BLACK);
         // --- ACTION BUTTONS (Blue) ---
-        javax.swing.JButton[] actionButtons = {CheckInBTN, EditBTN, SentHomeBTN, ClearBTN};
+        javax.swing.JButton[] actionButtons = {CheckInBTN, EditBTN, SentHomeBTN, ClearBTN, SearchBTN};
+        SearchField.setBackground(inputBackground); SearchField.setForeground(textColor);
         for (javax.swing.JButton btn : actionButtons) {
             btn.putClientProperty("JButton.buttonType", "roundRect");
             btn.putClientProperty("JComponent.arc", 10);
@@ -570,6 +588,25 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
         super.paintComponent(g);
     }
 }
+/** Filters the Check-in Logs table by whatever is in SearchField. */
+private void applySearchFilter() {
+    String query = SearchField.getText().trim().toLowerCase();
+    DefaultTableModel model = (DefaultTableModel) ReasonTable.getModel();
+    model.setRowCount(0);
+    for (CheckinSystem v : currentVisits) {
+        if (query.isEmpty()
+                || v.getName().toLowerCase().contains(query)
+                || v.getLrn().toLowerCase().contains(query)
+                || v.getGradeSection().toLowerCase().contains(query)
+                || v.getReason().toLowerCase().contains(query)) {
+            model.addRow(new Object[]{
+                v.getStatus(), v.getName(), v.getGradeSection(), v.getLrn(),
+                v.getMedicineDisplay(), v.getReason(),
+                v.getGuardianName(), v.getGuardianPhoneNums()
+            });
+        }
+    }
+}
  
    //ComboBox problem 
     private void medicineBox(){
@@ -641,27 +678,8 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
     private void refreshTableAndCounters(){
           try {
                  
-              currentVisits = visitService.loadActive(); 
-              
-         DefaultTableModel model = (DefaultTableModel) ReasonTable.getModel();
-
-         model.setRowCount(0);
-
-         for (CheckinSystem v : visitService.loadActive()) {
-
-                   model.addRow(new Object[]{
-                    v.getStatus(),
-                    v.getName(),
-                    v.getGradeSection(),
-                    v.getLrn(),
-                    v.getMedicineDisplay(),
-                    v.getReason(),
-                    v.getGuardianName(),
-                    v.getGuardianPhoneNums()
-             });
-
-         }
-
+              currentVisits = visitService.loadActive();
+                applySearchFilter(); // rebuilds the table, honoring the current search text
               int[] counts = visitService.getTodayCounts();
          
              VisitCounter.setText(String.valueOf(counts[0]));
@@ -825,6 +843,9 @@ NOT modify this code. The content of this method is always
         VisitPanel = new javax.swing.JPanel();
         jLabel1 = new javax.swing.JLabel();
         VisitCounter = new javax.swing.JLabel();
+        SearchField = new javax.swing.JTextField();
+        SearchLabel = new javax.swing.JLabel();
+        SearchBTN = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setFocusable(false);
@@ -1200,9 +1221,9 @@ NOT modify this code. The content of this method is always
         );
         CheckInPanel1Layout.setVerticalGroup(
             CheckInPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(CheckInPanel1Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 404, Short.MAX_VALUE)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CheckInPanel1Layout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 368, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
 
@@ -1281,8 +1302,16 @@ NOT modify this code. The content of this method is always
                 .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(VisitCounter, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(41, Short.MAX_VALUE))
+                .addContainerGap(36, Short.MAX_VALUE))
         );
+
+        SearchLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
+        SearchLabel.setForeground(new java.awt.Color(0, 0, 0));
+        SearchLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        SearchLabel.setText("Search:");
+
+        SearchBTN.setText("Search");
+        SearchBTN.addActionListener(this::SearchBTNActionPerformed);
 
         javax.swing.GroupLayout MainPanelLayout = new javax.swing.GroupLayout(MainPanel);
         MainPanel.setLayout(MainPanelLayout);
@@ -1312,13 +1341,18 @@ NOT modify this code. The content of this method is always
                                 .addComponent(InventoryLabel)
                                 .addGap(210, 210, 210))))
                     .addGroup(MainPanelLayout.createSequentialGroup()
-                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGap(23, 23, 23)
+                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                             .addGroup(MainPanelLayout.createSequentialGroup()
-                                .addGap(23, 23, 23)
-                                .addComponent(CheckInPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(MainPanelLayout.createSequentialGroup()
-                                .addGap(569, 569, 569)
-                                .addComponent(LogsLabel)))
+                                .addComponent(LogsLabel)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(SearchLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(2, 2, 2)
+                                .addComponent(SearchField, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(SearchBTN)
+                                .addGap(6, 6, 6))
+                            .addComponent(CheckInPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addContainerGap(28, Short.MAX_VALUE))))
         );
         MainPanelLayout.setVerticalGroup(
@@ -1336,17 +1370,21 @@ NOT modify this code. The content of this method is always
                                 .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addComponent(SentHomePanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                     .addComponent(VisitPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                                .addGap(18, 18, 18)
-                                .addComponent(LogsLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addGap(54, 54, 54)
+                                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                    .addComponent(LogsLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(SearchField, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(SearchLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(SearchBTN))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED))
                             .addGroup(MainPanelLayout.createSequentialGroup()
                                 .addComponent(InventoryPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(0, 0, Short.MAX_VALUE)))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGap(0, 67, Short.MAX_VALUE)))
                         .addComponent(CheckInPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(MainPanelLayout.createSequentialGroup()
                         .addGap(0, 0, Short.MAX_VALUE)
                         .addComponent(CheckInPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(19, Short.MAX_VALUE))
+                .addContainerGap(15, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -2007,6 +2045,10 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
        clearCheckInForm();
         showToast(CheckInPanel, "Form cleared.", true);
     }//GEN-LAST:event_ClearBTNActionPerformed
+
+    private void SearchBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SearchBTNActionPerformed
+       applySearchFilter();
+    }//GEN-LAST:event_SearchBTNActionPerformed
    
     private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {                                         
             
@@ -2238,6 +2280,9 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
     private javax.swing.JTextField PhoneField;
     private javax.swing.JTextArea ReasonArea;
     private javax.swing.JTable ReasonTable;
+    private javax.swing.JButton SearchBTN;
+    private javax.swing.JTextField SearchField;
+    private javax.swing.JLabel SearchLabel;
     private javax.swing.JButton SentHomeBTN;
     private javax.swing.JLabel SentHomeCount;
     private javax.swing.JLabel SentHomeFooterLabel;
