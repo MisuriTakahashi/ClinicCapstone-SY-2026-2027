@@ -70,8 +70,6 @@ public class AdminPanel extends javax.swing.JFrame {
         ((AbstractDocument) ExpDate.getDocument()).setDocumentFilter(new DateInputFilter());
         setLocationRelativeTo(null);
         refreshInventoryScreen();
-        refreshActivityLogDisplay();
-        refreshInventoryTable();
         loadStatistics();
         refreshAccountTable();
     }
@@ -540,184 +538,183 @@ private void animateContentIn(JPanel panel) {
         }  
     }
     
-  private void loadStatistics() {
-        try {
-            
-            ArrayList<CheckinSystem> visits = new VisitData().loadAll();
+private void loadStatistics() {
+    DbExecutor.run(
+        () -> new VisitData().loadAll(),
+        this::buildStatisticsUi,
+        ex -> JOptionPane.showMessageDialog(
+                this,
+                "Error loading statistics: " + ex.getMessage(),
+                "Statistics Error",
+                JOptionPane.ERROR_MESSAGE
+        )
+    );
+}
 
-            int weeklyCheckins = 0;
-            int inClinic = 0;
-            int sentHome = 0;
+    private void buildStatisticsUi(ArrayList<CheckinSystem> visits) {
 
-            int monday = 0;
-            int tuesday = 0;
-            int wednesday = 0;
-            int thursday = 0;
-            int friday = 0;
+        int weeklyCheckins = 0;
+        int inClinic = 0;
+        int sentHome = 0;
 
-            Map<String, Integer> reasonCount = new HashMap<>();
-            Map<String, Integer> medicineCount = new HashMap<>();
+        int monday = 0;
+        int tuesday = 0;
+        int wednesday = 0;
+        int thursday = 0;
+        int friday = 0;
 
-            // Get the current week's Monday and Friday
-            LocalDate today = LocalDate.now();
-            LocalDate mondayOfWeek = today.with(DayOfWeek.MONDAY);
-            LocalDate fridayOfWeek = today.with(DayOfWeek.FRIDAY);
+        Map<String, Integer> reasonCount = new HashMap<>();
+        Map<String, Integer> medicineCount = new HashMap<>();
 
-            DateTimeFormatter formatter =
-                     DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a");
+        // Get the current week's Monday and Friday
+        LocalDate today = LocalDate.now();
+        LocalDate mondayOfWeek = today.with(DayOfWeek.MONDAY);
+        LocalDate fridayOfWeek = today.with(DayOfWeek.FRIDAY);
 
-
-            lblMondayDate.setText(
-                    String.valueOf(mondayOfWeek.getDayOfMonth())
-            );
-
-            lblTuesdayDate.setText(
-                    String.valueOf(mondayOfWeek.plusDays(1).getDayOfMonth())
-            );
-
-            lblWednesdayDate.setText(
-                    String.valueOf(mondayOfWeek.plusDays(2).getDayOfMonth())
-            );
-
-            lblThursdayDate.setText(
-                    String.valueOf(mondayOfWeek.plusDays(3).getDayOfMonth())
-            );
-
-            lblFridayDate.setText(
-                    String.valueOf(mondayOfWeek.plusDays(4).getDayOfMonth())
-            );
+        DateTimeFormatter formatter =
+                 DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a");
 
 
-            for (CheckinSystem v : visits) {
-                
-                LocalDate visitDate;
+        lblMondayDate.setText(
+                String.valueOf(mondayOfWeek.getDayOfMonth())
+        );
 
-                try {
-                    visitDate = LocalDateTime
-                            .parse(v.getCheckInTime(), formatter)
-                            .toLocalDate();
+        lblTuesdayDate.setText(
+                String.valueOf(mondayOfWeek.plusDays(1).getDayOfMonth())
+        );
 
-                } catch (DateTimeParseException ex) {
+        lblWednesdayDate.setText(
+                String.valueOf(mondayOfWeek.plusDays(2).getDayOfMonth())
+        );
 
-                    continue;
-                }
+        lblThursdayDate.setText(
+                String.valueOf(mondayOfWeek.plusDays(3).getDayOfMonth())
+        );
 
-                if (!visitDate.isBefore(mondayOfWeek)
-                        && !visitDate.isAfter(fridayOfWeek)) {
-
-                    weeklyCheckins++;
-
-                    switch (visitDate.getDayOfWeek()) {
-
-                        case MONDAY:
-                            monday++;
-                            break;
-
-                        case TUESDAY:
-                            tuesday++;
-                            break;
-
-                        case WEDNESDAY:
-                            wednesday++;
-                            break;
-
-                        case THURSDAY:
-                            thursday++;
-                            break;
-
-                        case FRIDAY:
-                            friday++;
-                            break;
-
-                        default:
-                            break;
-                    }
-                }
+        lblFridayDate.setText(
+                String.valueOf(mondayOfWeek.plusDays(4).getDayOfMonth())
+        );
 
 
-                if ("In Clinic".equalsIgnoreCase(v.getStatus())) {
-                    inClinic++;
-                }
+        for (CheckinSystem v : visits) {
 
-                if ("Sent Home".equalsIgnoreCase(v.getStatus())) {
-                    sentHome++;
-                }
+            LocalDate visitDate;
 
+            try {
+                visitDate = LocalDateTime
+                        .parse(v.getCheckInTime(), formatter)
+                        .toLocalDate();
 
-                if (v.getReason() != null && !v.getReason().isBlank()) {
-                    reasonCount.put(
-                            v.getReason(),
-                            reasonCount.getOrDefault(v.getReason(), 0) + 1
-                    );
-                }
+            } catch (DateTimeParseException ex) {
 
+                continue;
+            }
 
-                if (v.getMedUsed() != null && !v.getMedUsed().isBlank()) {
-                    medicineCount.put(
-                            v.getMedUsed(),
-                            medicineCount.getOrDefault(v.getMedUsed(), 0) + 1
-                    );
+            if (!visitDate.isBefore(mondayOfWeek)
+                    && !visitDate.isAfter(fridayOfWeek)) {
+
+                weeklyCheckins++;
+
+                switch (visitDate.getDayOfWeek()) {
+
+                    case MONDAY:
+                        monday++;
+                        break;
+
+                    case TUESDAY:
+                        tuesday++;
+                        break;
+
+                    case WEDNESDAY:
+                        wednesday++;
+                        break;
+
+                    case THURSDAY:
+                        thursday++;
+                        break;
+
+                    case FRIDAY:
+                        friday++;
+                        break;
+
+                    default:
+                        break;
                 }
             }
 
-            lblWeeklyCheckInsValue.setText(
-                    String.valueOf(weeklyCheckins)
-            );
 
-            lblInClinicValue.setText(
-                    String.valueOf(inClinic)
-            );
+            if ("In Clinic".equalsIgnoreCase(v.getStatus())) {
+                inClinic++;
+            }
 
-            lblSentHomeValue.setText(
-                    String.valueOf(sentHome)
-            );
+            if ("Sent Home".equalsIgnoreCase(v.getStatus())) {
+                sentHome++;
+            }
 
-            lblMondayCount.setText(
-                    String.valueOf(monday)
-            );
 
-            lblTuesdayCount.setText(
-                    String.valueOf(tuesday)
-            );
+            if (v.getReason() != null && !v.getReason().isBlank()) {
+                reasonCount.put(
+                        v.getReason(),
+                        reasonCount.getOrDefault(v.getReason(), 0) + 1
+                );
+            }
 
-            lblWednesdayCount.setText(
-                    String.valueOf(wednesday)
-            );
 
-            lblThursdayCount.setText(
-                    String.valueOf(thursday)
-            );
-
-            lblFridayCount.setText(
-                    String.valueOf(friday)
-            );
-
-            DateTimeFormatter displayFormatter =
-                    DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-            lblReportingPeriod.setText(
-                    "Reporting period: "
-                    + mondayOfWeek.format(displayFormatter)
-                    + " to "
-                    + fridayOfWeek.format(displayFormatter)
-            );
-
-        } catch (Exception ex) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Error loading statistics: " + ex.getMessage(),
-                    "Statistics Error",
-                    JOptionPane.ERROR_MESSAGE
-            );
+            if (v.getMedUsed() != null && !v.getMedUsed().isBlank()) {
+                medicineCount.put(
+                        v.getMedUsed(),
+                        medicineCount.getOrDefault(v.getMedUsed(), 0) + 1
+                );
+            }
         }
-    }
 
-    /**
-     * This method is called from within the constructor to initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is always
-     * regenerated by the Form Editor.
-     */
+        lblWeeklyCheckInsValue.setText(
+                String.valueOf(weeklyCheckins)
+        );
+
+        lblInClinicValue.setText(
+                String.valueOf(inClinic)
+        );
+
+        lblSentHomeValue.setText(
+                String.valueOf(sentHome)
+        );
+
+        lblMondayCount.setText(
+                String.valueOf(monday)
+        );
+
+        lblTuesdayCount.setText(
+                String.valueOf(tuesday)
+        );
+
+        lblWednesdayCount.setText(
+                String.valueOf(wednesday)
+        );
+
+        lblThursdayCount.setText(
+                String.valueOf(thursday)
+        );
+
+        lblFridayCount.setText(
+                String.valueOf(friday)
+        );
+
+        DateTimeFormatter displayFormatter =
+                DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        lblReportingPeriod.setText(
+                "Reporting period: "
+                + mondayOfWeek.format(displayFormatter)
+                + " to "
+                + fridayOfWeek.format(displayFormatter)
+        );
+    }
+        /**
+         * This method is called from within the constructor to initialize the form.
+         * WARNING: Do NOT modify this code. The content of this method is always
+         * regenerated by the Form Editor.
+         */
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
