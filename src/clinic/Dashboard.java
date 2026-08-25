@@ -588,24 +588,27 @@ public class GlassOverlayPanel extends javax.swing.JPanel {
         super.paintComponent(g);
     }
 }
-/** Filters the Check-in Logs table by whatever is in SearchField. */
-private void applySearchFilter() {
+/** Filters the Check-in Logs table by whatever is in SearchField. Returns the number of matching rows.
+ *  Only Name, LRN, and Reason are searchable - by design, not by omission. */
+private int applySearchFilter() {
     String query = SearchField.getText().trim().toLowerCase();
     DefaultTableModel model = (DefaultTableModel) ReasonTable.getModel();
     model.setRowCount(0);
+    int matchCount = 0;
     for (CheckinSystem v : currentVisits) {
         if (query.isEmpty()
                 || v.getName().toLowerCase().contains(query)
                 || v.getLrn().toLowerCase().contains(query)
-                || v.getGradeSection().toLowerCase().contains(query)
                 || v.getReason().toLowerCase().contains(query)) {
             model.addRow(new Object[]{
                 v.getStatus(), v.getName(), v.getGradeSection(), v.getLrn(),
                 v.getMedicineDisplay(), v.getReason(),
                 v.getGuardianName(), v.getGuardianPhoneNums()
             });
+            matchCount++;
         }
     }
+    return matchCount;
 }
  
    //ComboBox problem 
@@ -2043,11 +2046,18 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
 
     private void ClearBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ClearBTNActionPerformed
        clearCheckInForm();
-        showToast(CheckInPanel, "Form cleared.", true);
+       showToast(CheckInPanel, "Form cleared.", true);
     }//GEN-LAST:event_ClearBTNActionPerformed
 
     private void SearchBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SearchBTNActionPerformed
-       applySearchFilter();
+        String query = SearchField.getText().trim();
+        int matches = applySearchFilter();
+
+        if (!query.isEmpty() && matches == 0) {
+            JOptionPane.showMessageDialog(this,
+                    "No student found matching \"" + query + "\".",
+                    "No Results", JOptionPane.INFORMATION_MESSAGE);
+        }
     }//GEN-LAST:event_SearchBTNActionPerformed
    
     private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {                                         
