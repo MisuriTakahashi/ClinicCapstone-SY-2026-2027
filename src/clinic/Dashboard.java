@@ -6,6 +6,8 @@ package clinic;
 
 
 import java.awt.Component;
+import java.awt.Graphics2D;
+import java.io.File;
 import net.miginfocom.swing.MigLayout;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -1435,27 +1437,45 @@ NOT modify this code. The content of this method is always
     private void EditBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditBTNActionPerformed
             
         String newName = NameCheckIn.getText().trim();
-String newGradeSection = GSCheckIn.getText().trim();
-String newReason = ReasonArea.getText().trim();
-Object selectedMed = jComboBox1.getSelectedItem();
+        String newGradeSection = GSCheckIn.getText().trim();
+        String newReason = ReasonArea.getText().trim();
+        Object selectedMed = jComboBox1.getSelectedItem();
 
-if (newName.isEmpty() || newGradeSection.isEmpty()) {
-    JOptionPane.showMessageDialog(
-            this,
-            "Name and Grade/Section cannot be empty."
-    );
-    return;
-}
+        if (newName.isEmpty() || newGradeSection.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Name and Grade/Section cannot be empty."
+            );
+            return;
+        }
 
-if (selectedMed == null) {
-    JOptionPane.showMessageDialog(
-            this,
-            "Your inventory of medicine might be empty, please check first."
-    );
-    return;
-}
+       String newMedUsed;
 
-String newMedUsed = selectedMed.toString();
+    if (selectedMed == null) {
+        // Combo box has nothing to pick from (inventory is empty) — ask the nurse
+        // whether they still want to proceed, keeping the record's existing medicine.
+        int forceEdit = JOptionPane.showConfirmDialog(
+                this,
+                "The medicine inventory has no medicine available, please check first.\n"
+                + "Would you still like to continue editing without changing the medicine?",
+                "Inventory Empty",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+        );
+
+        if (forceEdit != JOptionPane.YES_OPTION) {
+            return; // nurse chose to go check inventory first
+        }
+
+        newMedUsed = selectedOldMedUsed; // keep whatever medicine this record already had
+    } else {
+        newMedUsed = selectedMed.toString();
+    }
+
+
+     
+
+
 boolean medicineChanged = !newMedUsed.equalsIgnoreCase(selectedOldMedUsed);
 
 // Confirm with the nurse first if they actually picked a different medicine
@@ -1576,11 +1596,12 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
 
         try {
             // Reconcile medicine stock: return the old medicine, deduct the new one
+          String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
             if (!selectedOldMedUsed.equalsIgnoreCase("None") && selectedOldMedsQty > 0) {
-                productService.restockMedicine(selectedOldMedUsed, selectedOldMedsQty);
+                productService.restockMedicine(selectedOldMedUsed, selectedOldMedsQty, actor);
             }
             if (!newMedUsed.equalsIgnoreCase("None") && newMedsQty > 0) {
-                boolean deducted = productService.useMedicine(newMedUsed, newName, newMedsQty);
+                boolean deducted = productService.useMedicine(newMedUsed, newName, newMedsQty, actor);
                 if (!deducted) {
                     showToast(CheckInPanel, "Warning: " + newMedUsed + " is out of stock. Stock was not deducted.", false);
                 }
@@ -1935,6 +1956,7 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
     private void ReasonTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_ReasonTableMouseClicked
        
         int row = ReasonTable.getSelectedRow();
+      
         if (row == -1) return;
 
         CheckinSystem selected = currentVisits.get(row);
@@ -2009,7 +2031,8 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
              visitService.checkIn(name, gradeSection, lrn, reason, medUsed, pendingmedsQty, guardianName, guardianPhone);
 
              if (!medUsed.equals("None")) {
-                 boolean deducted = productService.useMedicine(medUsed, name , pendingmedsQty);
+            String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
+            boolean deducted = productService.useMedicine(medUsed, name , pendingmedsQty, actor);
                  if (!deducted) {
                      showToast(CheckInPanel, "Warning: " + medUsed + " is out of stock. Stock was not deducted.", false);
                  }
@@ -2062,83 +2085,269 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
    
     private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {                                         
             
+
             int row = ReasonTable.getSelectedRow();
-            
-            if(row == -1){
+
+            if (row == -1) {
                 JOptionPane.showMessageDialog(this, "Select a Student in the Table First...");
-                
                 return;
-              
             }
-            
+
+            if (ReasonTable.getSelectedRowCount() > 1) {
+                JOptionPane.showMessageDialog(this,
+                        "Please select only one student at a time to send home.",
+                        "Multiple Students Selected", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
             String lrn = (String) ReasonTable.getValueAt(row, 3);
-            
-            try{
-                
+
+            try {
                 CheckinSystem record = visitService.findActiveVisit(lrn);
-                
-                if(record == null){
+
+                if (record == null) {
                     JOptionPane.showMessageDialog(this, "This Student has Already been sent");
                     return;
                 }
-                
-                boolean success =  visitService.markSentHome(lrn);
-                
-                if(success){
-                    
-                    refreshTableAndCounters();
-                    
-                    printSentHomeSlip(record);
 
-                    JOptionPane.showMessageDialog(this, "Student successfully sent home.");
-                }else{
+                boolean success = visitService.markSentHome(lrn);
+
+                if (!success) {
                     JOptionPane.showMessageDialog(this, "Error... Unable to update the Student's Status");
+                    return;
                 }
-                
-            }catch(Exception ex){
-                 JOptionPane.showMessageDialog(this, "Error updating status: " + ex.getMessage());
-            } 
-            
+
+                refreshTableAndCounters();
+
+                String safeName = record.getName().replaceAll("[^a-zA-Z0-9]", "_");
+                String defaultFileName = "SentHome_" + safeName + "_" + java.time.LocalDate.now() + ".pdf";
+
+                javax.swing.JFileChooser fileChooser = new javax.swing.JFileChooser();
+                fileChooser.setDialogTitle("Save Sent Home Slip");
+                fileChooser.setSelectedFile(new java.io.File(defaultFileName));
+                fileChooser.setFileFilter(
+                        new javax.swing.filechooser.FileNameExtensionFilter("PDF Files (*.pdf)", "pdf"));
+
+                int userChoice = fileChooser.showSaveDialog(this);
+                if (userChoice != javax.swing.JFileChooser.APPROVE_OPTION) {
+                    // Status is already updated to Sent Home - the user just chose not to save a slip right now.
+                    return;
+                }
+
+                java.io.File pdfFile = fileChooser.getSelectedFile();
+                if (!pdfFile.getName().toLowerCase().endsWith(".pdf")) {
+                    pdfFile = new java.io.File(pdfFile.getParentFile(), pdfFile.getName() + ".pdf");
+                }
+
+                generateSentHomePdf(record, pdfFile);
+
+                int openChoice = JOptionPane.showConfirmDialog(this,
+                        "Sent Home slip generated successfully. Would you like to open it?",
+                        "Slip Generated", JOptionPane.YES_NO_OPTION);
+
+                if (openChoice == JOptionPane.YES_OPTION) {
+                    try {
+                        if (java.awt.Desktop.isDesktopSupported()) {
+                            java.awt.Desktop.getDesktop().open(pdfFile);
+                        } else {
+                            JOptionPane.showMessageDialog(this, "Saved to: " + pdfFile.getAbsolutePath());
+                        }
+                    } catch (java.io.IOException ex) {
+                        JOptionPane.showMessageDialog(this,
+                                "Could not open the PDF automatically. Saved to:\n" + pdfFile.getAbsolutePath());
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(this, "Saved to: " + pdfFile.getAbsolutePath());
+                }
+
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error updating status: " + ex.getMessage());
+            }
     }  
         //print layout
         private void printSentHomeSlip(CheckinSystem record) {
 
-         String sentHomeTime = java.time.LocalDateTime.now().format(
-                 java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a"));
+            String staffName = (loggedInAccount != null) ? loggedInAccount.GetName() : "N/A";
+            String sentHomeTime = java.time.LocalDateTime.now().format(
+            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a"));
 
-         StringBuilder sb = new StringBuilder();
+            java.util.List<String[]> fields = new java.util.ArrayList<>();
+            fields.add(new String[]{"Name", record.getName()});
+            fields.add(new String[]{"Grade/Section", record.getGradeSection()});
+            fields.add(new String[]{"LRN", record.getLrn()});
+            fields.add(new String[]{"Reason for Visit", record.getReason()});
+            fields.add(new String[]{"Medicine Used", record.getMedicineDisplay()});
+            fields.add(new String[]{"Checked In", record.getCheckInTime()});
+            fields.add(new String[]{"Sent Home", sentHomeTime});
+            fields.add(new String[]{"Parent/Guardian", dashOrValue(record.getGuardianName())});
+            fields.add(new String[]{"Guardian Phone", dashOrValue(record.getGuardianPhoneNums())});
+            fields.add(new String[]{"Clinic Staff", staffName});
 
-         sb.append("            CLINIC — STUDENT SENT HOME SLIP\n              ");
-         sb.append("========================================================\n\n");
+            java.awt.print.Printable printable = (graphics, pageFormat, pageIndex) -> {
+                if (pageIndex > 0) return java.awt.print.Printable.NO_SUCH_PAGE;
 
-         sb.append(String.format("%-18s: %s%n", "Name", record.getName()));
-         sb.append(String.format("%-18s: %s%n", "Grade/Section", record.getGradeSection()));
-         sb.append(String.format("%-18s: %s%n", "LRN", record.getLrn()));
-         sb.append(String.format("%-18s: %s%n", "Reason for Visit", record.getReason()));
-         sb.append(String.format("%-18s: %s%n", "Medicine Used", record.getMedUsed()));
-         sb.append("\n--------------------------------------------------------\n\n");
+                Graphics2D g2 = (Graphics2D) graphics;
+                g2.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
 
-         sb.append(String.format("%-18s: %s%n", "Checked In", record.getCheckInTime()));
-         sb.append(String.format("%-18s: %s%n", "Sent Home", sentHomeTime));
+                int y = 20;
+                g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.BOLD, 16));
+                g2.drawString("[School name] CLINIC", 10, y);
+                y += 20;
+                g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.BOLD, 13));
+                g2.drawString("STUDENT SENT HOME SLIP", 10, y);
+                y += 8;
+                g2.drawLine(10, y, (int) pageFormat.getImageableWidth() - 10, y);
+                y += 25;
 
-         sb.append("\n--------------------------------------------------------\n\n");
+                g2.setFont(new java.awt.Font("Monospaced", java.awt.Font.PLAIN, 12));
+                for (String[] field : fields) {
+                    g2.drawString(String.format("%-16s: %s", field[0], field[1]), 10, y);
+                    y += 20;
+                }
 
-         sb.append("Released to (Parent/Guardian):  ____________________________\n\n");
-         sb.append("Guardian Signature:             ____________________________\n\n");
-         sb.append("Nurse/Staff Signature:          ____________________________\n\n");
+                y += 25;
+                g2.drawString("Released to (Parent/Guardian): ____________________________", 10, y);
+                y += 40;
+                g2.drawString("Guardian Signature:             ____________________________", 10, y);
+                y += 40;
+                g2.drawString("Nurse/Staff Signature:          ____________________________", 10, y);
+                y += 30;
 
-         sb.append("\n========================================================\n");
-         sb.append("        Please keep this slip for your records.\n");
+                g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.ITALIC, 10));
+                g2.drawString("Please keep this slip for your records.", 10, y);
 
-         JTextArea slip = new JTextArea(sb.toString());
-         slip.setFont(new java.awt.Font("Consolas", java.awt.Font.PLAIN, 12)); // monospace = clean alignment
-         slip.setLineWrap(false);
+                return java.awt.print.Printable.PAGE_EXISTS;
+            };
 
-         try {
-             slip.print();
-         } catch (java.awt.print.PrinterException ex) {
-             JOptionPane.showMessageDialog(this, "Printing failed: " + ex.getMessage());
-         }
+            java.awt.print.PrinterJob job = java.awt.print.PrinterJob.getPrinterJob();
+            job.setPrintable(printable);
+            job.setJobName("SentHomeSlip_" + record.getLrn());
+
+            if (job.printDialog()) {
+                try {
+                    job.print();
+                } catch (java.awt.print.PrinterException ex) {
+                    JOptionPane.showMessageDialog(this, "Printing failed: " + ex.getMessage());
+                }
+            }
+}
+        
+    private void generateSentHomePdf(CheckinSystem record, File destination) throws IOException {
+    String staffName = (loggedInAccount != null) ? loggedInAccount.GetName() : "N/A";
+    String sentHomeTime = java.time.LocalDateTime.now().format(
+            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a"));
+
+    try (org.apache.pdfbox.pdmodel.PDDocument document = new org.apache.pdfbox.pdmodel.PDDocument()) {
+        org.apache.pdfbox.pdmodel.PDPage page =
+                new org.apache.pdfbox.pdmodel.PDPage(org.apache.pdfbox.pdmodel.common.PDRectangle.LETTER);
+        document.addPage(page);
+
+        // Embedded fonts loaded per-document (PDFont instances are tied to one PDDocument)
+        org.apache.pdfbox.pdmodel.font.PDFont fontRegular = loadSlipFont(document, "/Assets/fonts/ClinicSans-Regular.ttf");
+        org.apache.pdfbox.pdmodel.font.PDFont fontBold = loadSlipFont(document, "/Assets/fonts/ClinicSans-Bold.ttf");
+        org.apache.pdfbox.pdmodel.font.PDFont fontItalic = loadSlipFont(document, "/Assets/fonts/ClinicSans-Italic.ttf");
+
+        try (org.apache.pdfbox.pdmodel.PDPageContentStream content =
+                     new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
+
+            float margin = 50;
+            float y = page.getMediaBox().getHeight() - margin;
+            float leading = 20;
+
+            content.setFont(fontBold, 16);
+            content.beginText();
+            content.newLineAtOffset(margin, y);
+            content.showText("[Your School Name] CLINIC");
+            content.endText();
+            y -= 20;
+
+            content.setFont(fontBold, 13);
+            content.beginText();
+            content.newLineAtOffset(margin, y);
+            content.showText("SENT HOME RECORD");
+            content.endText();
+            y -= 10;
+
+            content.moveTo(margin, y);
+            content.lineTo(page.getMediaBox().getWidth() - margin, y);
+            content.stroke();
+            y -= 25;
+
+            String[][] fields = {
+                {"Name", record.getName()},
+                {"Grade/Section", record.getGradeSection()},
+                {"LRN", record.getLrn()},
+                {"Reason for Visit", record.getReason()},
+                {"Medicine Used", record.getMedicineDisplay()},
+                {"Checked In", record.getCheckInTime()},
+                {"Sent Home", sentHomeTime},
+                {"Parent/Guardian", dashOrValue(record.getGuardianName())},
+                {"Guardian Phone", dashOrValue(record.getGuardianPhoneNums())},
+                {"Clinic Staff", staffName}
+            };
+
+            content.setFont(fontRegular, 12);
+            for (String[] field : fields) {
+                content.beginText();
+                content.newLineAtOffset(margin, y);
+                content.showText(String.format("%-16s: %s", field[0], safeText(field[1])));
+                content.endText();
+                y -= leading;
+            }
+
+            y -= 25;
+            content.beginText();
+            content.newLineAtOffset(margin, y);
+            content.showText("Released to (Parent/Guardian): ____________________________");
+            content.endText();
+            y -= 45;
+
+            content.beginText();
+            content.newLineAtOffset(margin, y);
+            content.showText("Guardian Signature:             ____________________________");
+            content.endText();
+            y -= 45;
+
+            content.beginText();
+            content.newLineAtOffset(margin, y);
+            content.showText("Nurse/Staff Signature:          ____________________________");
+            content.endText();
+            y -= 30;
+
+            content.setFont(fontItalic, 10);
+            content.beginText();
+            content.newLineAtOffset(margin, y);
+            content.showText("Please keep this slip for your records.");
+            content.endText();
+        }
+
+        document.save(destination);
+    }
+}
+
+    private org.apache.pdfbox.pdmodel.font.PDFont slipFontRegular;
+    private org.apache.pdfbox.pdmodel.font.PDFont slipFontBold;
+    private org.apache.pdfbox.pdmodel.font.PDFont slipFontItalic;
+
+    private org.apache.pdfbox.pdmodel.font.PDFont loadSlipFont(
+            org.apache.pdfbox.pdmodel.PDDocument document, String resourcePath) throws IOException {
+        try (java.io.InputStream is = Dashboard.class.getResourceAsStream(resourcePath)) {
+            if (is == null) {
+                throw new IOException("Missing bundled font resource: " + resourcePath);
+            }
+            return org.apache.pdfbox.pdmodel.font.PDType0Font.load(document, is);
+        }
+    }
+    
+// PDFBox's built-in Helvetica font can't render every Unicode character.
+// This keeps generation from crashing on unusual characters typed into Reason/Name fields.
+private String safeText(String value) {
+    if (value == null) return "-";
+    return value.replaceAll("[^\\x20-\\x7E]", "?");
+}
+
+    private String dashOrValue(String value) {
+    return (value == null || value.isBlank()) ? "—" : value;
      }
         
     private void showTopAlertBanner(String message) {

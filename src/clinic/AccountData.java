@@ -38,16 +38,16 @@ public class AccountData {
            return accounts;
        }
 
-       public boolean nameExists(String name) throws SQLException {
-           String sql = "SELECT 1 FROM ACCOUNTS WHERE name = ?";
-           try (Connection conn = DatabaseManager.getConnection();
-                PreparedStatement ps = conn.prepareStatement(sql)) {
-               ps.setString(1, name);
-               try (ResultSet rs = ps.executeQuery()) {
-                   return rs.next();
-               }
-           }
-       }
+      public boolean nameExists(String name) throws SQLException {
+        String sql = "SELECT 1 FROM ACCOUNTS WHERE UPPER(name) = UPPER(?)";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
 
        public void createAccount(String name, String password, String role) throws SQLException {
            String sql = "INSERT INTO ACCOUNTS(name, password, role) VALUES(?, ?, ?)";

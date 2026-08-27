@@ -54,7 +54,7 @@ public class MedicineData {
         return medicine;
     }
 
-    public void addItem(String name, String expDate, int quantity) throws SQLException, IOException {
+     public void addItem(String name, String expDate, int quantity, String performedBy) throws SQLException, IOException {
         String sql = "INSERT INTO MEDICINES(name, exp_date, quantity) VALUES(?, ?, ?)";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -63,19 +63,20 @@ public class MedicineData {
             ps.setInt(3, quantity);
             ps.executeUpdate();
         }
-        logActivity("Added " + quantity + "x " + name);
+        logActivity("Added " + quantity + "x " + name, performedBy);
     }
 
-    private void logActivity(String message) throws IOException {
+   private void logActivity(String message, String performedBy) throws IOException {
         String timestamp = LocalDateTime.now().format(TIME_FORMAT);
+        String actor = (performedBy == null || performedBy.isBlank()) ? "Unknown" : performedBy;
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(activityLogFile, true))) {
-            bw.write("[" + timestamp + "] " + message);
+            bw.write("[" + timestamp + "] " + message + " | By: " + actor);
             bw.newLine();
         }
     }
 
-    public boolean editItem(String currentName, String newName, String newExpDate, int newQuantity)
-            throws SQLException, IOException {
+    public boolean editItem(String currentName, String newName, String newExpDate, int newQuantity, String performedBy)
+        throws SQLException, IOException {
 
         String sql = "UPDATE MEDICINES SET name = ?, exp_date = ?, quantity = ? WHERE name = ?";
         int rows;
@@ -88,23 +89,23 @@ public class MedicineData {
             rows = ps.executeUpdate();
         }
         if (rows == 0) return false;
-        logActivity("Edited " + currentName + " -> " + newName + " (" + newQuantity + "x)");
+        logActivity("Edited " + currentName + " -> " + newName + " (" + newQuantity + "x)", performedBy);
         return true;
     }
 
-    public boolean deleteItem(String name) throws SQLException, IOException {
-        String sql = "DELETE FROM MEDICINES WHERE name = ?";
-        int rows;
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, name);
-            rows = ps.executeUpdate();
-        }
-        if (rows == 0) return false;
-        logActivity("Deleted " + name);
-        return true;
-    }
-
+        public boolean deleteItem(String name, String performedBy) throws SQLException, IOException {
+          String sql = "DELETE FROM MEDICINES WHERE name = ?";
+          int rows;
+          try (Connection conn = DatabaseManager.getConnection();
+               PreparedStatement ps = conn.prepareStatement(sql)) {
+              ps.setString(1, name);
+              rows = ps.executeUpdate();
+          }
+          if (rows == 0) return false;
+          logActivity("Deleted " + name, performedBy);
+          return true;
+      }
+        
     public ArrayList<String> loadActivityLog() throws IOException {
         ArrayList<String> lines = new ArrayList<>();
         if (!activityLogFile.exists()) return lines;
@@ -118,42 +119,42 @@ public class MedicineData {
         return lines;
     }
 
-    public boolean useMedicine(String productName, String studentName, int quantity)
-            throws SQLException, IOException {
+    public boolean useMedicine(String productName, String studentName, int quantity, String performedBy)
+         throws SQLException, IOException {
 
-        String sql = "UPDATE MEDICINES SET quantity = quantity - ? WHERE name = ? AND quantity >= ?";
+     String sql = "UPDATE MEDICINES SET quantity = quantity - ? WHERE name = ? AND quantity >= ?";
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, quantity);
-            ps.setString(2, productName);
-            ps.setInt(3, quantity);
-            int rows = ps.executeUpdate();
-            if (rows == 0) return false; // medicine doesn't exist, or not enough stock
-        }
+     try (Connection conn = DatabaseManager.getConnection();
+          PreparedStatement ps = conn.prepareStatement(sql)) {
+         ps.setInt(1, quantity);
+         ps.setString(2, productName);
+         ps.setInt(3, quantity);
+         int rows = ps.executeUpdate();
+         if (rows == 0) return false;
+     }
 
-        logActivity("Student " + studentName + " Used " + quantity + "x " + productName);
-        return true;
-    }
+     logActivity("Student " + studentName + " Used " + quantity + "x " + productName, performedBy);
+     return true;
+ }
     
-    public boolean restockMedicine(String productName, int quantity) throws SQLException, IOException {
-        if (productName == null || productName.equalsIgnoreCase("None") || quantity <= 0) {
-            return false;
-        }
-
-        String sql = "UPDATE MEDICINES SET quantity = quantity + ? WHERE name = ?";
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, quantity);
-            ps.setString(2, productName);
-            int rows = ps.executeUpdate();
-            if (rows > 0) {
-                logActivity("Returned " + quantity + "x " + productName + " (visit edited)");
-                return true;
-            }
-            return false;
-        }
+   public boolean restockMedicine(String productName, int quantity, String performedBy) throws SQLException, IOException {
+    if (productName == null || productName.equalsIgnoreCase("None") || quantity <= 0) {
+        return false;
     }
+
+    String sql = "UPDATE MEDICINES SET quantity = quantity + ? WHERE name = ?";
+    try (Connection conn = DatabaseManager.getConnection();
+         PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setInt(1, quantity);
+        ps.setString(2, productName);
+        int rows = ps.executeUpdate();
+        if (rows > 0) {
+            logActivity("Returned " + quantity + "x " + productName + " (visit edited)", performedBy);
+            return true;
+        }
+        return false;
+    }
+  }
 
     public boolean nameExists(String name) throws SQLException {
         String sql = "SELECT 1 FROM MEDICINES WHERE name = ?";

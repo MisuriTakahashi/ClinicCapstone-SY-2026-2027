@@ -1586,7 +1586,9 @@ FrequentlyUsedLabel.setText(topMedicine);
         }
 
         try {
-            productService.addItem(name, expDate, quantity);
+            String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
+            productService.addItem(name, expDate, quantity, actor);
+            
             refreshInventoryScreen();
             ClearBtnActionPerformed(null);
             showToastNotification("✓ Added " + name + " (" + quantity + " units) to inventory!", name, quantity, Color.decode("#10B981"));
@@ -1662,7 +1664,8 @@ FrequentlyUsedLabel.setText(topMedicine);
            for (int row : selectedRows) {
                int modelRow = stockTable.convertRowIndexToModel(row);
                String name = currentProducts.get(modelRow).getname();
-               productService.deleteItem(name);
+                String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
+                productService.deleteItem(name, actor);
              }
 
               refreshInventoryScreen();
@@ -1674,42 +1677,49 @@ FrequentlyUsedLabel.setText(topMedicine);
     }//GEN-LAST:event_DeleteBTNActionPerformed
 
     private void EditBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditBtnActionPerformed
-                if (selectedProductName == null) {
-            JOptionPane.showMessageDialog(this, "Select a product from the table first.");
-            return;
-        }
-
-        String newName = ProductName.getText().trim();
-        String quantityText = Qty.getText().trim();
-        String newExpDate;
-        
-        try {
-            newExpDate = normalizeDate(ExpDate.getText().trim());
-        } catch (DateTimeParseException ex) {
-            JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2028-1-9 or 2028-01-09).");
-            return;
-        }
-        
-        int newQuantity;
-        try {
-            newQuantity = Integer.parseInt(quantityText);
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Quantity must be a whole number.");
-            return;
-        }
-
-        try {
-            boolean success = productService.editItem(selectedProductName, newName, newExpDate, newQuantity);
-            if (!success) {
-                JOptionPane.showMessageDialog(this, "Product not found.");
-            } else {
-                refreshInventoryScreen();
-                ClearBtnActionPerformed(null);
-                showToastNotification("✎ Updated " + newName + " stock details successfully!", newName, newQuantity, Color.decode("#2563EB"));
+              if (selectedProductName == null) {
+                JOptionPane.showMessageDialog(this, "Select a product from the table first.");
+                return;
             }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error editing item: " + ex.getMessage());
-        }
+
+            String newName = ProductName.getText().trim();
+            String quantityText = Qty.getText().trim();
+            String newExpDate;
+
+            try {
+                newExpDate = normalizeDate(ExpDate.getText().trim());
+            } catch (DateTimeParseException ex) {
+                JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2028-1-9 or 2028-01-09).");
+                return;
+            }
+
+            int newQuantity;
+            try {
+                newQuantity = Integer.parseInt(quantityText);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Quantity must be a whole number.");
+                return;
+            }
+
+            // 0 is a perfectly valid quantity (out of stock) - only negative values are rejected.
+            if (newQuantity < 0) {
+                JOptionPane.showMessageDialog(this, "Quantity cannot be negative.");
+                return;
+            }
+
+            try {
+                String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
+                boolean success = productService.editItem(selectedProductName, newName, newExpDate, newQuantity, actor);
+                if (!success) {
+                    JOptionPane.showMessageDialog(this, "Product not found.");
+                } else {
+                    refreshInventoryScreen();
+                    ClearBtnActionPerformed(null);
+                    showToastNotification("✎ Updated " + newName + " stock details successfully!", newName, newQuantity, Color.decode("#2563EB"));
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error editing item: " + ex.getMessage());
+            }
     }//GEN-LAST:event_EditBtnActionPerformed
 
     private void QtyActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_QtyActionPerformed
