@@ -38,6 +38,7 @@ import javax.swing.text.AbstractDocument;
  */
 public class AdminPanel extends javax.swing.JFrame {
     
+    
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(AdminPanel.class.getName());
     private final MedicineData  productService = new MedicineData ("inventory_activity.log");
     private ArrayList<Medicine> currentProducts = new ArrayList<>();
@@ -46,9 +47,10 @@ public class AdminPanel extends javax.swing.JFrame {
 
     // Runtime-only responsive containers. NetBeans Designer remains the source of the
     // actual components and initComponents() is intentionally left generated.
-    private final JPanel responsiveContent = new JPanel(new CardLayout());
+    private final FadePanel responsiveContent = new FadePanel(new CardLayout());
     private JPanel inventoryView;
     private CardLayout contentCards;
+    
 
     /**
      * Creates the administrator inventory panel.
@@ -56,6 +58,7 @@ public class AdminPanel extends javax.swing.JFrame {
    public AdminPanel(AccountSystem account) {
     if (account == null || !account.canAccessAdminPanel()) {
         throw new SecurityException("Access denied. Administrator role required.");
+        
     }
 
     com.formdev.flatlaf.FlatLightLaf.setup();
@@ -89,7 +92,58 @@ public class AdminPanel extends javax.swing.JFrame {
     loadStatistics();
     refreshAccountTable();
 }
+   // Custom panel that supports alpha transparency for fade animations
+private class FadePanel extends JPanel {
+    private float alpha = 1.0f;
 
+    public FadePanel(java.awt.LayoutManager layout) {
+        super(layout);
+        setOpaque(false); 
+    }
+
+    public void setAlpha(float alpha) {
+        this.alpha = alpha;
+        repaint();
+    }
+
+    @Override
+    protected void paintComponent(java.awt.Graphics g) {
+        java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
+        g2.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, alpha));
+        super.paintComponent(g2);
+        g2.dispose();
+    }
+}
+private void animateContentIn(JPanel panel) {
+    // Force Swing to initialize component bounds before animating
+    panel.revalidate();
+    panel.doLayout();
+
+    final int startX = responsiveContent.getWidth(); // Start off-screen right
+    final int targetX = 0; // Align with responsiveContent top-left
+
+    panel.setLocation(startX, 0);
+
+    javax.swing.Timer timer = new javax.swing.Timer(10, null);
+    timer.addActionListener(new java.awt.event.ActionListener() {
+        int currentX = startX;
+
+        @Override
+        public void actionPerformed(java.awt.event.ActionEvent e) {
+            if (currentX > targetX) {
+                currentX = Math.max(targetX, currentX - 50); // Frame step rate
+                panel.setLocation(currentX, 0);
+                responsiveContent.repaint();
+            } else {
+                panel.setLocation(targetX, 0);
+                responsiveContent.revalidate();
+                responsiveContent.repaint();
+                timer.stop();
+            }
+        }
+    });
+    timer.start();
+}
     /** Applies the FlatLaf treatment after NetBeans creates the form controls. */
    private void configureFlatLafUi() {
     Color page = Color.decode("#F8FAFC");
@@ -355,15 +409,17 @@ private void configureSidebarHover(JButton btn) {
         slideUp.start();
     }
 
-    private void showStatistics() {
-        loadStatistics();
-        if (contentCards != null) {
-            contentCards.show(responsiveContent, "statistics");
-        }
-        styleSidebarButton(jButton5, "Inventory", false);
-        styleSidebarButton(jButton6, "Statistics", true);
-        styleSidebarButton(AccManageBTN, "Account Management", false);
+private void showStatistics() {
+    loadStatistics();
+    if (contentCards != null) {
+        contentCards.show(responsiveContent, "statistics");
+        responsiveContent.revalidate();
+        animateContentIn(statisticsContainer);
     }
+    styleSidebarButton(jButton5, "Inventory", false);
+    styleSidebarButton(jButton6, "Statistics", true);
+    styleSidebarButton(AccManageBTN, "Account Management", false);
+}
 
     /** Applies the same FlatLaf card/typography treatment to the account panel. */
 private void configureAccountManagementUi() {
@@ -437,6 +493,8 @@ private void configureAccountManagementUi() {
 private void showAccountManagement() {
     if (contentCards != null) {
         contentCards.show(responsiveContent, "accounts");
+        responsiveContent.revalidate();
+        animateContentIn(AccountManagementPanel);
     }
     refreshAccountTable();
     styleSidebarButton(jButton5, "Inventory", false);
@@ -447,6 +505,8 @@ private void showAccountManagement() {
 private void showInventory() {
     if (contentCards != null) {
         contentCards.show(responsiveContent, "inventory");
+        responsiveContent.revalidate();
+        animateContentIn(inventoryView);
     }
     styleSidebarButton(jButton5, "Inventory", true);
     styleSidebarButton(jButton6, "Statistics", false);
@@ -460,13 +520,11 @@ private void showInventory() {
 private void installResponsiveLayout() {
     contentCards = (CardLayout) responsiveContent.getLayout();
     
-    // CRITICAL: Clear Designer-imposed sizes so MigLayout can fill the space
     statisticsContainer.setPreferredSize(null);
     statisticsContainer.setMinimumSize(null);
     AccountManagementPanel.setPreferredSize(null);
     AccountManagementPanel.setMinimumSize(null);
     
-    // Match the page background
     responsiveContent.setBackground(Color.decode("#F8FAFC"));
     
     buildInventoryView();
@@ -475,20 +533,19 @@ private void installResponsiveLayout() {
     
     jPanel1.removeAll();
     jPanel1.setLayout(new MigLayout("fill, insets 0, gap 0", 
-        "[180] [grow]",   // Col 0: Fixed 180px sidebar | Col 1: Grows to fill rest
-        "[30] [grow]"     // Row 0: Fixed 30px header | Row 1: Grows to fill rest
+        "[180!] [grow, fill]", 
+        "[30!] [grow, fill]"
     ));
     
     jPanel1.add(jPanel2, "cell 0 0 2 1, growx");
     jPanel1.add(jPanel3, "cell 0 1, growy");
-    jPanel1.add(responsiveContent, "cell 1 1, grow, push");
+    jPanel1.add(responsiveContent, "cell 1 1, grow");
     
     responsiveContent.add(inventoryView, "inventory");
     responsiveContent.add(statisticsContainer, "statistics");
     responsiveContent.add(AccountManagementPanel, "accounts");
     
     contentCards.show(responsiveContent, "inventory");
-    responsiveContent.revalidate();
     jPanel1.revalidate();
     jPanel1.repaint();
 }
@@ -538,7 +595,7 @@ private void buildStatisticsLayout() {
     jPanel7.setLayout(new MigLayout(
         "fill, insets 14, gap 10",
         "[grow] [grow] [grow] [grow] [grow]", 
-        "[pref] [160px!]" // Fixed height row to match the new card size
+        "[pref] [160px!]" 
     ));
     jPanel7.add(jLabel11, "cell 0 0 5 1, growx");
     
@@ -548,7 +605,6 @@ private void buildStatisticsLayout() {
     configureDayCard(jPanel13, lblThursdayDay, lblThursdayDate, lblThursdayCount);
     configureDayCard(jPanel14, lblFridayDay, lblFridayDate, lblFridayCount);
     
-    // INCREASED SIZE: Changed from 120px to 160px for larger squares
     jPanel7.add(jPanel8, "cell 0 1, w 160px!, h 160px!, center");
     jPanel7.add(jPanel9, "cell 1 1, w 160px!, h 160px!, center");
     jPanel7.add(jPanel12, "cell 2 1, w 160px!, h 160px!, center");
@@ -557,10 +613,11 @@ private void buildStatisticsLayout() {
     
     statisticsContainer.add(jPanel7, "cell 0 4 4 1, growx");
 }
+
 private void configureDayCard(JPanel card, JLabel day, JLabel date, JLabel count) {
     card.removeAll();
     card.setLayout(new MigLayout(
-        "fill, insets 12, gap 6", // Slightly more padding
+        "fill, insets 12, gap 6",
         "[grow]",
         "[pref] [pref] [push, grow]" 
     ));
@@ -569,8 +626,7 @@ private void configureDayCard(JPanel card, JLabel day, JLabel date, JLabel count
     date.setHorizontalAlignment(SwingConstants.CENTER);
     count.setHorizontalAlignment(SwingConstants.CENTER);
     
-    // Make the date number slightly larger to fill the new space better
-    date.setFont(new Font("Segoe UI", Font.BOLD, 24)); 
+    date.setFont(new Font("Segoe UI", Font.BOLD, 36)); 
     
     card.add(day, "growx, wrap");
     card.add(date, "growx, wrap");
@@ -580,17 +636,12 @@ private void buildAccountManagementLayout() {
     AccountManagementPanel.removeAll();
     AccountManagementPanel.setLayout(new MigLayout(
         "fill, insets 24, gap 20",
-        "[320, grow] [grow, fill]", // Left form min 320px, right table grows
-        "[grow, fill] [pref]"       // Row 0: main content grows, Row 1: button row
+        "[320, grow] [grow, fill]", 
+        "[grow, fill] [pref]"       
     ));
     
-    // Form panel on left, aligned to top
     AccountManagementPanel.add(createAccountFormPanel(), "cell 0 0, growy, aligny top");
-    
-    // Table on right, fills all available space
     AccountManagementPanel.add(jScrollPane3, "cell 1 0, grow, push");
-    
-    // Delete button below table, right-aligned
     AccountManagementPanel.add(AccDeleteBTN, "cell 1 1, east, w 140!, gaptop 16");
 }
 
@@ -611,7 +662,6 @@ private JPanel createAccountFormPanel() {
     form.add(ConfirmPasswordLabel, "growx, wrap, gaptop 8");
     form.add(ConfirmPasswordField, "growx, wrap, h 36px!");
     
-    // Buttons row with gap above
     form.add(CUserBTN, "split 2, growx, gaptop 16");
     form.add(CAdminBTN, "growx");
     
