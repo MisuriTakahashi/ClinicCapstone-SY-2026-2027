@@ -1,13 +1,5 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package clinic;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -15,33 +7,36 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 
 /**
+ * H2-backed account data/service layer.
  *
- * @author PC
+ * Authorization is enforced here, not only by the Swing UI. The actor's
+ * current role is reloaded from H2 before account-management operations are
+ * performed, so a caller cannot bypass permissions by constructing an
+ * AccountSystem object with a forged role.
  */
 public class AccountData {
 
-    // =========================
-    // LOAD ALL ACCOUNTS
-    // =========================
+    public ArrayList<AccountSystem> loadAll()
+            throws SQLException {
 
-    public ArrayList<AccountSystem> loadAll() throws SQLException {
+        ArrayList<AccountSystem> accounts =
+                new ArrayList<>();
 
-        ArrayList<AccountSystem> accounts = new ArrayList<>();
+        String sql =
+                "SELECT name, password, role, is_protected "
+                + "FROM ACCOUNTS ORDER BY name";
 
-        String sql = "SELECT name, password, role FROM ACCOUNTS";
-
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+        try (Connection conn =
+                     DatabaseManager.getConnection();
+             PreparedStatement ps =
+                     conn.prepareStatement(sql);
+             ResultSet rs =
+                     ps.executeQuery()) {
 
             while (rs.next()) {
 
                 accounts.add(
-                    new AccountSystem(
-                        rs.getString("name"),
-                        rs.getString("password"),
-                        rs.getString("role")
-                    )
+                        fromResultSet(rs)
                 );
             }
         }
@@ -49,42 +44,40 @@ public class AccountData {
         return accounts;
     }
 
-    // =========================
-    // CHECK IF NAME EXISTS
-    // =========================
+    public boolean nameExists(String name)
+            throws SQLException {
 
-    public boolean nameExists(String name) throws SQLException {
+        if (name == null
+                || name.trim().isEmpty()) {
+
+            return false;
+        }
 
         String sql =
-            "SELECT 1 FROM ACCOUNTS WHERE UPPER(name) = UPPER(?)";
+                "SELECT 1 FROM ACCOUNTS "
+                + "WHERE UPPER(name) = UPPER(?)";
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn =
+                     DatabaseManager.getConnection();
+             PreparedStatement ps =
+                     conn.prepareStatement(sql)) {
 
-            ps.setString(1, name);
+            ps.setString(1, name.trim());
 
-            try (ResultSet rs = ps.executeQuery()) {
+            try (ResultSet rs =
+                         ps.executeQuery()) {
+
                 return rs.next();
             }
         }
     }
 
-    // =========================
-    // CREATE ACCOUNT
-    // =========================
-
     /**
-     * Creates an account while checking the permissions
-     * of the currently logged-in account.
+     * Creates an account using the role hierarchy:
      *
-     * HEAD_ADMIN:
-     *      Can create ADMIN and USER.
-     *
-     * ADMIN:
-     *      Can create USER only.
-     *
-     * USER:
-     *      Cannot create accounts.
+     * HEAD_ADMIN -> ADMIN or USER
+     * ADMIN      -> USER only
+     * USER       -> nothing
      */
     public void createAccount(
             AccountSystem actor,
@@ -92,372 +85,457 @@ public class AccountData {
             String password,
             String role) throws SQLException {
 
-        if (actor == null) {
+        AccountSystem currentActor =
+                requireCurrentActor(actor);
+
+        String normalizedRole =
+                AccountSystem.normalizeRole(role);
+
+        if (normalizedRole == null
+                || AccountSystem.ROLE_HEAD_ADMIN
+                        .equals(normalizedRole)) {
+
             throw new SecurityException(
-                "You must be logged in to create an account."
+                    "Only ADMIN or USER accounts can "
+                    + "be created from account management."
             );
         }
 
-        String normalizedRole = normalizeRole(role);
+        if (AccountSystem.ROLE_ADMIN
+                .equals(normalizedRole)
+                && !currentActor.isHeadAdmin()) {
 
-        if (normalizedRole == null) {
             throw new SecurityException(
-                "Invalid account role."
+                    "Only the Head Admin can create "
+                    + "an Admin account."
             );
         }
 
-        // Nobody can create another Head Admin
-        if ("HEAD_ADMIN".equals(normalizedRole)) {
+        if (AccountSystem.ROLE_USER
+                .equals(normalizedRole)
+                && !currentActor.isAdmin()) {
+
             throw new SecurityException(
-                "A Head Admin cannot be created from account management."
+                    "You do not have permission to "
+                    + "create a User account."
             );
         }
 
-        // Only Head Admin can create Admin
-        if ("ADMIN".equals(normalizedRole)
-                && !actor.isHeadAdmin()) {
+        String cleanName =
+                validateAccountName(name);
 
-            throw new SecurityException(
-                "Only the Head Admin can create an Admin account."
+        validatePassword(password);
+
+        if (nameExists(cleanName)) {
+
+            throw new SQLException(
+                    "An account with this name already exists."
             );
         }
 
-        // Admin and Head Admin can create Users
-        if ("USER".equals(normalizedRole)
-                && !actor.isAdmin()) {
-
-            throw new SecurityException(
-                "You do not have permission to create a User account."
-            );
-        }
+        String passwordHash =
+                PasswordHasher.hashPassword(password);
 
         String sql =
-            "INSERT INTO ACCOUNTS(name, password, role) VALUES(?, ?, ?)";
+                "INSERT INTO ACCOUNTS("
+                + "name, password, role, is_protected"
+                + ") VALUES(?, ?, ?, FALSE)";
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn =
+                     DatabaseManager.getConnection()) {
 
-            ps.setString(1, name);
-            ps.setString(2, password);
-            ps.setString(3, normalizedRole);
+            conn.setAutoCommit(false);
 
-            ps.executeUpdate();
-        }
-    }
+            try (PreparedStatement ps =
+                         conn.prepareStatement(sql)) {
 
-    // =========================
-    // OLD CSV MIGRATION SUPPORT
-    // =========================
-    //
-    // LEAVE THIS FOR NOW.
-    //
-    // We are NOT removing CSV yet because this
-    // phase is ONLY the access-level upgrade.
-    //
-    // We will remove it in the next phase.
+                ps.setString(1, cleanName);
+                ps.setString(2, passwordHash);
+                ps.setString(3, normalizedRole);
 
-    private void createAccount(
-            String name,
-            String password,
-            String role) throws SQLException {
+                ps.executeUpdate();
 
-        String sql =
-            "INSERT INTO ACCOUNTS(name, password, role) VALUES(?, ?, ?)";
+                ActivityLogData.log(
+                        conn,
+                        "CREATE_ACCOUNT",
+                        "Created "
+                        + normalizedRole
+                        + " account: "
+                        + cleanName,
+                        currentActor.GetName()
+                );
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+                conn.commit();
 
-            ps.setString(1, name);
-            ps.setString(2, password);
-            ps.setString(3, normalizeRole(role));
+            } catch (SQLException | RuntimeException ex) {
 
-            ps.executeUpdate();
-        }
-    }
-
-    // =========================
-    // LOGIN
-    // =========================
-
-    public AccountSystem authenticate(
-            String name,
-            String password) throws SQLException {
-
-        String sql =
-            "SELECT name, password, role " +
-            "FROM ACCOUNTS " +
-            "WHERE name = ? AND password = ?";
-
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, name);
-            ps.setString(2, password);
-
-            try (ResultSet rs = ps.executeQuery()) {
-
-                if (rs.next()) {
-
-                    return new AccountSystem(
-                        rs.getString("name"),
-                        rs.getString("password"),
-                        rs.getString("role")
-                    );
+                try {
+                    conn.rollback();
+                } catch (SQLException ignored) {
                 }
 
-                return null;
+                throw ex;
+
+            } finally {
+                conn.setAutoCommit(true);
             }
         }
     }
 
-    // =========================
-    // DELETE ACCOUNT
-    // =========================
+    /**
+     * Authenticates by username first, then verifies the password hash.
+     * Passwords are never compared in SQL.
+     */
+    public AccountSystem authenticate(
+            String name,
+            String password) throws SQLException {
+
+        if (name == null
+                || name.trim().isEmpty()
+                || password == null) {
+
+            return null;
+        }
+
+        String sql =
+                "SELECT name, password, role, is_protected "
+                + "FROM ACCOUNTS "
+                + "WHERE UPPER(name) = UPPER(?)";
+
+        try (Connection conn =
+                     DatabaseManager.getConnection();
+             PreparedStatement ps =
+                     conn.prepareStatement(sql)) {
+
+            ps.setString(1, name.trim());
+
+            try (ResultSet rs =
+                         ps.executeQuery()) {
+
+                if (!rs.next()) {
+                    return null;
+                }
+
+                String storedHash =
+                        rs.getString("password");
+
+                if (!PasswordHasher.verifyPassword(
+                        password,
+                        storedHash)) {
+
+                    return null;
+                }
+
+                return fromResultSet(rs);
+            }
+        }
+    }
 
     /**
-     * Deletes an account according to the role hierarchy.
-     *
-     * HEAD_ADMIN:
-     *      Can delete ADMIN
-     *      Can delete USER
-     *      Cannot delete HEAD_ADMIN
-     *      Cannot delete itself
-     *
-     * ADMIN:
-     *      Can delete USER
-     *      Cannot delete ADMIN
-     *      Cannot delete HEAD_ADMIN
-     *      Cannot delete itself
-     *
-     * USER:
-     *      Cannot delete anyone
+     * Deletes an account only when the actor and target permissions are valid.
+     * Both actor and target are read again from H2 before DELETE is executed.
      */
     public boolean deleteAccount(
             AccountSystem actor,
             String targetName) throws SQLException {
 
-        if (actor == null) {
-            throw new SecurityException(
-                "You must be logged in to delete an account."
-            );
-        }
+        AccountSystem currentActor =
+                requireCurrentActor(actor);
 
         if (targetName == null
                 || targetName.trim().isEmpty()) {
 
             throw new SecurityException(
-                "Invalid account deletion request."
+                    "Invalid account deletion request."
             );
         }
 
         AccountSystem target =
-            findByName(targetName.trim());
+                findByName(targetName.trim());
 
         if (target == null) {
             return false;
         }
 
-        // =========================
-        // CANNOT DELETE YOURSELF
-        // =========================
+        if (!currentActor.canDeleteAccount(target)) {
 
-        if (actor.GetName().equalsIgnoreCase(target.GetName())) {
-
-            throw new SecurityException(
-                "You cannot delete your own account."
-            );
-        }
-
-        // =========================
-        // HEAD ADMIN PROTECTION
-        // =========================
-
-        if (target.isHeadAdmin()) {
-
-            throw new SecurityException(
-                "The Head Admin account cannot be deleted."
-            );
-        }
-
-        // =========================
-        // NORMAL USER
-        // =========================
-
-        if (!actor.isAdmin()) {
-
-            throw new SecurityException(
-                "You do not have permission to delete accounts."
-            );
-        }
-
-        // =========================
-        // ADMIN
-        // =========================
-
-        if (actor.isAdmin()
-                && !actor.isHeadAdmin()) {
-
-            if (!target.isNormalUser()) {
+            if (currentActor.GetName()
+                    .equalsIgnoreCase(
+                            target.GetName())) {
 
                 throw new SecurityException(
-                    "Admins can only delete Normal User accounts."
+                        "You cannot delete your own account."
                 );
             }
-        }
 
-        // =========================
-        // HEAD ADMIN
-        // =========================
-        //
-        // Head Admin can delete:
-        // ADMIN
-        // USER
-        //
-        // Head Admin cannot delete:
-        // HEAD_ADMIN
-        //
-        // Already protected above.
+            if (target.isHeadAdmin()
+                    || target.isProtectedAccount()) {
+
+                throw new SecurityException(
+                        "The protected Head Admin account "
+                        + "cannot be deleted."
+                );
+            }
+
+            if (!currentActor.isAdmin()) {
+
+                throw new SecurityException(
+                        "You do not have permission "
+                        + "to delete accounts."
+                );
+            }
+
+            throw new SecurityException(
+                    "Admins can only delete Normal User "
+                    + "accounts. The Head Admin can delete "
+                    + "Admin and User accounts."
+            );
+        }
 
         String sql =
-            "DELETE FROM ACCOUNTS WHERE name = ?";
+                "DELETE FROM ACCOUNTS "
+                + "WHERE id = ? "
+                + "AND is_protected = FALSE";
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn =
+                     DatabaseManager.getConnection()) {
 
-            ps.setString(1, target.GetName());
+            conn.setAutoCommit(false);
 
-            return ps.executeUpdate() > 0;
-        }
-    }
+            try (PreparedStatement ps =
+                         conn.prepareStatement(sql)) {
 
-    // =========================
-    // CSV MIGRATION
-    // =========================
-    //
-    // DO NOT REMOVE YET.
-    //
-    // We will remove this separately
-    // after the access system is confirmed working.
+                AccountSystem freshTarget =
+                        findByName(
+                                target.GetName()
+                        );
 
-    public int migrateFromCsv(String csvPath)
-            throws SQLException, IOException {
+                if (freshTarget == null) {
 
-        File file = new File(csvPath);
-
-        if (!file.exists()) {
-            return 0;
-        }
-
-        int migratedCount = 0;
-
-        try (BufferedReader br =
-                new BufferedReader(new FileReader(file))) {
-
-            String line;
-
-            while ((line = br.readLine()) != null) {
-
-                line = line.trim();
-
-                if (line.isEmpty()) {
-                    continue;
+                    conn.rollback();
+                    return false;
                 }
 
-                String[] parts =
-                    line.split("\",\"");
+                if (!currentActor.canDeleteAccount(
+                        freshTarget)) {
 
-                if (parts.length < 3) {
-                    continue;
-                }
+                    conn.rollback();
 
-                String name =
-                    parts[0].replaceAll("^\"|\"$", "");
-
-                String password =
-                    parts[1].replaceAll("^\"|\"$", "");
-
-                String role =
-                    parts[2].replaceAll("^\"|\"$", "");
-
-                if (!nameExists(name)) {
-
-                    createAccount(
-                        name,
-                        password,
-                        role
+                    throw new SecurityException(
+                            "The account can no longer "
+                            + "be deleted under the "
+                            + "current permissions."
                     );
-
-                    migratedCount++;
                 }
+
+                int targetId =
+                        findId(
+                                conn,
+                                freshTarget.GetName()
+                        );
+
+                if (targetId <= 0) {
+
+                    conn.rollback();
+                    return false;
+                }
+
+                ps.setInt(1, targetId);
+
+                int rows =
+                        ps.executeUpdate();
+
+                if (rows == 0) {
+
+                    conn.rollback();
+                    return false;
+                }
+
+                ActivityLogData.log(
+                        conn,
+                        "DELETE_ACCOUNT",
+                        "Deleted "
+                        + freshTarget.getNormalizedRole()
+                        + " account: "
+                        + freshTarget.GetName(),
+                        currentActor.GetName()
+                );
+
+                conn.commit();
+
+                return true;
+
+            } catch (SQLException | RuntimeException ex) {
+
+                try {
+                    conn.rollback();
+                } catch (SQLException ignored) {
+                }
+
+                throw ex;
+
+            } finally {
+                conn.setAutoCommit(true);
             }
         }
-
-        return migratedCount;
     }
-
-    // =========================
-    // FIND ACCOUNT
-    // =========================
 
     public AccountSystem findByName(String name)
             throws SQLException {
 
+        if (name == null
+                || name.trim().isEmpty()) {
+
+            return null;
+        }
+
         String sql =
-            "SELECT name, password, role " +
-            "FROM ACCOUNTS " +
-            "WHERE name = ?";
+                "SELECT name, password, role, is_protected "
+                + "FROM ACCOUNTS "
+                + "WHERE UPPER(name) = UPPER(?)";
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn =
+                     DatabaseManager.getConnection();
+             PreparedStatement ps =
+                     conn.prepareStatement(sql)) {
 
-            ps.setString(1, name);
+            ps.setString(1, name.trim());
 
-            try (ResultSet rs = ps.executeQuery()) {
+            try (ResultSet rs =
+                         ps.executeQuery()) {
 
-                if (rs.next()) {
-
-                    return new AccountSystem(
-                        rs.getString("name"),
-                        rs.getString("password"),
-                        rs.getString("role")
-                    );
-                }
-
-                return null;
+                return rs.next()
+                        ? fromResultSet(rs)
+                        : null;
             }
         }
     }
 
-    // =========================
-    // ROLE NORMALIZATION
-    // =========================
+    private AccountSystem requireCurrentActor(
+            AccountSystem actor)
+            throws SQLException {
 
-    private String normalizeRole(String role) {
+        if (actor == null
+                || actor.GetName() == null
+                || actor.GetName().trim().isEmpty()) {
 
-        if (role == null) {
-            return null;
+            throw new SecurityException(
+                    "You must be logged in to perform "
+                    + "this account operation."
+            );
         }
 
-        if (role.equalsIgnoreCase("HEAD_ADMIN")
-                || role.equalsIgnoreCase("Head Admin")
-                || role.equalsIgnoreCase("HeadAdmin")) {
+        AccountSystem currentActor =
+                findByName(actor.GetName());
 
-            return "HEAD_ADMIN";
+        if (currentActor == null) {
+
+            throw new SecurityException(
+                    "The logged-in account no longer exists."
+            );
         }
 
-        if (role.equalsIgnoreCase("ADMIN")
-                || role.equalsIgnoreCase("Admin")) {
+        /*
+         * The AccountSystem supplied by the authenticated UI contains
+         * the password hash loaded from H2. Require it to match the
+         * current DB record as an additional guard against fabricated
+         * AccountSystem objects with a forged username/role.
+         */
+        if (actor.GetPassword() == null
+                || !actor.GetPassword()
+                        .equals(
+                                currentActor.GetPassword()
+                        )) {
 
-            return "ADMIN";
+            throw new SecurityException(
+                    "The authenticated account context is invalid."
+            );
         }
 
-        if (role.equalsIgnoreCase("USER")
-                || role.equalsIgnoreCase("User")
-                || role.equalsIgnoreCase("Normal User")) {
+        if (!currentActor.isAdmin()) {
 
-            return "USER";
+            throw new SecurityException(
+                    "You do not have administrative "
+                    + "permission for this operation."
+            );
         }
 
-        return null;
+        return currentActor;
+    }
+
+    private static String validateAccountName(
+            String name) {
+
+        if (name == null) {
+
+            throw new IllegalArgumentException(
+                    "Account name is required."
+            );
+        }
+
+        String cleanName = name.trim();
+
+        if (cleanName.isEmpty()) {
+
+            throw new IllegalArgumentException(
+                    "Account name is required."
+            );
+        }
+
+        if (cleanName.length() > 255) {
+
+            throw new IllegalArgumentException(
+                    "Account name must be 255 characters "
+                    + "or fewer."
+            );
+        }
+
+        return cleanName;
+    }
+
+    private static void validatePassword(
+            String password) {
+
+        if (password == null
+                || password.isEmpty()) {
+
+            throw new IllegalArgumentException(
+                    "Password is required."
+            );
+        }
+    }
+
+    private static AccountSystem fromResultSet(
+            ResultSet rs) throws SQLException {
+
+        return new AccountSystem(
+                rs.getString("name"),
+                rs.getString("password"),
+                rs.getString("role"),
+                rs.getBoolean("is_protected")
+        );
+    }
+
+    private static int findId(
+            Connection conn,
+            String name) throws SQLException {
+
+        String sql =
+                "SELECT id FROM ACCOUNTS "
+                + "WHERE UPPER(name) = UPPER(?)";
+
+        try (PreparedStatement ps =
+                     conn.prepareStatement(sql)) {
+
+            ps.setString(1, name);
+
+            try (ResultSet rs =
+                         ps.executeQuery()) {
+
+                return rs.next()
+                        ? rs.getInt(1)
+                        : -1;
+            }
+        }
     }
 }

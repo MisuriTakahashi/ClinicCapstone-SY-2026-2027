@@ -148,6 +148,9 @@
                 </Property>
                 <Property name="text" type="java.lang.String" value="Statistic"/>
               </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="jButton6ActionPerformed"/>
+              </Events>
             </Component>
             <Component class="javax.swing.JButton" name="jButton7">
               <Properties>
@@ -304,6 +307,9 @@
               </SubComponents>
             </Container>
             <Component class="javax.swing.JTextField" name="AccNameField">
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="AccNameFieldActionPerformed"/>
+              </Events>
             </Component>
             <Component class="javax.swing.JPasswordField" name="AccPasswordField">
               <Events>
@@ -311,6 +317,9 @@
               </Events>
             </Component>
             <Component class="javax.swing.JPasswordField" name="ConfirmPasswordField">
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="ConfirmPasswordFieldActionPerformed"/>
+              </Events>
             </Component>
             <Component class="javax.swing.JLabel" name="AccountNameLabel">
               <Properties>

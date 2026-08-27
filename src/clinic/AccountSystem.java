@@ -5,24 +5,29 @@
 package clinic;
 
 /**
- *
- * @author PC
+ * Represents an authenticated application account.
  */
 public class AccountSystem {
+
+    public static final String ROLE_HEAD_ADMIN = "HEAD_ADMIN";
+    public static final String ROLE_ADMIN = "ADMIN";
+    public static final String ROLE_USER = "USER";
 
     private String name;
     private String password;
     private String role;
+    private boolean protectedAccount;
 
     public AccountSystem(String name, String password, String role) {
-        this.name = name;
-        this.password = password;
-        this.role = role;
+        this(name, password, role, false);
     }
 
-    // =========================
-    // GETTERS
-    // =========================
+    public AccountSystem(String name, String password, String role, boolean protectedAccount) {
+        this.name = name;
+        this.password = password;
+        this.role = normalizeRole(role);
+        this.protectedAccount = protectedAccount;
+    }
 
     public String GetName() {
         return name;
@@ -36,9 +41,9 @@ public class AccountSystem {
         return role;
     }
 
-    // =========================
-    // SETTERS
-    // =========================
+    public boolean isProtectedAccount() {
+        return protectedAccount;
+    }
 
     public void SetName(String name) {
         this.name = name;
@@ -49,87 +54,85 @@ public class AccountSystem {
     }
 
     public void setRole(String role) {
-        this.role = role;
+        this.role = normalizeRole(role);
     }
 
-    // =========================
-    // ROLE CHECKS
-    // =========================
+    public void setProtectedAccount(boolean protectedAccount) {
+        this.protectedAccount = protectedAccount;
+    }
 
-    /**
-     * Returns true only if this account is a Head Admin.
-     */
     public boolean isHeadAdmin() {
-        if (role == null) {
-            return false;
-        }
-
-        return role.equalsIgnoreCase("HEAD_ADMIN")
-                || role.equalsIgnoreCase("Head Admin")
-                || role.equalsIgnoreCase("HeadAdmin");
+        return ROLE_HEAD_ADMIN.equals(normalizeRole(role));
     }
 
     /**
-     * Returns true for both:
-     * HEAD_ADMIN
-     * ADMIN
-     *
-     * A Head Admin inherits Admin permissions.
+     * Head Admin inherits all Admin permissions.
      */
     public boolean isAdmin() {
-        if (role == null) {
-            return false;
-        }
-
-        return isHeadAdmin()
-                || role.equalsIgnoreCase("ADMIN")
-                || role.equalsIgnoreCase("Admin");
+        return isHeadAdmin() || ROLE_ADMIN.equals(normalizeRole(role));
     }
 
-    /**
-     * Returns true for a normal User account.
-     */
     public boolean isNormalUser() {
-        if (role == null) {
-            return false;
-        }
-
-        return role.equalsIgnoreCase("USER")
-                || role.equalsIgnoreCase("User")
-                || role.equalsIgnoreCase("Normal User");
+        return ROLE_USER.equals(normalizeRole(role));
     }
 
-    /**
-     * HEAD_ADMIN and ADMIN can access the Admin Panel.
-     * USER cannot.
-     */
     public boolean canAccessAdminPanel() {
         return isAdmin();
     }
 
     /**
-     * Converts old role names into the new standard role names.
+     * Centralized account-management deletion rule.
+     * The database/service layer still performs the authoritative check using
+     * the current database records before executing a DELETE statement.
      */
-    public String getNormalizedRole() {
+    public boolean canDeleteAccount(AccountSystem target) {
+        if (target == null || name == null || target.name == null) {
+            return false;
+        }
+
+        if (name.equalsIgnoreCase(target.name)) {
+            return false;
+        }
+
+        if (target.isProtectedAccount() || target.isHeadAdmin()) {
+            return false;
+        }
 
         if (isHeadAdmin()) {
-            return "HEAD_ADMIN";
+            return target.isAdmin() || target.isNormalUser();
         }
 
-        if (role != null
-                && (role.equalsIgnoreCase("ADMIN")
-                || role.equalsIgnoreCase("Admin"))) {
-            return "ADMIN";
-        }
-
-        if (isNormalUser()) {
-            return "USER";
-        }
-
-        return role;
+        return isAdmin() && target.isNormalUser();
     }
 
-    public String toCsvLine() {
-        return "\"" + name + "\",\"" + password + "\",\"" + role + "\"";
+    public String getNormalizedRole() {
+        return normalizeRole(role);
+    }
+
+    public static String normalizeRole(String role) {
+        if (role == null) {
+            return null;
+        }
+
+        String value = role.trim();
+
+        if (value.equalsIgnoreCase(ROLE_HEAD_ADMIN)
+                || value.equalsIgnoreCase("Head Admin")
+                || value.equalsIgnoreCase("HeadAdmin")) {
+            return ROLE_HEAD_ADMIN;
+        }
+
+        if (value.equalsIgnoreCase(ROLE_ADMIN)
+                || value.equalsIgnoreCase("Admin")) {
+            return ROLE_ADMIN;
+        }
+
+        if (value.equalsIgnoreCase(ROLE_USER)
+                || value.equalsIgnoreCase("User")
+                || value.equalsIgnoreCase("Normal User")) {
+            return ROLE_USER;
+        }
+
+        return null;
     }
 }

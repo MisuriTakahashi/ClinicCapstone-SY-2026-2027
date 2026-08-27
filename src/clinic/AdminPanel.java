@@ -929,6 +929,7 @@ FrequentlyUsedLabel.setText(topMedicine);
         jButton6.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
         jButton6.setForeground(new java.awt.Color(255, 255, 255));
         jButton6.setText("Statistic");
+        jButton6.addActionListener(this::jButton6ActionPerformed);
 
         jButton7.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
         jButton7.setForeground(new java.awt.Color(255, 255, 255));
@@ -1011,7 +1012,11 @@ FrequentlyUsedLabel.setText(topMedicine);
             ACTTable.getColumnModel().getColumn(1).setResizable(false);
         }
 
+        AccNameField.addActionListener(this::AccNameFieldActionPerformed);
+
         AccPasswordField.addActionListener(this::AccPasswordFieldActionPerformed);
+
+        ConfirmPasswordField.addActionListener(this::ConfirmPasswordFieldActionPerformed);
 
         AccountNameLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
         AccountNameLabel.setForeground(new java.awt.Color(0, 0, 0));
@@ -2097,6 +2102,18 @@ FrequentlyUsedLabel.setText(topMedicine);
                  "Export Failed", JOptionPane.ERROR_MESSAGE);
      }
     }//GEN-LAST:event_ExportBTNActionPerformed
+
+    private void AccNameFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AccNameFieldActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_AccNameFieldActionPerformed
+
+    private void ConfirmPasswordFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ConfirmPasswordFieldActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_ConfirmPasswordFieldActionPerformed
+
+    private void jButton6ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton6ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jButton6ActionPerformed
 
     /**
      * @param args the command line arguments
