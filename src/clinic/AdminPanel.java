@@ -3,7 +3,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
 package clinic;
-
+import net.miginfocom.swing.MigLayout;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.FlatClientProperties;
 import java.awt.Color;
@@ -36,15 +36,18 @@ import javax.swing.text.AbstractDocument;
  * @author PC
  */
 public class AdminPanel extends javax.swing.JFrame {
-    private static final int SIDEBAR_WIDTH = 180;
-    private static final int CONTENT_GAP = 20;
-    private static final int CONTENT_X = SIDEBAR_WIDTH + CONTENT_GAP;
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(AdminPanel.class.getName());
     private final MedicineData  productService = new MedicineData ("inventory_activity.log");
     private ArrayList<Medicine> currentProducts = new ArrayList<>();
     private String selectedProductName = null;
     private AccountSystem loggedInAccount;
+
+    // Runtime-only responsive layout containers.
+    // NetBeans Designer remains the source of truth for component creation.
+    private javax.swing.JPanel responsiveContentPanel;
+    private java.awt.CardLayout responsiveCardLayout;
+    private javax.swing.JPanel responsiveInventoryPanel;
 
     /**
      * Creates the administrator inventory panel.
@@ -58,6 +61,8 @@ public class AdminPanel extends javax.swing.JFrame {
 
         com.formdev.flatlaf.FlatLightLaf.setup();
         initComponents();
+        setResizable(true);
+        setMinimumSize(new java.awt.Dimension(1000, 620));
         setIconImage(AppIcon.getIcon());
 
         // Window X (not Return/Logout): remember this session for auto-restore next launch.
@@ -69,10 +74,9 @@ public class AdminPanel extends javax.swing.JFrame {
         });
         
         configureFlatLafUi();
-        statisticsContainer.setVisible(false);
-        AccountManagementPanel.setVisible(false);
         this.loggedInAccount = account;
         configureAccountManagementUi();
+        configureResponsiveLayout();
         ((AbstractDocument) ExpDate.getDocument()).setDocumentFilter(new DateInputFilter());
         setLocationRelativeTo(null);
         refreshInventoryScreen();
@@ -142,7 +146,7 @@ for (javax.swing.JLabel lbl : statValues) {
     
 
     jLabel6.setText("Stock overview");
-    jLabel1.setText("Inventory activity");
+    jLabel1.setText("Inventory Logs");
     jLabel1.setFont(new Font("Segoe UI", Font.BOLD, 22));
     jLabel2.setText("Manage stock");
     jLabel2.setFont(new Font("Segoe UI", Font.BOLD, 16));
@@ -207,6 +211,10 @@ for (javax.swing.JLabel lbl : statValues) {
     InventoryLogs.setFont(new Font("Segoe UI", Font.PLAIN, 13));
     InventoryLogs.setMargin(new java.awt.Insets(18, 18, 18, 18));
     InventoryLogs.setBackground(surface);
+     // Wrap long lines instead of letting them run off the edge
+ InventoryLogs.setLineWrap(true);
+ InventoryLogs.setWrapStyleWord(true);
+
     stockTable.setToolTipText("Your available medical supplies");
 
     // Wire actions
@@ -337,163 +345,297 @@ private void configureSidebarHover(JButton btn) {
     }
 
     private void showStatistics() {
-          AccountManagementPanel.setVisible(false);
+        showResponsiveCard("statistics");
+        loadStatistics();
 
-    jPanel4.setVisible(false);
-    jPanel5.setVisible(false);
-    jPanel6.setVisible(false);
-    jLabel1.setVisible(false);
-    jLabel6.setVisible(false);
-    
-    loadStatistics();
-    statisticsContainer.setLocation(1200, 30);
-    statisticsContainer.setVisible(true);
-
-    styleSidebarButton(jButton5, "Inventory", false);
-    styleSidebarButton(jButton6, "Statistics", true);
-    styleSidebarButton(AccManageBTN, "Account Management", false);
-
-    animateContentIn(statisticsContainer);
+        styleSidebarButton(jButton5, "Inventory", false);
+        styleSidebarButton(jButton6, "Statistics", true);
+        styleSidebarButton(AccManageBTN, "Account Management", false);
     }
+
     /** Applies the same FlatLaf card/typography treatment to the account panel. */
-private void configureAccountManagementUi() {
-    Color page   = Color.decode("#F8FAFC");
-    Color border = Color.decode("#E2E8F0");
-    Color primary = Color.decode("#2563EB");
-    Color textSecondary = Color.decode("#475569");
+    private void configureAccountManagementUi() {
+        Color page   = Color.decode("#F8FAFC");
+        Color border = Color.decode("#E2E8F0");
+        Color primary = Color.decode("#2563EB");
+        Color textSecondary = Color.decode("#475569");
 
-    // Panel background
-    AccountManagementPanel.setBackground(page);
+        // Panel background
+        AccountManagementPanel.setBackground(page);
 
-    // ---------- Table (match stockTable) ----------
-    ACTTable.setRowHeight(38);
-    ACTTable.setShowVerticalLines(false);
-    ACTTable.setShowHorizontalLines(true);
-    ACTTable.setGridColor(border);
-    ACTTable.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-    ACTTable.setForeground(textSecondary);
-    ACTTable.getTableHeader().putClientProperty(FlatClientProperties.STYLE,
-            "background: #F1F5F9; foreground: #475569; font: +1");
-    jScrollPane3.setBorder(BorderFactory.createEmptyBorder());
+        // ---------- Table (match stockTable) ----------
+        ACTTable.setRowHeight(38);
+        ACTTable.setShowVerticalLines(false);
+        ACTTable.setShowHorizontalLines(true);
+        ACTTable.setGridColor(border);
+        ACTTable.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        ACTTable.setForeground(textSecondary);
+        ACTTable.getTableHeader().putClientProperty(FlatClientProperties.STYLE,
+                "background: #F1F5F9; foreground: #475569; font: +1");
+        jScrollPane3.setBorder(BorderFactory.createEmptyBorder());
 
-    // ---------- Form fields ----------
-    AccNameField.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "e.g. nurse_Teban");
-    AccNameField.putClientProperty(FlatClientProperties.STYLE, "arc: 10; margin: 6,10,6,10");
-    AccNameField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-    AccNameField.setText("");                 // remove "jTextField1"
+        // ---------- Form fields ----------
+        AccNameField.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "e.g. nurse_Teban");
+        AccNameField.putClientProperty(FlatClientProperties.STYLE, "arc: 10; margin: 6,10,6,10");
+        AccNameField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        AccNameField.setText("");
 
-    AccPasswordField.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "••••••••");
-    AccPasswordField.putClientProperty(FlatClientProperties.STYLE,
-            "arc: 10; margin: 6,10,6,10; showRevealButton: true");
-    AccPasswordField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-    AccPasswordField.setText("");             // remove "jPasswordField1"
+        AccPasswordField.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "••••••••");
+        AccPasswordField.putClientProperty(FlatClientProperties.STYLE,
+                "arc: 10; margin: 6,10,6,10; showRevealButton: true");
+        AccPasswordField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        AccPasswordField.setText("");
 
-    ConfirmPasswordField.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "••••••••");
-    ConfirmPasswordField.putClientProperty(FlatClientProperties.STYLE, "arc: 10; margin: 6,10,6,10");
-    ConfirmPasswordField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-    ConfirmPasswordField.setText("");         // remove "jPasswordField1"
+        ConfirmPasswordField.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "••••••••");
+        ConfirmPasswordField.putClientProperty(FlatClientProperties.STYLE, "arc: 10; margin: 6,10,6,10");
+        ConfirmPasswordField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        ConfirmPasswordField.setText("");
 
-    // ---------- Labels ----------
-    for (javax.swing.JLabel lbl : new javax.swing.JLabel[]{
-            AccountNameLabel, AccountPasswordLabel, ConfirmPasswordLabel}) {
-        lbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        lbl.setForeground(textSecondary);
+        // ---------- Labels ----------
+        for (javax.swing.JLabel lbl : new javax.swing.JLabel[]{
+                AccountNameLabel, AccountPasswordLabel, ConfirmPasswordLabel}) {
+            lbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            lbl.setForeground(textSecondary);
+        }
+
+        // ---------- Buttons ----------
+        stylePrimaryButton(CAdminBTN, "Create Admin", primary);
+        stylePrimaryButton(CUserBTN,  "Create User",  primary);
+        styleDangerButton(AccDeleteBTN, "Delete");
+
+        CAdminBTN.setVisible(
+                loggedInAccount != null && loggedInAccount.isHeadAdmin());
+        CUserBTN.setVisible(
+                loggedInAccount != null && loggedInAccount.isAdmin());
+        AccDeleteBTN.setVisible(
+                loggedInAccount != null && loggedInAccount.isAdmin());
     }
 
-    // ---------- Buttons ----------
-    stylePrimaryButton(CAdminBTN, "Create Admin", primary);
-    stylePrimaryButton(CUserBTN,  "Create User",  primary);
-    styleDangerButton(AccDeleteBTN, "Delete");
-    
-    // Only Head Admin can create Admin accounts.
-        CAdminBTN.setVisible(
-            loggedInAccount != null
-            && loggedInAccount.isHeadAdmin()
-        );
+    private void showAccountManagement() {
+        showResponsiveCard("accounts");
+        refreshAccountTable();
 
-        // Both Head Admin and Admin can create Users.
-        CUserBTN.setVisible(
-            loggedInAccount != null
-            && loggedInAccount.isAdmin()
-        );
-
-        // Delete button is available to administrators.
-        // The actual permission is checked again in AccountData.
-        AccDeleteBTN.setVisible(
-            loggedInAccount != null
-            && loggedInAccount.isAdmin()
-        );
-}
-private void showAccountManagement() {
-   jPanel4.setVisible(false);
-    jPanel5.setVisible(false);
-    jPanel6.setVisible(false);
-    jLabel1.setVisible(false);
-    jLabel6.setVisible(false);
-    statisticsContainer.setVisible(false);
-
-    AccountManagementPanel.setLocation(1200, 30);
-    AccountManagementPanel.setVisible(true);
-
-    styleSidebarButton(jButton5, "Inventory", false);
-    styleSidebarButton(jButton6, "Statistics", false);
-    styleSidebarButton(AccManageBTN, "Account Management", true);
-
-    animateContentIn(AccountManagementPanel);
-}
-
-/** Slides page content into place without moving the fixed sidebar. */
-private void animateContentIn(JPanel panel) {
-    javax.swing.Timer timer = new javax.swing.Timer(10, null);
-    timer.addActionListener(new java.awt.event.ActionListener() {
-        private int currentX = 1200;
-
-        @Override
-        public void actionPerformed(java.awt.event.ActionEvent event) {
-            if (currentX > CONTENT_X) {
-                currentX = Math.max(CONTENT_X, currentX - 35);
-                panel.setLocation(currentX, 30);
-                jPanel1.repaint();
-            } else {
-                timer.stop();
-            }
-        }
-    });
-    timer.start();
-}
+        styleSidebarButton(jButton5, "Inventory", false);
+        styleSidebarButton(jButton6, "Statistics", false);
+        styleSidebarButton(AccManageBTN, "Account Management", true);
+    }
 
     private void showInventory() {
-         statisticsContainer.setVisible(false);
-    AccountManagementPanel.setVisible(false);
+        showResponsiveCard("inventory");
 
-    jPanel4.setLocation(200, 140);
-    jPanel4.setVisible(true);
-    jPanel5.setVisible(true);
-    jPanel6.setVisible(true);
-    jLabel1.setVisible(true);
-    jLabel6.setVisible(true);
+        styleSidebarButton(jButton5, "Inventory", true);
+        styleSidebarButton(jButton6, "Statistics", false);
+        styleSidebarButton(AccManageBTN, "Account Management", false);
+    }
 
-    styleSidebarButton(jButton5, "Inventory", true);
-    styleSidebarButton(jButton6, "Statistics", false);
-    styleSidebarButton(AccManageBTN, "Account Management", false);
+    /**
+     * Installs responsive runtime layouts around the components created by NetBeans.
+     * initComponents() remains untouched, so the form can still be edited in the GUI Builder.
+     */
+    private void configureResponsiveLayout() {
+        Color page = Color.decode("#F8FAFC");
 
-        javax.swing.Timer timer = new javax.swing.Timer(10, null);
-        timer.addActionListener(new java.awt.event.ActionListener() {
-            int currentY = 140;
-            int targetY = 110;
+        responsiveCardLayout = new java.awt.CardLayout();
+        responsiveContentPanel = new javax.swing.JPanel(responsiveCardLayout);
+        responsiveContentPanel.setOpaque(true);
+        responsiveContentPanel.setBackground(page);
 
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) {
-                if (currentY > targetY) {
-                    currentY = Math.max(targetY, currentY - 3);
-                    jPanel4.setLocation(200, currentY);
-                    jPanel1.repaint();
-                } else {
-                    timer.stop();
-                }
-            }
-        });
-        timer.start();
+        responsiveInventoryPanel = new javax.swing.JPanel();
+        responsiveInventoryPanel.setBackground(page);
+        responsiveInventoryPanel.setLayout(new MigLayout(
+                "fill, insets 20",
+                "[grow,fill][320!]",
+                "[30!][grow][220!]"));
+
+        // Inventory headings.
+        jLabel6.setText("Stock overview");
+        responsiveInventoryPanel.add(jLabel6, "cell 0 0, growx, aligny center");
+        jLabel1.setText("Inventory activity");
+        responsiveInventoryPanel.add(jLabel1, "cell 1 0, growx, aligny center");
+
+        // Stock table grows with the available left-side space.
+        responsiveInventoryPanel.add(jPanel4, "cell 0 1 1 2, grow");
+
+        // Activity log occupies the top-right area.
+        javax.swing.JPanel inventoryLog = jPanel6;
+        inventoryLog.setLayout(new MigLayout("fill, insets 0", "[grow]", "[grow]"));
+        inventoryLog.removeAll();
+        inventoryLog.add(jScrollPane2, "grow");
+        responsiveInventoryPanel.add(inventoryLog, "cell 1 1, grow");
+
+        // Inventory form occupies the bottom-right area.
+        javax.swing.JPanel inventoryForm = jPanel5;
+        inventoryForm.setLayout(new MigLayout("fill, insets 10", "[grow]", "[grow]"));
+        inventoryForm.removeAll();
+
+        javax.swing.JPanel formGrid = new javax.swing.JPanel(new MigLayout(
+                "wrap 2, fillx, insets 0",
+                "[90!][grow,fill]",
+                "[]8[]8[]12[]"));
+        formGrid.setOpaque(false);
+        formGrid.add(jLabel2, "span 2, growx");
+        formGrid.add(jLabel3);
+        formGrid.add(ProductName, "growx");
+        formGrid.add(jLabel4);
+        formGrid.add(ExpDate, "growx");
+        formGrid.add(jLabel5);
+        formGrid.add(Qty, "growx");
+        formGrid.add(AddBTN, "span 2, split 4, growx");
+        formGrid.add(EditBtn, "growx");
+        formGrid.add(DeleteBTN, "growx");
+        formGrid.add(ClearBtn, "growx");
+
+        inventoryForm.add(formGrid, "grow");
+        responsiveInventoryPanel.add(inventoryForm, "cell 1 2, grow");
+
+        configureStatisticsResponsiveLayout();
+        configureAccountResponsiveLayout();
+
+        responsiveContentPanel.add(responsiveInventoryPanel, "inventory");
+        responsiveContentPanel.add(statisticsContainer, "statistics");
+        responsiveContentPanel.add(AccountManagementPanel, "accounts");
+
+        // Replace only the runtime children/layout of jPanel1.
+        // NetBeans' generated initComponents() remains unchanged on disk.
+        jPanel1.removeAll();
+        jPanel1.setLayout(new MigLayout(
+                "fill, insets 0, gap 0",
+                "[180!][grow,fill]",
+                "[30!][grow,fill]"));
+        jPanel1.add(jPanel2, "cell 0 0 2 1, grow");
+        jPanel1.add(jPanel3, "cell 0 1, grow");
+        jPanel1.add(responsiveContentPanel, "cell 1 1, grow");
+
+        responsiveCardLayout.show(responsiveContentPanel, "inventory");
+        jPanel1.revalidate();
+        jPanel1.repaint();
+    }
+
+    private void configureStatisticsResponsiveLayout() {
+        statisticsContainer.setBackground(Color.decode("#F8FAFC"));
+        statisticsContainer.setLayout(new MigLayout(
+                "fill, insets 20",
+                "[grow,fill][grow,fill][grow,fill]",
+                "[30!][20!][150!][150!][grow,fill]"));
+
+        statisticsContainer.removeAll();
+        statisticsContainer.add(jLabel7, "cell 0 0 3 1, growx");
+        statisticsContainer.add(lblReportingPeriod, "cell 0 1 3 1, growx");
+
+        configureStatCard(cardWeeklyCheckIns, lblWeeklyTitle, lblWeeklyCheckInsValue, jLabel8);
+        configureStatCard(jPanel10, lblInClinicTitle, lblInClinicValue, jLabel9);
+        configureStatCard(jPanel11, lblSentHomeTitle, lblSentHomeValue, jLabel10);
+
+        statisticsContainer.add(cardWeeklyCheckIns, "cell 0 2, grow");
+        statisticsContainer.add(jPanel10, "cell 1 2, grow");
+        statisticsContainer.add(jPanel11, "cell 2 2, grow");
+
+        configureTwoLineCard(FrequentlyUsedPanel, FrequentlyUsedTitle, FrequentlyUsedLabel);
+        configureTwoLineCard(CommonReasonPanel, CommonReasonTitle, CommonReasonLabel);
+        statisticsContainer.add(FrequentlyUsedPanel, "cell 0 3, grow");
+        statisticsContainer.add(CommonReasonPanel, "cell 1 3, grow");
+
+        configureDailyCheckinPanel();
+        statisticsContainer.add(jPanel7, "cell 0 4 3 1, grow");
+    }
+
+    private void configureStatCard(javax.swing.JPanel card, javax.swing.JLabel title,
+                                    javax.swing.JLabel value, javax.swing.JLabel footer) {
+        card.removeAll();
+        card.setLayout(new MigLayout(
+                "fill, insets 14",
+                "[grow,fill]",
+                "[]12[grow,fill]12[]"));
+        card.add(title, "growx, align center");
+        card.add(value, "grow, align center");
+        card.add(footer, "growx, align center");
+    }
+
+    private void configureTwoLineCard(javax.swing.JPanel card, javax.swing.JLabel title,
+                                      javax.swing.JLabel value) {
+        card.removeAll();
+        card.setLayout(new MigLayout(
+                "fill, insets 14",
+                "[grow,fill]",
+                "[]12[grow,fill]"));
+        card.add(title, "growx, align center");
+        card.add(value, "grow, align center");
+    }
+
+    private void configureDailyCheckinPanel() {
+        jPanel7.removeAll();
+        jPanel7.setLayout(new MigLayout(
+                "fill, insets 14",
+                "[grow,fill][grow,fill][grow,fill][grow,fill][grow,fill]",
+                "[][grow,fill]"));
+        jPanel7.add(jLabel11, "span 5, growx");
+
+        configureDailyCard(jPanel8, lblModayDay, lblMondayDate, lblMondayCount);
+        configureDailyCard(jPanel9, lblTuesdayDay, lblTuesdayDate, lblTuesdayCount);
+        configureDailyCard(jPanel12, lblWednesdayDay, lblWednesdayDate, lblWednesdayCount);
+        configureDailyCard(jPanel13, lblThursdayDay, lblThursdayDate, lblThursdayCount);
+        configureDailyCard(jPanel14, lblFridayDay, lblFridayDate, lblFridayCount);
+
+        jPanel7.add(jPanel8, "cell 0 1, grow");
+        jPanel7.add(jPanel9, "cell 1 1, grow");
+        jPanel7.add(jPanel12, "cell 2 1, grow");
+        jPanel7.add(jPanel13, "cell 3 1, grow");
+        jPanel7.add(jPanel14, "cell 4 1, grow");
+    }
+
+    private void configureDailyCard(javax.swing.JPanel card, javax.swing.JLabel day,
+                                    javax.swing.JLabel date, javax.swing.JLabel count) {
+        card.removeAll();
+        card.setLayout(new MigLayout(
+                "fill, insets 8",
+                "[grow,fill]",
+                "[]4[]4[grow]"));
+        card.add(day, "growx, align center");
+        card.add(date, "growx, align center");
+        card.add(count, "growx, align center");
+    }
+
+    private void configureAccountResponsiveLayout() {
+        AccountManagementPanel.removeAll();
+        AccountManagementPanel.setLayout(new MigLayout(
+                "fill, insets 20",
+                "[300!][grow,fill]",
+                "[grow,fill]"));
+
+        javax.swing.JPanel accountForm = new javax.swing.JPanel(new MigLayout(
+                "wrap 1, fillx, insets 0",
+                "[grow,fill]",
+                "[][][][][][][][40!]"));
+        accountForm.setOpaque(false);
+
+        accountForm.add(AccountNameLabel, "growx");
+        accountForm.add(AccNameField, "growx, h 35!");
+        accountForm.add(AccountPasswordLabel, "growx");
+        accountForm.add(AccPasswordField, "growx, h 36!");
+        accountForm.add(ConfirmPasswordLabel, "growx");
+        accountForm.add(ConfirmPasswordField, "growx, h 36!");
+        accountForm.add(new javax.swing.JSeparator(), "growx, gaptop 8, gapbottom 8");
+        accountForm.add(CUserBTN, "split 2, growx, h 40!");
+        accountForm.add(CAdminBTN, "growx, h 40!");
+
+        javax.swing.JPanel accountTableArea = new javax.swing.JPanel(new MigLayout(
+                "fill, insets 0",
+                "[grow,fill]",
+                "[grow,fill][]"));
+        accountTableArea.setOpaque(false);
+        accountTableArea.add(jScrollPane3, "grow");
+        accountTableArea.add(AccDeleteBTN, "align right, h 44!");
+
+        AccountManagementPanel.add(accountForm, "cell 0 0, grow");
+        AccountManagementPanel.add(accountTableArea, "cell 1 0, grow");
+    }
+
+    private void showResponsiveCard(String cardName) {
+        if (responsiveCardLayout != null && responsiveContentPanel != null) {
+            responsiveCardLayout.show(responsiveContentPanel, cardName);
+            responsiveContentPanel.revalidate();
+            responsiveContentPanel.repaint();
+        }
     }
 
     private void createHeader(Color primary) {
@@ -552,16 +694,19 @@ private void animateContentIn(JPanel panel) {
         try {
             ArrayList<String> log = productService.loadActivityLog();
             StringBuilder sb = new StringBuilder();
-        
+
             if (log.isEmpty()) {
                 sb.append("No recent activity.\n\nChanges to stock levels will be recorded here.");
             } else {
-                for (String line : log) {
-                    sb.append(line).append("\n");
+                // Newest first, with a blank line between entries so each log
+                // line reads as its own block instead of a cramped wall of text.
+                for (int i = log.size() - 1; i >= 0; i--) {
+                    sb.append(log.get(i)).append("\n\n");
                 }
             }
 
             InventoryLogs.setText(sb.toString());
+            InventoryLogs.setCaretPosition(0); // always open scrolled to the newest entry
         } catch (IOException ex) {
             JOptionPane.showMessageDialog(this, "Error loading activity log: " + ex.getMessage());
         }
