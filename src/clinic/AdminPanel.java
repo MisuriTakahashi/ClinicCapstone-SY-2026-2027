@@ -50,6 +50,12 @@ public class AdminPanel extends javax.swing.JFrame {
      * Creates the administrator inventory panel.
      */
     public AdminPanel(AccountSystem account) {
+          if (account == null || !account.canAccessAdminPanel()) {
+        throw new SecurityException(
+            "Access denied. Administrator role required."
+        );
+    }
+
         com.formdev.flatlaf.FlatLightLaf.setup();
         initComponents();
         setIconImage(AppIcon.getIcon());
@@ -398,6 +404,25 @@ private void configureAccountManagementUi() {
     stylePrimaryButton(CAdminBTN, "Create Admin", primary);
     stylePrimaryButton(CUserBTN,  "Create User",  primary);
     styleDangerButton(AccDeleteBTN, "Delete");
+    
+    // Only Head Admin can create Admin accounts.
+        CAdminBTN.setVisible(
+            loggedInAccount != null
+            && loggedInAccount.isHeadAdmin()
+        );
+
+        // Both Head Admin and Admin can create Users.
+        CUserBTN.setVisible(
+            loggedInAccount != null
+            && loggedInAccount.isAdmin()
+        );
+
+        // Delete button is available to administrators.
+        // The actual permission is checked again in AccountData.
+        AccDeleteBTN.setVisible(
+            loggedInAccount != null
+            && loggedInAccount.isAdmin()
+        );
 }
 private void showAccountManagement() {
    jPanel4.setVisible(false);
@@ -1800,7 +1825,7 @@ FrequentlyUsedLabel.setText(topMedicine);
 
                 String name = ACTTable.getValueAt(row, 0).toString();
 
-                accountService.deleteAccount(name);
+               accountService.deleteAccount(loggedInAccount, name);
             }
 
             JOptionPane.showMessageDialog(
@@ -1825,49 +1850,163 @@ FrequentlyUsedLabel.setText(topMedicine);
     }//GEN-LAST:event_AccDeleteBTNActionPerformed
 
     private void CAdminBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CAdminBTNActionPerformed
-        createAccountFromForm("Admin");
+          createAccountFromForm("ADMIN");
     }//GEN-LAST:event_CAdminBTNActionPerformed
 
     private void CUserBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CUserBTNActionPerformed
-         createAccountFromForm("User");
+          createAccountFromForm("USER");
     }//GEN-LAST:event_CUserBTNActionPerformed
         
     private final AccountData accountService = new AccountData();
-    
-            //login for creation account
             private void createAccountFromForm(String role) {
-            String name = AccNameField.getText().trim();
-            char[] pw1 = AccPasswordField.getPassword();
-            char[] pw2 = ConfirmPasswordField.getPassword();
-            String password = new String(pw1);
-            String confirmPassword = new String(pw2);
 
-            if (name.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Name and password are required.");
+            // =========================
+            // BASIC ACCESS CHECK
+            // =========================
+
+            if (loggedInAccount == null
+                    || !loggedInAccount.isAdmin()) {
+
+                JOptionPane.showMessageDialog(
+                    this,
+                    "You do not have permission to create accounts.",
+                    "Access Denied",
+                    JOptionPane.WARNING_MESSAGE
+                );
+
+                return;
+            }
+
+            // =========================
+            // ADMIN CREATION
+            // =========================
+
+            if ("ADMIN".equalsIgnoreCase(role)
+                    && !loggedInAccount.isHeadAdmin()) {
+
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Only the Head Admin can create an Admin account.",
+                    "Access Denied",
+                    JOptionPane.WARNING_MESSAGE
+                );
+
+                return;
+            }
+
+            // =========================
+            // USER CREATION
+            // =========================
+
+            if ("USER".equalsIgnoreCase(role)
+                    && !loggedInAccount.isAdmin()) {
+
+                JOptionPane.showMessageDialog(
+                    this,
+                    "You do not have permission to create a User account.",
+                    "Access Denied",
+                    JOptionPane.WARNING_MESSAGE
+                );
+
+                return;
+            }
+
+            // =========================
+            // READ FORM
+            // =========================
+
+            String name =
+                AccNameField.getText().trim();
+
+            char[] pw1 =
+                AccPasswordField.getPassword();
+
+            char[] pw2 =
+                ConfirmPasswordField.getPassword();
+
+            String password =
+                new String(pw1);
+
+            String confirmPassword =
+                new String(pw2);
+
+            // =========================
+            // VALIDATION
+            // =========================
+
+            if (name.isEmpty()
+                    || password.isEmpty()) {
+
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Name and password are required."
+                );
+
                 return;
             }
 
             if (!password.equals(confirmPassword)) {
-                JOptionPane.showMessageDialog(this, "Passwords do not match.");
+
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Passwords do not match."
+                );
+
                 return;
             }
 
+            // =========================
+            // CREATE ACCOUNT
+            // =========================
+
             try {
+
                 if (accountService.nameExists(name)) {
-                    JOptionPane.showMessageDialog(this, "An account with this name already exists.");
+
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "An account with this name already exists."
+                    );
+
                     return;
                 }
 
-                accountService.createAccount(name, password, role);
-                JOptionPane.showMessageDialog(this, role + " account created for " + name + ".");
+                accountService.createAccount(
+                    loggedInAccount,
+                    name,
+                    password,
+                    role
+                );
+
+                JOptionPane.showMessageDialog(
+                    this,
+                    role + " account created for " + name + "."
+                );
 
                 AccNameField.setText("");
                 AccPasswordField.setText("");
                 ConfirmPasswordField.setText("");
+
                 refreshAccountTable();
 
+            } catch (SecurityException ex) {
+
+                JOptionPane.showMessageDialog(
+                    this,
+                    ex.getMessage(),
+                    "Access Denied",
+                    JOptionPane.WARNING_MESSAGE
+                );
+
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error creating account: " + ex.getMessage());
+
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Error creating account: "
+                        + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE
+                );
             }
         }
             

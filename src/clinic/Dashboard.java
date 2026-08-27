@@ -82,8 +82,8 @@ public class Dashboard extends javax.swing.JFrame {
             ((AbstractDocument) NameCheckIn.getDocument()).setDocumentFilter(new NameInputFilter()); //this is an input filter for NameCheckin which dont allows numbers
             ((AbstractDocument) ParentGurdianName.getDocument()).setDocumentFilter(new NameInputFilter()); //this also and input filter for the parentName which do not allows numbers too
             ((AbstractDocument) PhoneField.getDocument()).setDocumentFilter(new PhoneNumberFilter()); // this only allows 09 number and also 11 digits only 
-            jButton1.setVisible(loggedInAccount.isAdmin());
-            setLocationRelativeTo(null);
+             
+                setLocationRelativeTo(null);
             
             //this already shows the time and Table and Counters and display the inventoryStatus and medicinebox which is the comboBox
             startDateTimeClock();
@@ -1417,7 +1417,7 @@ NOT modify this code. The content of this method is always
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-       if (loggedInAccount == null || !loggedInAccount.isAdmin()) {
+           if (loggedInAccount == null || !loggedInAccount.canAccessAdminPanel()) {
 
         showToast(
                 MainPanel,
