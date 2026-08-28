@@ -570,6 +570,40 @@ private void buildInventoryView() {
     inventoryView.add(jPanel5, "cell 1 2, growx"); // Form keeps preferred height but fills width
 }
 
+// Helper method to format 3-label statistic cards vertically centered
+private void configureStatCard(JPanel card, JLabel title, JLabel value, JLabel subtitle) {
+    card.removeAll();
+    card.setLayout(new MigLayout(
+        "fill, insets 20 16 20 16",
+        "[grow, fill]",
+        "[pref] [push, center] [pref]"
+    ));
+
+    title.setHorizontalAlignment(SwingConstants.CENTER);
+    value.setHorizontalAlignment(SwingConstants.CENTER);
+    subtitle.setHorizontalAlignment(SwingConstants.CENTER);
+
+    card.add(title, "growx, wrap");
+    card.add(value, "growx, center, wrap");
+    card.add(subtitle, "growx, wrap");
+}
+
+// Helper method to format 2-label statistic cards
+private void configureTwoLabelCard(JPanel card, JLabel title, JLabel value) {
+    card.removeAll();
+    card.setLayout(new MigLayout(
+        "fill, insets 20 16 20 16",
+        "[grow, fill]",
+        "[pref] [push, center]"
+    ));
+
+    title.setHorizontalAlignment(SwingConstants.CENTER);
+    value.setHorizontalAlignment(SwingConstants.CENTER);
+
+    card.add(title, "growx, wrap");
+    card.add(value, "growx, center");
+}
+
 private void buildStatisticsLayout() {
     statisticsContainer.removeAll();
     statisticsContainer.setLayout(new MigLayout(
@@ -577,19 +611,27 @@ private void buildStatisticsLayout() {
         "[grow] [grow] [grow] [grow]", // 4 columns
         "[pref] [pref] [grow, fill] [grow, fill] [pref]" 
     ));
-    
+
     statisticsContainer.add(jLabel7, "cell 0 0 4 1, growx");
     statisticsContainer.add(lblReportingPeriod, "cell 0 1 4 1, growx");
-    
+
+    // Convert card interior layouts to MigLayout for perfect alignment
+    configureStatCard(cardWeeklyCheckIns, lblWeeklyTitle, lblWeeklyCheckInsValue, jLabel8);
+    configureStatCard(jPanel10, lblInClinicTitle, lblInClinicValue, jLabel9);
+    configureStatCard(jPanel11, lblSentHomeTitle, lblSentHomeValue, jLabel10);
+
+    configureTwoLabelCard(FrequentlyUsedPanel, FrequentlyUsedTitle, FrequentlyUsedLabel);
+    configureTwoLabelCard(CommonReasonPanel, CommonReasonTitle, CommonReasonLabel);
+
     // First 3 cards span 2 rows vertically
     statisticsContainer.add(cardWeeklyCheckIns, "cell 0 2, spany 2, grow, push");
     statisticsContainer.add(jPanel10, "cell 1 2, spany 2, grow, push");
     statisticsContainer.add(jPanel11, "cell 2 2, spany 2, grow, push");
-    
+
     // 4th column split into two rows
     statisticsContainer.add(FrequentlyUsedPanel, "cell 3 2, grow, push");
     statisticsContainer.add(CommonReasonPanel, "cell 3 3, grow, push");
-    
+
     // Daily Check-ins container
     jPanel7.removeAll();
     jPanel7.setLayout(new MigLayout(
@@ -598,19 +640,19 @@ private void buildStatisticsLayout() {
         "[pref] [160px!]" 
     ));
     jPanel7.add(jLabel11, "cell 0 0 5 1, growx");
-    
+
     configureDayCard(jPanel8, lblModayDay, lblMondayDate, lblMondayCount);
     configureDayCard(jPanel9, lblTuesdayDay, lblTuesdayDate, lblTuesdayCount);
     configureDayCard(jPanel12, lblWednesdayDay, lblWednesdayDate, lblWednesdayCount);
     configureDayCard(jPanel13, lblThursdayDay, lblThursdayDate, lblThursdayCount);
     configureDayCard(jPanel14, lblFridayDay, lblFridayDate, lblFridayCount);
-    
+
     jPanel7.add(jPanel8, "cell 0 1, w 160px!, h 160px!, center");
     jPanel7.add(jPanel9, "cell 1 1, w 160px!, h 160px!, center");
     jPanel7.add(jPanel12, "cell 2 1, w 160px!, h 160px!, center");
     jPanel7.add(jPanel13, "cell 3 1, w 160px!, h 160px!, center");
     jPanel7.add(jPanel14, "cell 4 1, w 160px!, h 160px!, center");
-    
+
     statisticsContainer.add(jPanel7, "cell 0 4 4 1, growx");
 }
 
@@ -634,40 +676,70 @@ private void configureDayCard(JPanel card, JLabel day, JLabel date, JLabel count
 }
 private void buildAccountManagementLayout() {
     AccountManagementPanel.removeAll();
+
+    // Reset preferred size constraints set by NetBeans Designer
+    jScrollPane3.setPreferredSize(null);
+    jScrollPane3.setMinimumSize(null);
+    jScrollPane3.setMaximumSize(null);
+    AccDeleteBTN.setPreferredSize(null);
+
+    // Main panel layout: 2 columns, 1 row for overall content
     AccountManagementPanel.setLayout(new MigLayout(
-        "fill, insets 24, gap 20",
-        "[320, grow] [grow, fill]", 
-        "[grow, fill] [pref]"       
+        "fill, insets 40 50 40 50, gap 50", 
+        "[320!, fill] [grow, fill]", // Left: 320px fixed form, Right: table & delete button area
+        "[grow, fill]"
     ));
+
+    // Left Side Container (Form centered vertically)
+    JPanel leftContainer = new JPanel(new MigLayout("fill, insets 0", "[grow]", "[grow] [pref] [grow]"));
+    leftContainer.setOpaque(false);
+    leftContainer.add(createAccountFormPanel(), "cell 0 1, growx");
+
+    // Right Side Container (Table on top, Delete button horizontally centered below table)
+    JPanel rightContainer = new JPanel(new MigLayout(
+        "fill, insets 0, gap 16", 
+        "[grow]", 
+        "[grow, fill] [40px!]"
+    ));
+    rightContainer.setOpaque(false);
     
-    AccountManagementPanel.add(createAccountFormPanel(), "cell 0 0, growy, aligny top");
-    AccountManagementPanel.add(jScrollPane3, "cell 1 0, grow, push");
-    AccountManagementPanel.add(AccDeleteBTN, "cell 1 1, east, w 140!, gaptop 16");
+    rightContainer.add(jScrollPane3, "cell 0 0, grow");
+    rightContainer.add(AccDeleteBTN, "cell 0 1, center, w 140!, h 40!");
+
+    // Add containers to main panel
+    AccountManagementPanel.add(leftContainer, "cell 0 0");
+    AccountManagementPanel.add(rightContainer, "cell 1 0");
+
+    AccountManagementPanel.revalidate();
+    AccountManagementPanel.repaint();
 }
 
 private JPanel createAccountFormPanel() {
     JPanel form = new JPanel(new MigLayout(
-        "fillx, insets 0, gap 12",
-        "[grow]",
-        "[pref] [36px] [pref] [36px] [pref] [36px] [pref] [40px]"
+        "fillx, insets 0, gap 8", 
+        "[grow] [grow]", 
+        "[pref] [38px!] [pref] [38px!] [pref] [38px!] [16px!] [40px!]"
     ));
     form.setOpaque(false);
-    
-    form.add(AccountNameLabel, "growx, wrap");
-    form.add(AccNameField, "growx, wrap, h 36px!");
-    
-    form.add(AccountPasswordLabel, "growx, wrap, gaptop 8");
-    form.add(AccPasswordField, "growx, wrap, h 36px!");
-    
-    form.add(ConfirmPasswordLabel, "growx, wrap, gaptop 8");
-    form.add(ConfirmPasswordField, "growx, wrap, h 36px!");
-    
-    form.add(CUserBTN, "split 2, growx, gaptop 16");
-    form.add(CAdminBTN, "growx");
-    
+
+    // ===== ACCOUNT NAME =====
+    form.add(AccountNameLabel, "cell 0 0 2 1, growx");
+    form.add(AccNameField, "cell 0 1 2 1, growx, h 38px!");
+
+    // ===== ACCOUNT PASSWORD =====
+    form.add(AccountPasswordLabel, "cell 0 2 2 1, growx, gaptop 6");
+    form.add(AccPasswordField, "cell 0 3 2 1, growx, h 38px!");
+
+    // ===== CONFIRM PASSWORD =====
+    form.add(ConfirmPasswordLabel, "cell 0 4 2 1, growx, gaptop 6");
+    form.add(ConfirmPasswordField, "cell 0 5 2 1, growx, h 38px!");
+
+    // ===== BUTTONS (Create User & Create Admin Side-by-Side) =====
+    form.add(CUserBTN, "cell 0 7, growx, h 40!");
+    form.add(CAdminBTN, "cell 1 7, growx, h 40!");
+
     return form;
 }
-
     private void createHeader(Color primary) {
         jPanel2.removeAll();
         jPanel2.setBackground(primary);
@@ -1223,61 +1295,8 @@ FrequentlyUsedLabel.setText(topMedicine);
         AccDeleteBTN.setText("Delete");
         AccDeleteBTN.addActionListener(this::AccDeleteBTNActionPerformed);
 
-        javax.swing.GroupLayout AccountManagementPanelLayout = new javax.swing.GroupLayout(AccountManagementPanel);
-        AccountManagementPanel.setLayout(AccountManagementPanelLayout);
-        AccountManagementPanelLayout.setHorizontalGroup(
-            AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(AccountManagementPanelLayout.createSequentialGroup()
-                .addContainerGap(146, Short.MAX_VALUE)
-                .addGroup(AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, AccountManagementPanelLayout.createSequentialGroup()
-                        .addGroup(AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(AccNameField)
-                            .addComponent(AccPasswordField)
-                            .addComponent(ConfirmPasswordField, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 253, Short.MAX_VALUE)
-                            .addComponent(AccountNameLabel)
-                            .addComponent(AccountPasswordLabel)
-                            .addComponent(ConfirmPasswordLabel)
-                            .addGroup(AccountManagementPanelLayout.createSequentialGroup()
-                                .addComponent(CUserBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                .addComponent(CAdminBTN)))
-                        .addGap(109, 109, 109)
-                        .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(56, 56, 56))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, AccountManagementPanelLayout.createSequentialGroup()
-                        .addComponent(AccDeleteBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 134, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(209, 209, 209))))
-        );
-        AccountManagementPanelLayout.setVerticalGroup(
-            AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(AccountManagementPanelLayout.createSequentialGroup()
-                .addGap(157, 157, 157)
-                .addComponent(AccountNameLabel)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(AccNameField, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(AccountPasswordLabel)
-                .addGap(4, 4, 4)
-                .addComponent(AccPasswordField, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(ConfirmPasswordLabel)
-                .addGap(4, 4, 4)
-                .addComponent(ConfirmPasswordField, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
-                .addGroup(AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(CUserBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(CAdminBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, AccountManagementPanelLayout.createSequentialGroup()
-                .addContainerGap(84, Short.MAX_VALUE)
-                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
-                .addComponent(AccDeleteBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(43, 43, 43))
-        );
-
-        jPanel1.add(AccountManagementPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 30, 1000, 620));
+        // Layout is set in buildAccountManagementLayout() — do not add GroupLayout here.
+        // jPanel1.add is also skipped; installResponsiveLayout() adds it to the CardLayout.
 
         statisticsContainer.setBackground(new java.awt.Color(248, 250, 252));
         statisticsContainer.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
