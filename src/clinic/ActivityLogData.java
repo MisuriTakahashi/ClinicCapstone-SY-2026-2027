@@ -22,12 +22,15 @@ import java.util.ArrayList;
  * Database-backed activity/audit logging.
  *
  * Activity records are stored in the encrypted H2 database instead of a
- * plaintext inventory_activity.log file.
+ * PLAINTEXT inventory_activity.log file.
  */
 public final class ActivityLogData {
 
-    private static final DateTimeFormatter DISPLAY_FORMAT =
+        private static final DateTimeFormatter LEGACY_TIMESTAMP_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+    private static final DateTimeFormatter DISPLAY_FORMAT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd h:mm a");
 
     private ActivityLogData() {
     }
@@ -318,12 +321,12 @@ public final class ActivityLogData {
                             closeBracket
                     ).trim();
 
-            try {
+           try {
 
                 timestamp =
                         LocalDateTime.parse(
                                 timestampText,
-                                DISPLAY_FORMAT
+                                LEGACY_TIMESTAMP_FORMAT
                         );
 
             } catch (DateTimeParseException ignored) {

@@ -86,8 +86,11 @@ public class AdminPanel extends javax.swing.JFrame {
     installResponsiveLayout();
     ((AbstractDocument) ExpDate.getDocument()).setDocumentFilter(new DateInputFilter());
     setLocationRelativeTo(null);
+    
     refreshInventoryScreen();
     refreshActivityLogDisplay();
+    
+    
     refreshInventoryTable();
     loadStatistics();
     refreshAccountTable();
@@ -208,13 +211,9 @@ for (javax.swing.JLabel lbl : dayCountLabels) {
     lbl.setForeground(Color.decode("#64748B"));
     lbl.setHorizontalAlignment(SwingConstants.CENTER);
 }
-    
-    
-    
-    
 
     jLabel6.setText("Stock overview");
-    jLabel1.setText("Inventory Logs");
+    jLabel1.setText("Activities Logs");
     jLabel1.setFont(new Font("Segoe UI", Font.BOLD, 22));
     jLabel2.setText("Manage stock");
     jLabel2.setFont(new Font("Segoe UI", Font.BOLD, 16));
@@ -508,6 +507,9 @@ private void showInventory() {
         responsiveContent.revalidate();
         animateContentIn(inventoryView);
     }
+   
+        refreshActivityLogDisplay();
+    
     styleSidebarButton(jButton5, "Inventory", true);
     styleSidebarButton(jButton6, "Statistics", false);
     styleSidebarButton(AccManageBTN, "Account Management", false);
