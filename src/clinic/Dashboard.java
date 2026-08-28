@@ -1037,7 +1037,7 @@ NOT modify this code. The content of this method is always
         SentHomeBTN.setBackground(new java.awt.Color(0, 102, 204));
         SentHomeBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
         SentHomeBTN.setForeground(new java.awt.Color(255, 255, 255));
-        SentHomeBTN.setText("Sent Home");
+        SentHomeBTN.setText("Sent Home/Back");
         SentHomeBTN.addActionListener(this::SentHomeBTNActionPerformed);
 
         LRNLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
