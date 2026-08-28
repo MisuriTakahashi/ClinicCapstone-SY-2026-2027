@@ -21,6 +21,7 @@ import javax.swing.text.AbstractDocument;
 import java.sql.SQLException;
 import java.io.IOException;
 
+
 /**
  *
  * @author PC
@@ -2257,9 +2258,14 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
         document.addPage(page);
 
         // Embedded fonts loaded per-document (PDFont instances are tied to one PDDocument)
-        org.apache.pdfbox.pdmodel.font.PDFont fontRegular = loadSlipFont(document, "/Assets/fonts/ClinicSans-Regular.ttf");
-        org.apache.pdfbox.pdmodel.font.PDFont fontBold = loadSlipFont(document, "/Assets/fonts/ClinicSans-Bold.ttf");
-        org.apache.pdfbox.pdmodel.font.PDFont fontItalic = loadSlipFont(document, "/Assets/fonts/ClinicSans-Italic.ttf");
+       org.apache.pdfbox.pdmodel.font.PDFont fontRegular =
+        loadSlipFont(document, "/Assets/Fonts/ClinicSans-Regular.ttf");
+
+        org.apache.pdfbox.pdmodel.font.PDFont fontBold =
+                loadSlipFont(document, "/Assets/Fonts/ClinicSans-Bold.ttf");
+
+        org.apache.pdfbox.pdmodel.font.PDFont fontItalic =
+                loadSlipFont(document, "/Assets/Fonts/ClinicSans-Italic.ttf");
 
         try (org.apache.pdfbox.pdmodel.PDPageContentStream content =
                      new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
