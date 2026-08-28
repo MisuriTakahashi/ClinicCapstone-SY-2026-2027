@@ -6,11 +6,11 @@ package clinic;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.time.LocalDateTime;
@@ -33,7 +33,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 public class ReportExporter {
     private final VisitData visitData = new VisitData();
     private final MedicineData medicineData;
-    
+
 
     public ReportExporter(MedicineData medicineData) {
         this.medicineData = medicineData; // reuse the same instance AdminPanel already uses
@@ -49,11 +49,32 @@ public class ReportExporter {
         return false;
     }
 
-      /** Writes the combined Check-in Logs + Inventory/Medicine Logs report as a real .xlsx workbook. */
+    /** Writes the combined Check-in Logs + Inventory/Medicine Logs + Stock Overview report as a real .xlsx workbook. */
     public void writeDailyReport(LocalDate date, File destination) throws SQLException, IOException {
         String iso = date.toString();
         ArrayList<CheckinSystem> visits = visitData.getVisitsByDate(iso);
         ArrayList<String> logLines = medicineData.loadActivityLog();
+
+        // Structured entries for this date only, used to compute per-medicine usage totals
+        // for the Stock Overview section below. loadFormatted()/logLines above is still what
+        // drives the plain "Activities Logs" text section, unchanged from before.
+        ArrayList<ActivityLogData.Entry> allEntries = ActivityLogData.loadEntries();
+        HashMap<String, Integer> usedTodayByMedicine = new HashMap<>();
+        for (ActivityLogData.Entry entry : allEntries) {
+            if (entry.timestamp() == null) continue;
+            LocalDate entryDate = entry.timestamp().toLocalDateTime().toLocalDate();
+            if (!entryDate.equals(date)) continue;
+
+            ActivityLogData.UsageInfo usage =
+                    ActivityLogData.parseMedicineUsage(entry.action(), entry.details());
+            if (usage == null) continue;
+
+            usedTodayByMedicine.merge(
+                    usage.medicineName(),
+                    usage.quantity(),
+                    Integer::sum
+            );
+        }
 
         String prettyDate = date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy"))
                 + " - " + date.getDayOfWeek().toString().substring(0, 1)
@@ -90,9 +111,21 @@ public class ReportExporter {
             dateStyle.setDataFormat(workbook.getCreationHelper()
                     .createDataFormat().getFormat("mmmm d, yyyy h:mm AM/PM"));
 
+            // --- Stock Overview row styles ---
+            // Expired rows get a red fill, low-stock (but not expired) rows get a yellow
+            // fill, and normal in-stock rows have no fill at all.
+            CellStyle expiredStyle = workbook.createCellStyle();
+            expiredStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
+            expiredStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            CellStyle lowStockStyle = workbook.createCellStyle();
+            lowStockStyle.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
+            lowStockStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
             String[] checkinHeaders = {"Student Name", "Grade/Section", "LRN", "Check-in Date/Time", "Reason",
                     "Medicine Used", "Medicine Quantity", "Status", "Guardian Name", "Guardian Phone"};
             String[] inventoryHeaders = {"Date/Time", "Activity"};
+            String[] stockHeaders = {"Medicine Name", "Current Quantity", "Expiration Date", "Status", "Given Out (This Date)"};
             int columnCount = checkinHeaders.length; // widest section - drives auto-sizing below
 
             int rowIndex = 0;
@@ -190,6 +223,60 @@ public class ReportExporter {
                 sheet.createRow(rowIndex++).createCell(0).setCellValue("No inventory activity for this date.");
             }
 
+            rowIndex++; // blank spacer row between sections
+
+            // --- Section 3: Stock Overview ---
+            // Shows the CURRENT inventory (not historical to this date - the database only
+            // tracks live quantities), flagged for expiry/low stock, plus how many units of
+            // each medicine were given out on this specific date.
+            Row stockSectionRow = sheet.createRow(rowIndex++);
+            Cell stockSectionCell = stockSectionRow.createCell(0);
+            stockSectionCell.setCellValue("STOCK OVERVIEW");
+            stockSectionCell.setCellStyle(sectionStyle);
+
+            Row stockHeaderRow = sheet.createRow(rowIndex++);
+            for (int col = 0; col < stockHeaders.length; col++) {
+                Cell cell = stockHeaderRow.createCell(col);
+                cell.setCellValue(stockHeaders[col]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            ArrayList<Medicine> inventory = medicineData.loadAll();
+            for (Medicine med : inventory) {
+                boolean expired = med.isExpired();
+                boolean lowStock = med.isLowStock();
+
+                String statusText = expired ? "Expired" : (lowStock ? "Low Stock" : "Normal");
+                CellStyle rowStyle = expired ? expiredStyle : (lowStock ? lowStockStyle : null);
+
+                int givenOutToday = usedTodayByMedicine.getOrDefault(med.getname(), 0);
+
+                Row row = sheet.createRow(rowIndex++);
+
+                Cell nameCell = row.createCell(0);
+                nameCell.setCellValue(safe(med.getname()));
+                if (rowStyle != null) nameCell.setCellStyle(rowStyle);
+
+                Cell qtyCell = row.createCell(1);
+                qtyCell.setCellValue(med.getquantity());
+                if (rowStyle != null) qtyCell.setCellStyle(rowStyle);
+
+                Cell expCell = row.createCell(2);
+                expCell.setCellValue(safe(med.getExpDate()));
+                if (rowStyle != null) expCell.setCellStyle(rowStyle);
+
+                Cell statusCell = row.createCell(3);
+                statusCell.setCellValue(statusText);
+                if (rowStyle != null) statusCell.setCellStyle(rowStyle);
+
+                Cell givenOutCell = row.createCell(4);
+                givenOutCell.setCellValue(givenOutToday);
+                if (rowStyle != null) givenOutCell.setCellStyle(rowStyle);
+            }
+            if (inventory.isEmpty()) {
+                sheet.createRow(rowIndex++).createCell(0).setCellValue("No medicines in inventory.");
+            }
+
             // --- Auto-size every column, AFTER all headers and data have been written ---
             final int MAX_COLUMN_WIDTH = 50 * 256; // caps very long text columns at ~50 characters wide
             for (int col = 0; col < columnCount; col++) {
@@ -205,14 +292,14 @@ public class ReportExporter {
             }
         }
     }
-    
+
     /** Wraps a field in quotes and escapes internal quotes, CSV-safe. */
     private String csv(String value) {
         if (value == null) value = "";
         return "\"" + value.replace("\"", "\"\"") + "\"";
     }
-    
-    
+
+
     /** Returns true if there is at least one check-in record for the date (ignores inventory). */
         public boolean hasCheckinRecordsForDate(LocalDate date) throws SQLException {
             return !visitData.getVisitsByDate(date.toString()).isEmpty();
@@ -220,7 +307,7 @@ public class ReportExporter {
 
         public void writeCheckinReport(LocalDate date, File destination) throws SQLException, IOException {
         String iso = date.toString();
-        
+
         ArrayList<CheckinSystem> visits = visitData.getVisitsByDate(iso);
 
         String prettyDate = date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy"))

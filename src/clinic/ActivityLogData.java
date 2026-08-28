@@ -17,6 +17,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Database-backed activity/audit logging.
@@ -115,14 +117,31 @@ public final class ActivityLogData {
         }
     }
 
+    /** One raw ACTIVITY_LOG row, with no display formatting applied. */
+    public record Entry(
+            Timestamp timestamp,
+            String action,
+            String details,
+            String actor) {
+    }
+
+    /** Result of parsing a USE_MEDICINE details string into its parts. */
+    public record UsageInfo(
+            String medicineName,
+            int quantity) {
+    }
+
     /**
-     * Returns records newest-first, formatted similarly to the old activity
-     * log so the existing Admin Panel and report exporter can keep using it.
+     * Returns the raw ACTIVITY_LOG rows, newest first. This is the single place
+     * that reads the table; loadFormatted() below builds display text from it,
+     * and anything else (e.g. the daily report's Stock Overview section) that
+     * needs to reason about individual entries should use this instead of
+     * re-querying the table itself.
      */
-    public static ArrayList<String> loadFormatted()
+    public static ArrayList<Entry> loadEntries()
             throws SQLException {
 
-        ArrayList<String> lines =
+        ArrayList<Entry> entries =
                 new ArrayList<>();
 
         String sql =
@@ -139,57 +158,209 @@ public final class ActivityLogData {
 
             while (rs.next()) {
 
-                Timestamp timestamp =
-                        rs.getTimestamp("TIMESTAMP");
-
-                String action =
-                        rs.getString("ACTION");
-
-                String details =
-                        rs.getString("DETAILS");
-
-                String actor =
-                        rs.getString("ACTOR");
-
-                String time =
-                        timestamp == null
-                        ? LocalDateTime.now()
-                                .format(DISPLAY_FORMAT)
-                        : timestamp
-                                .toLocalDateTime()
-                                .format(DISPLAY_FORMAT);
-
-                StringBuilder line =
-                        new StringBuilder()
-                                .append("[")
-                                .append(time)
-                                .append("] ")
-                                .append(
-                                        action == null
-                                        ? "UNKNOWN"
-                                        : action
-                                );
-
-                if (details != null
-                        && !details.isBlank()) {
-
-                    line.append(": ")
-                            .append(details);
-                }
-
-                line.append(" | By: ")
-                        .append(
-                                actor == null
-                                || actor.isBlank()
-                                ? "Unknown"
-                                : actor
-                        );
-
-                lines.add(line.toString());
+                entries.add(new Entry(
+                        rs.getTimestamp("TIMESTAMP"),
+                        rs.getString("ACTION"),
+                        rs.getString("DETAILS"),
+                        rs.getString("ACTOR")
+                ));
             }
         }
 
+        return entries;
+    }
+
+    /**
+     * Returns records newest-first, formatted similarly to the old activity
+     * log so the existing Admin Panel and report exporter can keep using it.
+     * The internal ACTION code (e.g. ADD_MEDICINE, DELETE_ACCOUNT) is never
+     * shown to the user here — humanize() below converts it into a natural
+     * sentence first. This is the one place that formatting happens, so the
+     * Admin Panel and the Excel report automatically stay in sync.
+     */
+    public static ArrayList<String> loadFormatted()
+            throws SQLException {
+
+        ArrayList<String> lines =
+                new ArrayList<>();
+
+        for (Entry entry : loadEntries()) {
+
+            String time =
+                    entry.timestamp() == null
+                    ? LocalDateTime.now()
+                            .format(DISPLAY_FORMAT)
+                    : entry.timestamp()
+                            .toLocalDateTime()
+                            .format(DISPLAY_FORMAT);
+
+            String message =
+                    humanize(
+                            entry.action(),
+                            entry.details()
+                    );
+
+            String actor =
+                    entry.actor() == null
+                    || entry.actor().isBlank()
+                    ? "Unknown"
+                    : entry.actor();
+
+            lines.add(
+                    "[" + time + "] "
+                    + message
+                    + " | By: " + actor
+            );
+        }
+
         return lines;
+    }
+
+    // ---------------------------------------------------------------
+    // Human-readable formatting
+    // ---------------------------------------------------------------
+    //
+    // The database keeps the internal ACTION codes (ADD_MEDICINE,
+    // DELETE_ACCOUNT, etc.) because they're useful for the backend.
+    // Everything below only affects what gets displayed to a person —
+    // in the Admin Panel activity feed and in the Excel daily report,
+    // both of which read through loadFormatted() above.
+
+    private static final Pattern ADD_MEDICINE_PATTERN =
+            Pattern.compile("^(\\d+)x (.+)$");
+
+    private static final Pattern EDIT_MEDICINE_PATTERN =
+            Pattern.compile("^(.+) -> (.+) \\((\\d+)x\\)$");
+
+    private static final Pattern USE_MEDICINE_PATTERN =
+            Pattern.compile("^Student (.+) used (\\d+)x (.+)$");
+
+    private static final Pattern RESTOCK_MEDICINE_PATTERN =
+            Pattern.compile("^Returned (\\d+)x (.+) \\(visit edited\\)$");
+
+    /** Converts an ACTION code + its DETAILS into a natural sentence. */
+    private static String humanize(String action, String details) {
+
+        String safeDetails =
+                details == null ? "" : details.trim();
+
+        String code =
+                action == null ? "" : action.trim().toUpperCase();
+
+        switch (code) {
+
+            case "ADD_MEDICINE": {
+                Matcher m = ADD_MEDICINE_PATTERN.matcher(safeDetails);
+                if (m.matches()) {
+                    int qty = parseIntSafe(m.group(1));
+                    String name = m.group(2);
+                    return "Added " + qty + " " + unit(qty)
+                            + " of " + name + " to inventory";
+                }
+                break;
+            }
+
+            case "EDIT_MEDICINE": {
+                Matcher m = EDIT_MEDICINE_PATTERN.matcher(safeDetails);
+                if (m.matches()) {
+                    String oldName = m.group(1);
+                    String newName = m.group(2);
+                    int qty = parseIntSafe(m.group(3));
+                    return "Updated medicine from " + oldName
+                            + " to " + newName
+                            + " with " + qty + " " + unit(qty);
+                }
+                break;
+            }
+
+            case "DELETE_MEDICINE":
+                if (!safeDetails.isEmpty()) {
+                    return "Removed " + safeDetails + " from inventory";
+                }
+                break;
+
+            case "USE_MEDICINE": {
+                Matcher m = USE_MEDICINE_PATTERN.matcher(safeDetails);
+                if (m.matches()) {
+                    String student = m.group(1);
+                    int qty = parseIntSafe(m.group(2));
+                    String product = m.group(3);
+                    return student + " was given " + qty + " "
+                            + unit(qty) + " of " + product;
+                }
+                break;
+            }
+
+            case "RESTOCK_MEDICINE": {
+                Matcher m = RESTOCK_MEDICINE_PATTERN.matcher(safeDetails);
+                if (m.matches()) {
+                    int qty = parseIntSafe(m.group(1));
+                    String product = m.group(2);
+                    return "Returned " + qty + " " + unit(qty)
+                            + " of " + product
+                            + " to inventory after editing a visit";
+                }
+                break;
+            }
+
+            case "CREATE_ACCOUNT":
+            case "DELETE_ACCOUNT":
+                // These are already written as plain sentences when logged
+                // (see AccountData / DatabaseManager) - just drop the
+                // "protected default" wording used for the system-generated
+                // default Head Admin message, and drop the technical prefix.
+                return safeDetails.replaceAll(
+                        "(?i)protected default ", "");
+
+            default:
+                break;
+        }
+
+        // Fallback for anything unrecognized (including imported legacy
+        // lines): show the details as-is rather than a raw ACTION code.
+        return safeDetails.isEmpty()
+                ? humanizeUnknownAction(code)
+                : safeDetails;
+    }
+
+    private static String humanizeUnknownAction(String code) {
+        if (code.isEmpty()) {
+            return "Activity recorded";
+        }
+        String words = code.replace('_', ' ').toLowerCase();
+        return Character.toUpperCase(words.charAt(0)) + words.substring(1);
+    }
+
+    private static String unit(int qty) {
+        return qty == 1 ? "unit" : "units";
+    }
+
+    private static int parseIntSafe(String s) {
+        try {
+            return Integer.parseInt(s.trim());
+        } catch (Exception ex) {
+            return 0;
+        }
+    }
+
+    /**
+     * Parses a USE_MEDICINE details string (e.g. "Student John used 1x
+     * Biogesic") into the medicine name and quantity used. Returns null if
+     * the action isn't USE_MEDICINE or the details don't match the expected
+     * shape. Shared by humanize() above and by the daily report's Stock
+     * Overview section, so this parsing lives in exactly one place.
+     */
+    public static UsageInfo parseMedicineUsage(String action, String details) {
+        if (!"USE_MEDICINE".equalsIgnoreCase(action) || details == null) {
+            return null;
+        }
+        Matcher m = USE_MEDICINE_PATTERN.matcher(details.trim());
+        if (!m.matches()) {
+            return null;
+        }
+        int qty = parseIntSafe(m.group(2));
+        String product = m.group(3);
+        return new UsageInfo(product, qty);
     }
 
     /**
@@ -401,6 +572,4 @@ public final class ActivityLogData {
             String details,
             String actor) {
     }
-    
-    
 }
