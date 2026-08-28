@@ -165,20 +165,20 @@ private void animateContentIn(JPanel panel) {
     jPanel5.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(border), BorderFactory.createEmptyBorder(18, 18, 18, 18)));
     
-    // --- Statistics Cards Styling ---
+// --- Statistics Cards Styling ---
 // 1. Apply the white card styling to all statistics panels
 javax.swing.JPanel[] statCards = {
-    cardWeeklyCheckIns, jPanel10, jPanel11, 
+    cardWeeklyCheckIns, jPanel10, SentbackPanel, jPanel11, 
     CommonReasonPanel, FrequentlyUsedPanel, jPanel7
 };
 for (javax.swing.JPanel card : statCards) {
     styleCard(card, surface, border);
 }
 
-// 2. Standardize the subtitle fonts and colors (e.g., "Common Reason")
+// 2. Standardize the subtitle fonts and colors
 java.awt.Color textSecondary = Color.decode("#475569");
 javax.swing.JLabel[] statTitles = {
-    lblWeeklyTitle, lblInClinicTitle, lblSentHomeTitle, 
+    lblWeeklyTitle, lblInClinicTitle, SentbackTitle, lblSentHomeTitle, 
     CommonReasonTitle, FrequentlyUsedTitle, jLabel11
 };
 for (javax.swing.JLabel lbl : statTitles) {
@@ -189,12 +189,12 @@ for (javax.swing.JLabel lbl : statTitles) {
 
 // 3. Standardize the big number/value fonts and colors
 javax.swing.JLabel[] statValues = {
-    lblWeeklyCheckInsValue, lblInClinicValue, lblSentHomeValue, 
+    lblWeeklyCheckInsValue, lblInClinicValue, SentBackValue, lblSentHomeValue, 
     CommonReasonLabel, FrequentlyUsedLabel
 };
 for (javax.swing.JLabel lbl : statValues) {
     lbl.setFont(new Font("Segoe UI", Font.BOLD, 30));
-    lbl.setForeground(primary); // Uses your modern blue (#2563EB)
+    lbl.setForeground(primary);
     lbl.setHorizontalAlignment(SwingConstants.CENTER);
 }
     
@@ -618,17 +618,21 @@ private void buildStatisticsLayout() {
     // Convert card interior layouts to MigLayout for perfect alignment
     configureStatCard(cardWeeklyCheckIns, lblWeeklyTitle, lblWeeklyCheckInsValue, jLabel8);
     configureStatCard(jPanel10, lblInClinicTitle, lblInClinicValue, jLabel9);
+    configureStatCard(SentbackPanel, SentbackTitle, SentBackValue, SentbackLabel);
     configureStatCard(jPanel11, lblSentHomeTitle, lblSentHomeValue, jLabel10);
 
     configureTwoLabelCard(FrequentlyUsedPanel, FrequentlyUsedTitle, FrequentlyUsedLabel);
     configureTwoLabelCard(CommonReasonPanel, CommonReasonTitle, CommonReasonLabel);
 
-    // First 3 cards span 2 rows vertically
+    // Columns 0 & 1 span 2 rows vertically
     statisticsContainer.add(cardWeeklyCheckIns, "cell 0 2, spany 2, grow, push");
     statisticsContainer.add(jPanel10, "cell 1 2, spany 2, grow, push");
-    statisticsContainer.add(jPanel11, "cell 2 2, spany 2, grow, push");
 
-    // 4th column split into two rows
+    // Column 2 split into two rows: Sent Back (top) and Sent Home (bottom)
+    statisticsContainer.add(SentbackPanel, "cell 2 2, grow, push");
+    statisticsContainer.add(jPanel11, "cell 2 3, grow, push");
+
+    // Column 3 split into two rows: Frequently Used (top) and Common Reason (bottom)
     statisticsContainer.add(FrequentlyUsedPanel, "cell 3 2, grow, push");
     statisticsContainer.add(CommonReasonPanel, "cell 3 3, grow, push");
 
@@ -857,6 +861,7 @@ private JPanel createAccountFormPanel() {
 
             int weeklyCheckins = 0;
             int inClinic = 0;
+            int sentBack = 0;
             int sentHome = 0;
 
             int monday = 0;
@@ -947,6 +952,9 @@ private JPanel createAccountFormPanel() {
 
                 if ("In Clinic".equalsIgnoreCase(v.getStatus())) {
                     inClinic++;
+                }
+                if ("Sent Back".equalsIgnoreCase(v.getStatus())) {
+                    sentBack++;
                 }
 
                 if ("Sent Home".equalsIgnoreCase(v.getStatus())) {
@@ -1091,6 +1099,10 @@ FrequentlyUsedLabel.setText(topMedicine);
         lblInClinicTitle = new javax.swing.JLabel();
         lblInClinicValue = new javax.swing.JLabel();
         jLabel9 = new javax.swing.JLabel();
+        SentbackPanel = new javax.swing.JPanel();
+        SentbackTitle = new javax.swing.JLabel();
+        SentBackValue = new javax.swing.JLabel();
+        SentbackLabel = new javax.swing.JLabel();
         jPanel11 = new javax.swing.JPanel();
         lblSentHomeTitle = new javax.swing.JLabel();
         lblSentHomeValue = new javax.swing.JLabel();
@@ -1295,8 +1307,61 @@ FrequentlyUsedLabel.setText(topMedicine);
         AccDeleteBTN.setText("Delete");
         AccDeleteBTN.addActionListener(this::AccDeleteBTNActionPerformed);
 
-        // Layout is set in buildAccountManagementLayout() — do not add GroupLayout here.
-        // jPanel1.add is also skipped; installResponsiveLayout() adds it to the CardLayout.
+        javax.swing.GroupLayout AccountManagementPanelLayout = new javax.swing.GroupLayout(AccountManagementPanel);
+        AccountManagementPanel.setLayout(AccountManagementPanelLayout);
+        AccountManagementPanelLayout.setHorizontalGroup(
+            AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(AccountManagementPanelLayout.createSequentialGroup()
+                .addContainerGap(146, Short.MAX_VALUE)
+                .addGroup(AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, AccountManagementPanelLayout.createSequentialGroup()
+                        .addGroup(AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(AccNameField)
+                            .addComponent(AccPasswordField)
+                            .addComponent(ConfirmPasswordField, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 253, Short.MAX_VALUE)
+                            .addComponent(AccountNameLabel)
+                            .addComponent(AccountPasswordLabel)
+                            .addComponent(ConfirmPasswordLabel)
+                            .addGroup(AccountManagementPanelLayout.createSequentialGroup()
+                                .addComponent(CUserBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(CAdminBTN)))
+                        .addGap(109, 109, 109)
+                        .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(56, 56, 56))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, AccountManagementPanelLayout.createSequentialGroup()
+                        .addComponent(AccDeleteBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 134, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(209, 209, 209))))
+        );
+        AccountManagementPanelLayout.setVerticalGroup(
+            AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(AccountManagementPanelLayout.createSequentialGroup()
+                .addGap(157, 157, 157)
+                .addComponent(AccountNameLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(AccNameField, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(AccountPasswordLabel)
+                .addGap(4, 4, 4)
+                .addComponent(AccPasswordField, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(ConfirmPasswordLabel)
+                .addGap(4, 4, 4)
+                .addComponent(ConfirmPasswordField, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
+                .addGroup(AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(CUserBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(CAdminBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, AccountManagementPanelLayout.createSequentialGroup()
+                .addContainerGap(84, Short.MAX_VALUE)
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
+                .addComponent(AccDeleteBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(43, 43, 43))
+        );
+
+        jPanel1.add(AccountManagementPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 30, 1000, 620));
 
         statisticsContainer.setBackground(new java.awt.Color(248, 250, 252));
         statisticsContainer.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
@@ -1359,6 +1424,29 @@ FrequentlyUsedLabel.setText(topMedicine);
 
         statisticsContainer.add(jPanel10, new org.netbeans.lib.awtextra.AbsoluteConstraints(230, 64, 210, 308));
 
+        SentbackPanel.setBackground(new java.awt.Color(255, 255, 255));
+        SentbackPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(226, 232, 240)));
+        SentbackPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        SentbackTitle.setFont(new java.awt.Font("Segoe UI", 0, 13)); // NOI18N
+        SentbackTitle.setForeground(new java.awt.Color(71, 85, 105));
+        SentbackTitle.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        SentbackTitle.setText("Sent Back");
+        SentbackPanel.add(SentbackTitle, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 18, 190, 17));
+
+        SentBackValue.setFont(new java.awt.Font("Segoe UI", 1, 30)); // NOI18N
+        SentBackValue.setForeground(new java.awt.Color(29, 78, 216));
+        SentBackValue.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        SentBackValue.setText("0");
+        SentbackPanel.add(SentBackValue, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 50, 190, 36));
+
+        SentbackLabel.setForeground(new java.awt.Color(148, 163, 184));
+        SentbackLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        SentbackLabel.setText("Student Sent back this week");
+        SentbackPanel.add(SentbackLabel, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 100, 190, 16));
+
+        statisticsContainer.add(SentbackPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(450, 62, 210, 150));
+
         jPanel11.setBackground(new java.awt.Color(255, 255, 255));
         jPanel11.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(226, 232, 240)));
         jPanel11.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
@@ -1367,20 +1455,20 @@ FrequentlyUsedLabel.setText(topMedicine);
         lblSentHomeTitle.setForeground(new java.awt.Color(71, 85, 105));
         lblSentHomeTitle.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         lblSentHomeTitle.setText("Sent Home");
-        jPanel11.add(lblSentHomeTitle, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 18, 180, 17));
+        jPanel11.add(lblSentHomeTitle, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 18, 190, 17));
 
         lblSentHomeValue.setFont(new java.awt.Font("Segoe UI", 1, 30)); // NOI18N
         lblSentHomeValue.setForeground(new java.awt.Color(29, 78, 216));
         lblSentHomeValue.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         lblSentHomeValue.setText("0");
-        jPanel11.add(lblSentHomeValue, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 75, 180, 36));
+        jPanel11.add(lblSentHomeValue, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 50, 190, 36));
 
         jLabel10.setForeground(new java.awt.Color(148, 163, 184));
         jLabel10.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel10.setText("Student Sent home this week");
-        jPanel11.add(jLabel10, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 155, 170, 16));
+        jPanel11.add(jLabel10, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 100, 190, 16));
 
-        statisticsContainer.add(jPanel11, new org.netbeans.lib.awtextra.AbsoluteConstraints(450, 64, 210, 308));
+        statisticsContainer.add(jPanel11, new org.netbeans.lib.awtextra.AbsoluteConstraints(450, 222, 210, 150));
 
         CommonReasonPanel.setBackground(new java.awt.Color(255, 255, 255));
         CommonReasonPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(226, 232, 240)));
@@ -2350,6 +2438,10 @@ FrequentlyUsedLabel.setText(topMedicine);
     private javax.swing.JTextArea InventoryLogs;
     private javax.swing.JTextField ProductName;
     private javax.swing.JTextField Qty;
+    private javax.swing.JLabel SentBackValue;
+    private javax.swing.JLabel SentbackLabel;
+    private javax.swing.JPanel SentbackPanel;
+    private javax.swing.JLabel SentbackTitle;
     private javax.swing.JPanel cardWeeklyCheckIns;
     private javax.swing.JButton jButton5;
     private javax.swing.JButton jButton6;
