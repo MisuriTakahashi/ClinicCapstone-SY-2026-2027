@@ -2084,13 +2084,46 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
             String lrn = (String) ReasonTable.getValueAt(row, 3);
 
             try {
+                
                 CheckinSystem record = visitService.findActiveVisit(lrn);
 
                 if (record == null) {
                     JOptionPane.showMessageDialog(this, "This Student has Already been sent");
                     return;
                 }
+                
+                Object[] pickerOptions = {"Sent Home", "Sent Back to Classroom", "Cancel"};
+                int choice = JOptionPane.showOptionDialog(
+                        this,
+                        "Sent home Or Sent Back to room?",
+                        "Student Status",
+                        JOptionPane.DEFAULT_OPTION,
+                        JOptionPane.QUESTION_MESSAGE,
+                        null,
+                        pickerOptions,
+                        pickerOptions[0]);
 
+                if (choice != 0 && choice != 1) {
+                    // Cancel selected, or dialog closed with the X button — do nothing
+                    return;
+                }
+
+                if (choice == 1) {
+                    // ---- SENT BACK TO CLASSROOM ----
+                    boolean backSuccess = visitService.markSentBack(lrn);
+
+                    if (!backSuccess) {
+                        JOptionPane.showMessageDialog(this, "Error... Unable to update the Student's Status");
+                        return;
+                    }
+
+                    refreshTableAndCounters();
+                    JOptionPane.showMessageDialog(this,
+                            record.getName() + " has been sent back to the classroom.");
+                    return;
+                }
+
+                // ---- SENT HOME (choice == 0) — existing flow, unchanged below ----
                 boolean success = visitService.markSentHome(lrn);
 
                 if (!success) {

@@ -1017,6 +1017,10 @@ FrequentlyUsedLabel.setText(topMedicine);
             lblSentHomeValue.setText(
                     String.valueOf(sentHome)
             );
+            
+            SentBackValue.setText(
+                    String.valueOf(sentBack)
+            );
 
             lblMondayCount.setText(
                     String.valueOf(monday)

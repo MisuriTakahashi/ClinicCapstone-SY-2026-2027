@@ -99,6 +99,7 @@ public class VisitData {
         String today = LocalDate.now().toString();
         int totalToday = 0;
         int sentHomeToday = 0;
+        int sentBackToday = 0;
 
         String sql = "SELECT status FROM VISITS WHERE check_in_time LIKE ? AND archived = FALSE";
         try (Connection conn = DatabaseManager.getConnection();
@@ -107,11 +108,13 @@ public class VisitData {
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     totalToday++;
-                    if ("Sent Home".equals(rs.getString("status"))) sentHomeToday++;
+                    String status = rs.getString("status");
+                    if ("Sent Home".equals(status)) sentHomeToday++;
+                    else if ("Sent Back".equals(status)) sentBackToday++;
                 }
             }
         }
-        return new int[]{totalToday, sentHomeToday};
+        return new int[]{totalToday, sentHomeToday, sentBackToday};
     }
     
     public ArrayList<CheckinSystem> getVisitsByDate(String dateIso) throws SQLException {
@@ -196,8 +199,9 @@ public class VisitData {
     }
 
     public boolean editVisit(String lrn, String newName, String newGradeSection,
-                          String newReason, String newMedUsed, int newMedsQty,
-                          String newGuardianName, String newGuardianPhone) throws SQLException {
+                        
+            String newReason, String newMedUsed, int newMedsQty,
+            String newGuardianName, String newGuardianPhone) throws SQLException {
 
             String sql = "UPDATE VISITS SET name = ?, grade_section = ?, reason = ?, "
                 + "med_used = ?, meds_qty = ?, guardian_name = ?, guardian_phone = ? "
@@ -227,4 +231,19 @@ public class VisitData {
             }
         }
     }
+    
+    public boolean markSentBack(String lrn) throws SQLException {
+        String sql = "UPDATE VISITS SET status = 'Sent Back' "
+            + "WHERE id = (SELECT id FROM VISITS WHERE lrn = ? AND status = 'In Clinic' AND archived = FALSE "
+            + "ORDER BY id ASC LIMIT 1)";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, lrn);
+            return ps.executeUpdate() > 0;
+        }
+    }
+    
+    
+    
 }
