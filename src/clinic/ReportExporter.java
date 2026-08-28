@@ -164,7 +164,7 @@ public class ReportExporter {
             // --- Section 2: Inventory / Medicine Logs ---
             Row inventorySectionRow = sheet.createRow(rowIndex++);
             Cell inventorySectionCell = inventorySectionRow.createCell(0);
-            inventorySectionCell.setCellValue("INVENTORY / MEDICINE LOGS");
+            inventorySectionCell.setCellValue("Activities Logs");
             inventorySectionCell.setCellStyle(sectionStyle);
 
             Row inventoryHeaderRow = sheet.createRow(rowIndex++);
