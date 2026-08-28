@@ -255,9 +255,7 @@
                                   <Component id="SearchLabel" min="-2" pref="50" max="-2" attributes="0"/>
                                   <EmptySpace min="-2" pref="2" max="-2" attributes="0"/>
                                   <Component id="SearchField" min="-2" pref="263" max="-2" attributes="0"/>
-                                  <EmptySpace max="-2" attributes="0"/>
-                                  <Component id="SearchBTN" min="-2" max="-2" attributes="0"/>
-                                  <EmptySpace min="-2" pref="6" max="-2" attributes="0"/>
+                                  <EmptySpace min="-2" pref="81" max="-2" attributes="0"/>
                               </Group>
                               <Component id="CheckInPanel1" min="-2" max="-2" attributes="0"/>
                           </Group>
@@ -289,7 +287,6 @@
                                       <Component id="LogsLabel" alignment="3" min="-2" pref="30" max="-2" attributes="0"/>
                                       <Component id="SearchField" alignment="3" min="-2" pref="39" max="-2" attributes="0"/>
                                       <Component id="SearchLabel" alignment="3" min="-2" pref="39" max="-2" attributes="0"/>
-                                      <Component id="SearchBTN" alignment="3" min="-2" max="-2" attributes="0"/>
                                   </Group>
                                   <EmptySpace max="-2" attributes="0"/>
                               </Group>
@@ -1096,14 +1093,6 @@
             <Property name="horizontalAlignment" type="int" value="0"/>
             <Property name="text" type="java.lang.String" value="Search:"/>
           </Properties>
-        </Component>
-        <Component class="javax.swing.JButton" name="SearchBTN">
-          <Properties>
-            <Property name="text" type="java.lang.String" value="Search"/>
-          </Properties>
-          <Events>
-            <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="SearchBTNActionPerformed"/>
-          </Events>
         </Component>
       </SubComponents>
     </Container>

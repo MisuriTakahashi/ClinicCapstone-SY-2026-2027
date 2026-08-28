@@ -221,7 +221,7 @@ public class Dashboard extends javax.swing.JFrame {
             SearchField.putClientProperty("JComponent.roundRect", true);
             SearchField.putClientProperty("JTextField.placeholderText", "Search name, LRN, reason...");
             SearchField.putClientProperty("JTextField.showClearButton", true);
-            SearchBTN.putClientProperty("JButton.buttonType", "roundRect");
+            
 
             // Live search: filter as the user types
             SearchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
@@ -345,8 +345,7 @@ public class Dashboard extends javax.swing.JFrame {
 
     // Row 4: Logs Label (Spans Cols 2 & 3)
     MainPanel.add(LogsLabel,   "alignx center");
-    MainPanel.add(SearchField, "split 2, alignx right, gapleft push, w 220!, h 34!");
-    MainPanel.add(SearchBTN,   "h 34!, wrap");
+    MainPanel.add(SearchField, "alignx right, gapleft push, w 220!, h 34!, wrap");
 
     // Row 5: The Table (Spans Cols 2 & 3, Grows to fill height)
     MainPanel.add(CheckInPanel1, "spanx 2, grow, wrap");
@@ -439,7 +438,7 @@ private void applyTheme() {
         ThemeToggle.setBackground(java.awt.Color.WHITE);
         ThemeToggle.setForeground(java.awt.Color.BLACK);
         // --- ACTION BUTTONS (Blue) ---
-        javax.swing.JButton[] actionButtons = {CheckInBTN, EditBTN, SentHomeBTN, ClearBTN, SearchBTN};
+        javax.swing.JButton[] actionButtons = {CheckInBTN, EditBTN, SentHomeBTN, ClearBTN, };
         SearchField.setBackground(inputBackground); SearchField.setForeground(textColor);
         for (javax.swing.JButton btn : actionButtons) {
             btn.putClientProperty("JButton.buttonType", "roundRect");
@@ -850,7 +849,6 @@ NOT modify this code. The content of this method is always
         VisitCounter = new javax.swing.JLabel();
         SearchField = new javax.swing.JTextField();
         SearchLabel = new javax.swing.JLabel();
-        SearchBTN = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setFocusable(false);
@@ -1315,9 +1313,6 @@ NOT modify this code. The content of this method is always
         SearchLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         SearchLabel.setText("Search:");
 
-        SearchBTN.setText("Search");
-        SearchBTN.addActionListener(this::SearchBTNActionPerformed);
-
         javax.swing.GroupLayout MainPanelLayout = new javax.swing.GroupLayout(MainPanel);
         MainPanel.setLayout(MainPanelLayout);
         MainPanelLayout.setHorizontalGroup(
@@ -1354,9 +1349,7 @@ NOT modify this code. The content of this method is always
                                 .addComponent(SearchLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(2, 2, 2)
                                 .addComponent(SearchField, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(SearchBTN)
-                                .addGap(6, 6, 6))
+                                .addGap(81, 81, 81))
                             .addComponent(CheckInPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addContainerGap(28, Short.MAX_VALUE))))
         );
@@ -1379,8 +1372,7 @@ NOT modify this code. The content of this method is always
                                 .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                                     .addComponent(LogsLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
                                     .addComponent(SearchField, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(SearchLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(SearchBTN))
+                                    .addComponent(SearchLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED))
                             .addGroup(MainPanelLayout.createSequentialGroup()
                                 .addComponent(InventoryPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -2071,17 +2063,6 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
        clearCheckInForm();
        showToast(CheckInPanel, "Form cleared.", true);
     }//GEN-LAST:event_ClearBTNActionPerformed
-
-    private void SearchBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SearchBTNActionPerformed
-        String query = SearchField.getText().trim();
-        int matches = applySearchFilter();
-
-        if (!query.isEmpty() && matches == 0) {
-            JOptionPane.showMessageDialog(this,
-                    "No student found matching \"" + query + "\".",
-                    "No Results", JOptionPane.INFORMATION_MESSAGE);
-        }
-    }//GEN-LAST:event_SearchBTNActionPerformed
    
     private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {                                         
             
@@ -2499,7 +2480,6 @@ private String safeText(String value) {
     private javax.swing.JTextField PhoneField;
     private javax.swing.JTextArea ReasonArea;
     private javax.swing.JTable ReasonTable;
-    private javax.swing.JButton SearchBTN;
     private javax.swing.JTextField SearchField;
     private javax.swing.JLabel SearchLabel;
     private javax.swing.JButton SentHomeBTN;
