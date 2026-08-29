@@ -117,23 +117,34 @@ public class LoginUi extends javax.swing.JFrame {
     }
 
     // Smooth Fade-Out Effect
-    private void fadeOutAndOpenDashboard(AccountSystem account) {
-        javax.swing.Timer timer = new javax.swing.Timer(20, null);
-        timer.addActionListener(e -> {
-            float opacity = getOpacity();
-            opacity -= 0.05f;
-            
-            if (opacity <= 0.05f) {
-                setOpacity(0.0f);
-                timer.stop();
-                new Dashboard(account).setVisible(true);
-                dispose();
-            } else {
-                setOpacity(opacity);
-            }
-        });
-        timer.start();
+// Smooth Fade-Out Effect (Linux & Cross-Platform Safe)
+private void fadeOutAndOpenDashboard(AccountSystem account) {
+    java.awt.GraphicsDevice gd = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+    boolean isTranslucencySupported = gd.isWindowTranslucencySupported(java.awt.GraphicsDevice.WindowTranslucency.TRANSLUCENT);
+
+    // If translucency is not supported by the OS/WM (e.g. Linux X11/Wayland), transition instantly
+    if (!isTranslucencySupported) {
+        new Dashboard(account).setVisible(true);
+        dispose();
+        return;
     }
+
+    javax.swing.Timer timer = new javax.swing.Timer(20, null);
+    timer.addActionListener(e -> {
+        float opacity = getOpacity();
+        opacity -= 0.05f;
+        
+        if (opacity <= 0.05f) {
+            setOpacity(0.0f);
+            timer.stop();
+            new Dashboard(account).setVisible(true);
+            dispose();
+        } else {
+            setOpacity(opacity);
+        }
+    });
+    timer.start();
+}
     
     /**
      * This method is called from within the constructor to initialize the form.
@@ -277,19 +288,27 @@ public class LoginUi extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void ExitBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ExitBTNActionPerformed
-      javax.swing.Timer timer = new javax.swing.Timer(15, null);
-        timer.addActionListener(e -> {
-            float opacity = getOpacity();
-            opacity -= 0.1f;
-            if (opacity <= 0.05f) {
-                timer.stop();
-                System.exit(0);
-            } else {
-                setOpacity(opacity);
-            }
-        });
-        timer.start();
+      java.awt.GraphicsDevice gd = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+    boolean isTranslucencySupported = gd.isWindowTranslucencySupported(java.awt.GraphicsDevice.WindowTranslucency.TRANSLUCENT);
 
+    // If translucency is not supported, exit immediately
+    if (!isTranslucencySupported) {
+        System.exit(0);
+        return;
+    }
+
+    javax.swing.Timer timer = new javax.swing.Timer(15, null);
+    timer.addActionListener(e -> {
+        float opacity = getOpacity();
+        opacity -= 0.1f;
+        if (opacity <= 0.05f) {
+            timer.stop();
+            System.exit(0);
+        } else {
+            setOpacity(opacity);
+        }
+    });
+    timer.start();
     }//GEN-LAST:event_ExitBTNActionPerformed
 
     /**
