@@ -43,20 +43,58 @@ public class FirstRunSetup extends javax.swing.JFrame {
     }
     }
     private void applyFlatLafStyles() {
-    
+    // Window Base Style
+    getRootPane().putClientProperty("FlatLaf.style", "font: 14 $defaultFont.family");
 
-    
-getRootPane().putClientProperty("FlatLaf.style", "font: 14");
-
+    // ==========================================
+    // 1. STYLE: Number Input Panel (jPanel2)
+    // ==========================================
     NumberTxt.setHorizontalAlignment(javax.swing.JTextField.CENTER);
     NumberTxt.putClientProperty("JTextField.placeholderText", "e.g., 1");
     NumberTxt.putClientProperty("JTextField.arc", 12);
     NumberTxt.putClientProperty("JTextField.outline", "#CBD5E1");
     NumberTxt.putClientProperty("JTextField.padding", new java.awt.Insets(6, 10, 6, 10));
 
-
     NextButton.putClientProperty("JButton.buttonType", "roundRect");
     NextButton.putClientProperty("JButton.arc", 12);
+
+    // ==========================================
+    // 2. STYLE: Create Panel (jPanel3 Controls)
+    // ==========================================
+    
+    // Header & Badge Styling
+    jLabel7.putClientProperty("FlatLaf.style", "font: bold 22 $defaultFont.family; foreground: #0F172A;");
+    NumberPlaceHolder.putClientProperty("FlatLaf.style", "font: bold 22 $defaultFont.family; foreground: #0284C7;");
+
+    // Form Field Labels
+    AccountNameLabel.putClientProperty("FlatLaf.style", "font: bold 13 $defaultFont.family; foreground: #475569;");
+    AccountPasswordLabel.putClientProperty("FlatLaf.style", "font: bold 13 $defaultFont.family; foreground: #475569;");
+    ConfirmPasswordLabel.putClientProperty("FlatLaf.style", "font: bold 13 $defaultFont.family; foreground: #475569;");
+
+    // Text & Password Input Fields
+    AccNameField.putClientProperty("JTextField.placeholderText", "Enter admin username...");
+    AccNameField.putClientProperty("JTextField.arc", 12);
+    AccNameField.putClientProperty("JTextField.outline", "#CBD5E1");
+    AccNameField.putClientProperty("JTextField.padding", new java.awt.Insets(6, 10, 6, 10));
+
+    AccPasswordField.putClientProperty("JTextField.placeholderText", "Enter password...");
+    AccPasswordField.putClientProperty("JTextField.arc", 12);
+    AccPasswordField.putClientProperty("JTextField.outline", "#CBD5E1");
+    AccPasswordField.putClientProperty("JTextField.padding", new java.awt.Insets(6, 10, 6, 10));
+    AccPasswordField.putClientProperty("JPasswordField.showRevealButton", true); // Optional eye button to toggle visibility
+
+    ConfirmPasswordField1.putClientProperty("JTextField.placeholderText", "Re-enter password...");
+    ConfirmPasswordField1.putClientProperty("JTextField.arc", 12);
+    ConfirmPasswordField1.putClientProperty("JTextField.outline", "#CBD5E1");
+    ConfirmPasswordField1.putClientProperty("JTextField.padding", new java.awt.Insets(6, 10, 6, 10));
+    ConfirmPasswordField1.putClientProperty("JPasswordField.showRevealButton", true);
+
+    // Buttons (NextButton1 = Next / Intermediate, NextButton2 = Final Confirm)
+    NextButton1.putClientProperty("JButton.buttonType", "roundRect");
+    NextButton1.putClientProperty("JButton.arc", 12);
+
+    NextButton2.putClientProperty("JButton.buttonType", "roundRect");
+    NextButton2.putClientProperty("JButton.arc", 12);
 }
 
     /**
@@ -68,6 +106,17 @@ getRootPane().putClientProperty("FlatLaf.style", "font: 14");
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
+        CreatePanel = new javax.swing.JPanel();
+        jLabel7 = new javax.swing.JLabel();
+        NumberPlaceHolder = new javax.swing.JLabel();
+        AccNameField = new javax.swing.JTextField();
+        AccountNameLabel = new javax.swing.JLabel();
+        AccountPasswordLabel = new javax.swing.JLabel();
+        AccPasswordField = new javax.swing.JPasswordField();
+        ConfirmPasswordLabel = new javax.swing.JLabel();
+        ConfirmPasswordField1 = new javax.swing.JPasswordField();
+        NextButton1 = new javax.swing.JButton();
+        NextButton2 = new javax.swing.JButton();
         jPanel2 = new javax.swing.JPanel();
         jLabel4 = new javax.swing.JLabel();
         jLabel6 = new javax.swing.JLabel();
@@ -79,6 +128,107 @@ getRootPane().putClientProperty("FlatLaf.style", "font: 14");
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        CreatePanel.setBackground(new java.awt.Color(255, 255, 255));
+
+        jLabel7.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
+        jLabel7.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel7.setText("Create Head Admin");
+
+        NumberPlaceHolder.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
+        NumberPlaceHolder.setForeground(new java.awt.Color(0, 0, 0));
+
+        AccNameField.addActionListener(this::AccNameFieldActionPerformed);
+
+        AccountNameLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
+        AccountNameLabel.setForeground(new java.awt.Color(0, 0, 0));
+        AccountNameLabel.setText("Account Name:");
+
+        AccountPasswordLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
+        AccountPasswordLabel.setForeground(new java.awt.Color(0, 0, 0));
+        AccountPasswordLabel.setText("Account Password:");
+
+        AccPasswordField.addActionListener(this::AccPasswordFieldActionPerformed);
+
+        ConfirmPasswordLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
+        ConfirmPasswordLabel.setForeground(new java.awt.Color(0, 0, 0));
+        ConfirmPasswordLabel.setText("Confirm Password:");
+
+        NextButton1.setBackground(new java.awt.Color(0, 102, 204));
+        NextButton1.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        NextButton1.setForeground(new java.awt.Color(255, 255, 255));
+        NextButton1.setText("Confirm");
+        NextButton1.addActionListener(this::NextButton1ActionPerformed);
+
+        NextButton2.setBackground(new java.awt.Color(0, 102, 204));
+        NextButton2.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        NextButton2.setForeground(new java.awt.Color(255, 255, 255));
+        NextButton2.setText("Next");
+        NextButton2.addActionListener(this::NextButton2ActionPerformed);
+
+        javax.swing.GroupLayout CreatePanelLayout = new javax.swing.GroupLayout(CreatePanel);
+        CreatePanel.setLayout(CreatePanelLayout);
+        CreatePanelLayout.setHorizontalGroup(
+            CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(CreatePanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(CreatePanelLayout.createSequentialGroup()
+                        .addComponent(jLabel7, javax.swing.GroupLayout.PREFERRED_SIZE, 222, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(NumberPlaceHolder, javax.swing.GroupLayout.PREFERRED_SIZE, 109, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CreatePanelLayout.createSequentialGroup()
+                        .addGap(0, 174, Short.MAX_VALUE)
+                        .addGroup(CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CreatePanelLayout.createSequentialGroup()
+                                .addComponent(NextButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(14, 14, 14))
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CreatePanelLayout.createSequentialGroup()
+                                .addGroup(CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addGroup(CreatePanelLayout.createSequentialGroup()
+                                        .addGroup(CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                            .addComponent(ConfirmPasswordLabel)
+                                            .addComponent(AccountPasswordLabel)
+                                            .addComponent(AccountNameLabel))
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addGroup(CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                            .addComponent(AccNameField, javax.swing.GroupLayout.PREFERRED_SIZE, 230, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                            .addComponent(ConfirmPasswordField1, javax.swing.GroupLayout.PREFERRED_SIZE, 230, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                            .addComponent(AccPasswordField, javax.swing.GroupLayout.PREFERRED_SIZE, 230, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CreatePanelLayout.createSequentialGroup()
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 190, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(NextButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 87, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addGap(82, 82, 82)))
+                                .addGap(171, 171, 171))))))
+        );
+        CreatePanelLayout.setVerticalGroup(
+            CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(CreatePanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel7)
+                    .addComponent(NumberPlaceHolder, javax.swing.GroupLayout.DEFAULT_SIZE, 33, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 243, Short.MAX_VALUE)
+                .addGroup(CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(AccNameField, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(AccountNameLabel))
+                .addGap(18, 18, 18)
+                .addGroup(CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(AccPasswordField, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(AccountPasswordLabel))
+                .addGap(18, 18, 18)
+                .addGroup(CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(ConfirmPasswordLabel)
+                    .addComponent(ConfirmPasswordField1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
+                .addComponent(NextButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(181, 181, 181)
+                .addComponent(NextButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
+        );
+
+        getContentPane().add(CreatePanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(592, 0, 710, 710));
 
         jPanel2.setBackground(new java.awt.Color(255, 255, 255));
 
@@ -230,6 +380,24 @@ getRootPane().putClientProperty("FlatLaf.style", "font: 14");
         new HeadAdminMakerUi(count).setVisible(true);
     }//GEN-LAST:event_NextButtonActionPerformed
 
+    private void AccNameFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AccNameFieldActionPerformed
+       
+    }//GEN-LAST:event_AccNameFieldActionPerformed
+
+    private void AccPasswordFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AccPasswordFieldActionPerformed
+       
+    }//GEN-LAST:event_AccPasswordFieldActionPerformed
+
+    private void NextButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_NextButton1ActionPerformed
+        // "Next" — only visible on non-final Head Admins.
+       
+    }//GEN-LAST:event_NextButton1ActionPerformed
+
+    private void NextButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_NextButton2ActionPerformed
+        // "Confirm" — only visible on the final Head Admin.
+        
+    }//GEN-LAST:event_NextButton2ActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -245,12 +413,23 @@ getRootPane().putClientProperty("FlatLaf.style", "font: 14");
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JTextField AccNameField;
+    private javax.swing.JPasswordField AccPasswordField;
+    private javax.swing.JLabel AccountNameLabel;
+    private javax.swing.JLabel AccountPasswordLabel;
+    private javax.swing.JPasswordField ConfirmPasswordField1;
+    private javax.swing.JLabel ConfirmPasswordLabel;
+    private javax.swing.JPanel CreatePanel;
     private javax.swing.JButton NextButton;
+    private javax.swing.JButton NextButton1;
+    private javax.swing.JButton NextButton2;
+    private javax.swing.JLabel NumberPlaceHolder;
     private javax.swing.JTextField NumberTxt;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     // End of variables declaration//GEN-END:variables
