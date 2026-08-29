@@ -538,4 +538,116 @@ public class AccountData {
             }
         }
     }
+    
+        /**
+     * First-run only. Creates one or more protected HEAD_ADMIN accounts
+     * in a single transaction. There is no logged-in actor yet, so this
+     * intentionally does NOT go through requireCurrentActor(). Instead,
+     * it re-checks — inside the same transaction that performs the
+     * inserts — that the ACCOUNTS table is still completely empty. If
+     * it isn't, nothing is inserted and a SecurityException is thrown.
+     */
+    public void createInitialHeadAdmins(
+            java.util.List<PendingHeadAdmin> pendingHeadAdmins)
+            throws SQLException {
+
+        if (pendingHeadAdmins == null
+                || pendingHeadAdmins.isEmpty()) {
+
+            throw new IllegalArgumentException(
+                    "At least one Head Admin is required."
+            );
+        }
+
+        String insert =
+                "INSERT INTO ACCOUNTS("
+                + "name, password, role, is_protected"
+                + ") VALUES(?, ?, ?, TRUE)";
+
+        try (Connection conn =
+                     DatabaseManager.getConnection()) {
+
+            conn.setAutoCommit(false);
+
+            try {
+
+                try (PreparedStatement countPs =
+                             conn.prepareStatement(
+                                     "SELECT COUNT(*) FROM ACCOUNTS"
+                             );
+                     ResultSet countRs =
+                             countPs.executeQuery()) {
+
+                    countRs.next();
+
+                    if (countRs.getInt(1) > 0) {
+
+                        throw new SecurityException(
+                                "First-Run Head Admin setup can "
+                                + "only run on a database with "
+                                + "no existing accounts."
+                        );
+                    }
+                }
+
+                try (PreparedStatement ps =
+                             conn.prepareStatement(insert)) {
+
+                    for (PendingHeadAdmin admin
+                            : pendingHeadAdmins) {
+
+                        ps.setString(1, admin.name());
+                        ps.setString(2, admin.passwordHash());
+                        ps.setString(
+                                3,
+                                AccountSystem.ROLE_HEAD_ADMIN
+                        );
+
+                        ps.addBatch();
+                    }
+
+                    ps.executeBatch();
+                }
+
+                for (PendingHeadAdmin admin
+                        : pendingHeadAdmins) {
+
+                    ActivityLogData.log(
+                            conn,
+                            "CREATE_ACCOUNT",
+                            "Created protected "
+                            + AccountSystem.ROLE_HEAD_ADMIN
+                            + " account: "
+                            + admin.name(),
+                            "SYSTEM_SETUP"
+                    );
+                }
+
+                conn.commit();
+
+            } catch (SQLException | RuntimeException ex) {
+
+                try {
+                    conn.rollback();
+                } catch (SQLException ignored) {
+                }
+
+                throw ex;
+
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    /**
+     * One validated, already-hashed Head Admin waiting to be inserted
+     * during First-Run Setup. Holds only the password hash — never
+     * plaintext — and nothing is written to H2 until all of them are
+     * collected and createInitialHeadAdmins() is called.
+     */
+    public record PendingHeadAdmin(
+            String name,
+            String passwordHash) {
+    }
 }

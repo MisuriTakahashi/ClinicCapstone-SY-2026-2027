@@ -129,7 +129,7 @@ public class DatabaseManager {
 
             migrateAccountRolesAndPasswords(conn);
 
-            ensureDefaultHeadAdmin(conn);
+            protectExistingHeadAdmins(conn);
 
             /*
              * Import existing plaintext inventory history once.
@@ -302,149 +302,48 @@ public class DatabaseManager {
         }
     }
 
-    private static void ensureDefaultHeadAdmin(
+      /**
+     * Safety net only: marks any existing HEAD_ADMIN row as protected.
+     * Never creates an account, never sets a password. This just
+     * guarantees that a HEAD_ADMIN account created some other way
+     * (e.g. an older database) still can't be deleted through normal
+     * Account Management.
+     */
+    private static void protectExistingHeadAdmins(
             Connection conn) throws SQLException {
 
-        int headAdminCount = 0;
-
-        String countSql =
-                "SELECT COUNT(*) "
-                + "FROM ACCOUNTS "
-                + "WHERE role = ?";
-
         try (PreparedStatement ps =
-                     conn.prepareStatement(countSql)) {
+                     conn.prepareStatement(
+                             "UPDATE ACCOUNTS "
+                             + "SET is_protected = TRUE "
+                             + "WHERE role = ?"
+                     )) {
 
             ps.setString(
                     1,
-                    AccountSystem.ROLE_HEAD_ADMIN
-            );
-
-            try (ResultSet rs =
-                         ps.executeQuery()) {
-
-                if (rs.next()) {
-                    headAdminCount =
-                            rs.getInt(1);
-                }
-            }
-        }
-
-        if (headAdminCount > 0) {
-
-            try (PreparedStatement ps =
-                         conn.prepareStatement(
-                                 "UPDATE ACCOUNTS "
-                                 + "SET is_protected = TRUE "
-                                 + "WHERE role = ?"
-                         )) {
-
-                ps.setString(
-                        1,
-                        AccountSystem.ROLE_HEAD_ADMIN
-                );
-
-                ps.executeUpdate();
-            }
-
-            return;
-        }
-
-        String username =
-                SecurityConfig
-                        .DEFAULT_HEAD_ADMIN_USERNAME
-                        .trim();
-
-        if (username.isEmpty()) {
-
-            throw new SQLException(
-                    "Default Head Admin username "
-                    + "cannot be empty."
-            );
-        }
-
-        String existingSql =
-                "SELECT id, role "
-                + "FROM ACCOUNTS "
-                + "WHERE UPPER(name) = UPPER(?)";
-
-        try (PreparedStatement ps =
-                     conn.prepareStatement(existingSql)) {
-
-            ps.setString(1, username);
-
-            try (ResultSet rs =
-                         ps.executeQuery()) {
-
-                if (rs.next()) {
-
-                    throw new SQLException(
-                            "The configured default "
-                            + "Head Admin username '"
-                            + username
-                            + "' already belongs to "
-                            + "a non-Head-Admin account. "
-                            + "Change the configured username "
-                            + "before starting the application."
-                    );
-                }
-            }
-        }
-
-        if (SecurityConfig.DEFAULT_HEAD_ADMIN_PASSWORD
-                == null
-                || SecurityConfig.DEFAULT_HEAD_ADMIN_PASSWORD
-                        .isEmpty()) {
-
-            throw new SQLException(
-                    "Default Head Admin password "
-                    + "cannot be empty."
-            );
-        }
-
-        String insert =
-                "INSERT INTO ACCOUNTS("
-                + "name, password, role, is_protected"
-                + ") VALUES(?, ?, ?, TRUE)";
-
-        try (PreparedStatement ps =
-                     conn.prepareStatement(insert)) {
-
-            ps.setString(
-                    1,
-                    username
-            );
-
-            ps.setString(
-                    2,
-                    PasswordHasher.hashPassword(
-                            SecurityConfig
-                                    .DEFAULT_HEAD_ADMIN_PASSWORD
-                    )
-            );
-
-            ps.setString(
-                    3,
                     AccountSystem.ROLE_HEAD_ADMIN
             );
 
             ps.executeUpdate();
         }
+    }
 
-        ActivityLogData.log(
-                conn,
-                "CREATE_ACCOUNT",
-                "Created protected default "
-                + AccountSystem.ROLE_HEAD_ADMIN
-                + " account: "
-                + username,
-                "SYSTEM"
-        );
+    /**
+     * First-run detection: true once the ACCOUNTS table has at least
+     * one row. Does not check for any specific username.
+     */
+    public static boolean hasAnyAccounts() throws SQLException {
 
-        System.out.println(
-                "Default protected Head Admin created: "
-                + username
-        );
+        try (Connection conn = getConnection();
+             PreparedStatement ps =
+                     conn.prepareStatement(
+                             "SELECT COUNT(*) FROM ACCOUNTS"
+                     );
+             ResultSet rs = ps.executeQuery()) {
+
+            rs.next();
+            return rs.getInt(1) > 0;
+        }
     }
 
     private record AccountMigrationRow(

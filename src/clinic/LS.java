@@ -117,6 +117,34 @@ public class LS {
 
                 screen.dispose();
 
+                boolean firstRun;
+
+                try {
+
+                    firstRun =
+                            !DatabaseManager.hasAnyAccounts();
+
+                } catch (java.sql.SQLException ex) {
+
+                    javax.swing.JOptionPane.showMessageDialog(
+                            null,
+                            "Could not check the account "
+                            + "database: " + ex.getMessage(),
+                            "Startup Error",
+                            javax.swing.JOptionPane.ERROR_MESSAGE
+                    );
+
+                    firstRun = false;
+                }
+
+                if (firstRun) {
+
+                    new FirstRunSetup()
+                            .setVisible(true);
+
+                    return;
+                }
+
                 AccountSystem restoredAccount =
                         SessionManager.loadSession();
 
