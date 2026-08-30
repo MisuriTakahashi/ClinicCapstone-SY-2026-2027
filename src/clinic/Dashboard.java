@@ -1672,12 +1672,13 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
 
     /** Exports check-in logs for a confirmed date, then archives & resets the active list.
      *  Returns true only if the export actually succeeded (and the user did not cancel). */
-    private boolean exportTodaysCheckinLogs() {
+     private boolean exportTodaysCheckinLogs() {
         LocalDate reportDate = confirmReportDate();
         if (reportDate == null) {
             return false; // user cancelled the date confirmation - stay logged in
         }
 
+        String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
         ReportExporter exporter = new ReportExporter(productService);
 
         try {
@@ -1703,8 +1704,8 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
             }
 
             // Export first. Only if this line completes without throwing do we move on.
-            exporter.writeCheckinReport(reportDate, destination);
-
+            exporter.writeCheckinReport(reportDate, destination, actor);
+            
             // Export succeeded -> now archive & reset the active daily check-in list for this date.
             try {
                 int archivedCount = visitService.archiveDate(reportDate.toString());
@@ -2102,8 +2103,9 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
 
                 if (choice == 1) {
                     // ---- SENT BACK TO CLASSROOM ----
-                    boolean backSuccess = visitService.markSentBack(lrn);
-
+                    String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
+                    boolean backSuccess = visitService.markSentBack(lrn, actor);
+                    
                     if (!backSuccess) {
                         JOptionPane.showMessageDialog(this, "Error... Unable to update the Student's Status");
                         return;
@@ -2116,7 +2118,8 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
                 }
 
                 // ---- SENT HOME (choice == 0) — existing flow, unchanged below ----
-                boolean success = visitService.markSentHome(lrn);
+                String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
+                boolean success = visitService.markSentHome(lrn, actor);
 
                 if (!success) {
                     JOptionPane.showMessageDialog(this, "Error... Unable to update the Student's Status");

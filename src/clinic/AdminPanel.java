@@ -883,202 +883,38 @@ private JPanel createAccountFormPanel() {
 /** Computes and displays the statistics cards from an already-loaded visit list. */
 private void applyStatistics(ArrayList<CheckinSystem> visits) {
     try {
-
-        int weeklyCheckins = 0;
-        int inClinic = 0;
-        int sentBack = 0;
-        int sentHome = 0;
-
-        int monday = 0;
-        int tuesday = 0;
-        int wednesday = 0;
-        int thursday = 0;
-        int friday = 0;
-
-        Map<String, Integer> reasonCount = new HashMap<>();
-        Map<String, Integer> medicineCount = new HashMap<>();
-
-        // Get the current week's Monday and Friday
         LocalDate today = LocalDate.now();
-        LocalDate mondayOfWeek = today.with(DayOfWeek.MONDAY);
-        LocalDate fridayOfWeek = today.with(DayOfWeek.FRIDAY);
+        WeeklyStats stats = computeWeeklyStats(visits, today);
 
-        DateTimeFormatter formatter =
-                 DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a");
+        lblMondayDate.setText(String.valueOf(stats.mondayOfWeek().getDayOfMonth()));
+        lblTuesdayDate.setText(String.valueOf(stats.mondayOfWeek().plusDays(1).getDayOfMonth()));
+        lblWednesdayDate.setText(String.valueOf(stats.mondayOfWeek().plusDays(2).getDayOfMonth()));
+        lblThursdayDate.setText(String.valueOf(stats.mondayOfWeek().plusDays(3).getDayOfMonth()));
+        lblFridayDate.setText(String.valueOf(stats.mondayOfWeek().plusDays(4).getDayOfMonth()));
 
+        CommonReasonLabel.setText(stats.topReason());
+        FrequentlyUsedLabel.setText(stats.topMedicine());
 
-        lblMondayDate.setText(
-                String.valueOf(mondayOfWeek.getDayOfMonth())
-        );
+        lblWeeklyCheckInsValue.setText(String.valueOf(stats.weeklyCheckins()));
+        lblInClinicValue.setText(String.valueOf(stats.inClinic()));
+        lblSentHomeValue.setText(String.valueOf(stats.sentHome()));
+        SentBackValue.setText(String.valueOf(stats.sentBack()));
 
-        lblTuesdayDate.setText(
-                String.valueOf(mondayOfWeek.plusDays(1).getDayOfMonth())
-        );
+        lblMondayCount.setText(String.valueOf(stats.monday()));
+        lblTuesdayCount.setText(String.valueOf(stats.tuesday()));
+        lblWednesdayCount.setText(String.valueOf(stats.wednesday()));
+        lblThursdayCount.setText(String.valueOf(stats.thursday()));
+        lblFridayCount.setText(String.valueOf(stats.friday()));
 
-        lblWednesdayDate.setText(
-                String.valueOf(mondayOfWeek.plusDays(2).getDayOfMonth())
-        );
-
-        lblThursdayDate.setText(
-                String.valueOf(mondayOfWeek.plusDays(3).getDayOfMonth())
-        );
-
-        lblFridayDate.setText(
-                String.valueOf(mondayOfWeek.plusDays(4).getDayOfMonth())
-        );
-
-
-        for (CheckinSystem v : visits) {
-
-            LocalDate visitDate;
-
-            try {
-                visitDate = LocalDateTime
-                        .parse(v.getCheckInTime(), formatter)
-                        .toLocalDate();
-
-            } catch (DateTimeParseException ex) {
-
-                continue;
-            }
-
-            if (!visitDate.isBefore(mondayOfWeek)
-                    && !visitDate.isAfter(fridayOfWeek)) {
-
-                weeklyCheckins++;
-
-                switch (visitDate.getDayOfWeek()) {
-
-                    case MONDAY:
-                        monday++;
-                        break;
-
-                    case TUESDAY:
-                        tuesday++;
-                        break;
-
-                    case WEDNESDAY:
-                        wednesday++;
-                        break;
-
-                    case THURSDAY:
-                        thursday++;
-                        break;
-
-                    case FRIDAY:
-                        friday++;
-                        break;
-
-                    default:
-                        break;
-                }
-            }
-
-
-            if ("In Clinic".equalsIgnoreCase(v.getStatus())) {
-                inClinic++;
-            }
-            if ("Sent Back".equalsIgnoreCase(v.getStatus())) {
-                sentBack++;
-            }
-
-            if ("Sent Home".equalsIgnoreCase(v.getStatus())) {
-                sentHome++;
-            }
-
-
-            if (v.getReason() != null && !v.getReason().isBlank()) {
-                reasonCount.put(
-                        v.getReason(),
-                        reasonCount.getOrDefault(v.getReason(), 0) + 1
-                );
-            }
-
-
-            if (v.getMedUsed() != null && !v.getMedUsed().isBlank()) {
-                medicineCount.put(
-                        v.getMedUsed(),
-                        medicineCount.getOrDefault(v.getMedUsed(), 0) + 1
-                );
-            }
-        }
-        // --- Calculate Most Common Reason ---
-        String topReason = "N/A";
-        int maxReasonCount = 0;
-        for (Map.Entry<String, Integer> entry : reasonCount.entrySet()) {
-            if (entry.getValue() > maxReasonCount) {
-                maxReasonCount = entry.getValue();
-                topReason = entry.getKey();
-            }
-        }
-
-        // --- Calculate Most Frequently Used Medicine ---
-        String topMedicine = "N/A";
-        int maxMedCount = 0;
-        for (Map.Entry<String, Integer> entry : medicineCount.entrySet()) {
-            if (entry.getValue() > maxMedCount) {
-                maxMedCount = entry.getValue();
-                topMedicine = entry.getKey();
-            }
-        }
-
-        // Clean up "None" or empty medicine entries so it looks professional
-        if (topMedicine.equalsIgnoreCase("None") || topMedicine.trim().isEmpty()) {
-            topMedicine = "No medicine used";
-        }
-
-        // --- Update the UI Labels ---
-        CommonReasonLabel.setText(topReason);
-        FrequentlyUsedLabel.setText(topMedicine);
-
-        lblWeeklyCheckInsValue.setText(
-                String.valueOf(weeklyCheckins)
-        );
-
-        lblInClinicValue.setText(
-                String.valueOf(inClinic)
-        );
-
-        lblSentHomeValue.setText(
-                String.valueOf(sentHome)
-        );
-
-        SentBackValue.setText(
-                String.valueOf(sentBack)
-        );
-
-        lblMondayCount.setText(
-                String.valueOf(monday)
-        );
-
-        lblTuesdayCount.setText(
-                String.valueOf(tuesday)
-        );
-
-        lblWednesdayCount.setText(
-                String.valueOf(wednesday)
-        );
-
-        lblThursdayCount.setText(
-                String.valueOf(thursday)
-        );
-
-        lblFridayCount.setText(
-                String.valueOf(friday)
-        );
-
-        DateTimeFormatter displayFormatter =
-                DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
+        DateTimeFormatter displayFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         lblReportingPeriod.setText(
                 "Reporting period: "
-                + mondayOfWeek.format(displayFormatter)
+                + stats.mondayOfWeek().format(displayFormatter)
                 + " to "
-                + fridayOfWeek.format(displayFormatter)
+                + stats.fridayOfWeek().format(displayFormatter)
         );
 
     } catch (Exception ex) {
-
         JOptionPane.showMessageDialog(
                 this,
                 "Error loading statistics: " + ex.getMessage(),
@@ -1086,6 +922,122 @@ private void applyStatistics(ArrayList<CheckinSystem> visits) {
                 JOptionPane.ERROR_MESSAGE
         );
     }
+}
+
+/**
+ * Aggregated Monday-Friday statistics for the week containing {@code anyDayInWeek},
+ * computed from an already-loaded visit list. Shared by the Admin Panel's on-screen
+ * statistics cards (applyStatistics, above) and the Excel daily report
+ * (ReportExporter.writeDailyReport), so the two can never disagree.
+ *
+ * Counting rules are unchanged from the original applyStatistics(): every visit
+ * passed in is counted, so a caller using loadAll() (which includes archived
+ * visits) gets the same archived-inclusive behavior as before.
+ */
+public static WeeklyStats computeWeeklyStats(ArrayList<CheckinSystem> visits, LocalDate anyDayInWeek) {
+
+    int weeklyCheckins = 0;
+    int inClinic = 0;
+    int sentBack = 0;
+    int sentHome = 0;
+
+    int monday = 0;
+    int tuesday = 0;
+    int wednesday = 0;
+    int thursday = 0;
+    int friday = 0;
+
+    Map<String, Integer> reasonCount = new HashMap<>();
+    Map<String, Integer> medicineCount = new HashMap<>();
+
+    LocalDate mondayOfWeek = anyDayInWeek.with(DayOfWeek.MONDAY);
+    LocalDate fridayOfWeek = anyDayInWeek.with(DayOfWeek.FRIDAY);
+
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a");
+
+    for (CheckinSystem v : visits) {
+
+        LocalDate visitDate;
+
+        try {
+            visitDate = LocalDateTime.parse(v.getCheckInTime(), formatter).toLocalDate();
+        } catch (DateTimeParseException ex) {
+            continue;
+        }
+
+        if (!visitDate.isBefore(mondayOfWeek) && !visitDate.isAfter(fridayOfWeek)) {
+
+            weeklyCheckins++;
+
+            switch (visitDate.getDayOfWeek()) {
+                case MONDAY:    monday++;    break;
+                case TUESDAY:   tuesday++;   break;
+                case WEDNESDAY: wednesday++; break;
+                case THURSDAY:  thursday++;  break;
+                case FRIDAY:    friday++;    break;
+                default: break;
+            }
+        }
+
+        if ("In Clinic".equalsIgnoreCase(v.getStatus())) {
+            inClinic++;
+        }
+        if ("Sent Back".equalsIgnoreCase(v.getStatus())) {
+            sentBack++;
+        }
+        if ("Sent Home".equalsIgnoreCase(v.getStatus())) {
+            sentHome++;
+        }
+
+        if (v.getReason() != null && !v.getReason().isBlank()) {
+            reasonCount.put(v.getReason(), reasonCount.getOrDefault(v.getReason(), 0) + 1);
+        }
+
+        if (v.getMedUsed() != null && !v.getMedUsed().isBlank()) {
+            medicineCount.put(v.getMedUsed(), medicineCount.getOrDefault(v.getMedUsed(), 0) + 1);
+        }
+    }
+
+    String topReason = "N/A";
+    int maxReasonCount = 0;
+    for (Map.Entry<String, Integer> entry : reasonCount.entrySet()) {
+        if (entry.getValue() > maxReasonCount) {
+            maxReasonCount = entry.getValue();
+            topReason = entry.getKey();
+        }
+    }
+
+    String topMedicine = "N/A";
+    int maxMedCount = 0;
+    for (Map.Entry<String, Integer> entry : medicineCount.entrySet()) {
+        if (entry.getValue() > maxMedCount) {
+            maxMedCount = entry.getValue();
+            topMedicine = entry.getKey();
+        }
+    }
+
+    if (topMedicine.equalsIgnoreCase("None") || topMedicine.trim().isEmpty()) {
+        topMedicine = "No medicine used";
+    }
+
+    return new WeeklyStats(
+            weeklyCheckins, inClinic, sentBack, sentHome,
+            monday, tuesday, wednesday, thursday, friday,
+            topReason, topMedicine,
+            mondayOfWeek, fridayOfWeek
+    );
+}
+
+/**
+ * Immutable result of computeWeeklyStats() — one Monday-Friday week's worth of
+ * clinic statistics, in the same shape used by both the on-screen cards and the
+ * Excel STATISTICS section.
+ */
+public record WeeklyStats(
+        int weeklyCheckins, int inClinic, int sentBack, int sentHome,
+        int monday, int tuesday, int wednesday, int thursday, int friday,
+        String topReason, String topMedicine,
+        LocalDate mondayOfWeek, LocalDate fridayOfWeek) {
 }
 
     /**
@@ -2364,6 +2316,7 @@ private void refreshAccountTable() {
          return;
      }
 
+     String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
      ReportExporter exporter = new ReportExporter(productService);
 
      try {
@@ -2386,7 +2339,7 @@ private void refreshAccountTable() {
          }
 
          // 4. Generate and save
-         exporter.writeDailyReport(reportDate, destination);
+          exporter.writeDailyReport(reportDate, destination, actor);
 
          // 5. Success message
          JOptionPane.showMessageDialog(this, "Report exported successfully:\n" + destination.getAbsolutePath());

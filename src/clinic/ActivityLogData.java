@@ -19,6 +19,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.time.LocalDate;
 
 /**
  * Database-backed activity/audit logging.
@@ -38,6 +39,16 @@ public final class ActivityLogData {
 
        private static final DateTimeFormatter DISPLAY_FORMAT =
             DateTimeFormatter.ofPattern("MMMM d, yyyy h:mm a");
+       
+           private static final Pattern SENT_HOME_PATTERN =
+            Pattern.compile("^Student \"(.+)\" \\(LRN: (.+)\\) was sent home\\.$");
+
+    private static final Pattern SENT_BACK_PATTERN =
+            Pattern.compile("^Student \"(.+)\" \\(LRN: (.+)\\) was sent back to the classroom\\.$");
+
+    private static final Pattern EXPORT_REPORT_PATTERN =
+            Pattern.compile("^Exported (.+) report for (\\d{4}-\\d{2}-\\d{2}) to: (.+)$");
+    
 
     private ActivityLogData() {
     }
@@ -174,6 +185,46 @@ public final class ActivityLogData {
 
         return entries;
     }
+    
+    /**
+        * Public entry point for the same sentence-building logic loadFormatted()
+        * uses internally. Lets callers that work with structured Entry records
+        * directly (e.g. ReportExporter) render the human-readable "Details"
+        * text for one entry without duplicating the humanize() switch below.
+        */
+       public static String humanizeDetails(String action, String details) {
+           return humanize(action, details);
+       }
+
+       /**
+        * Public entry point for the same actor display logic loadFormatted()
+        * uses internally (currently just expands "SYSTEM_SETUP" and falls
+        * back to "Unknown"). Never replaces a real logged-in account name.
+        */
+       public static String displayActor(String actor) {
+           return actor == null || actor.isBlank()
+                   ? "Unknown"
+                   : humanizeActor(actor);
+       }
+       
+       /**
+        * Converts a raw ACTION code (e.g. "USE_MEDICINE") into a normal-looking
+        * label (e.g. "Use Medicine") for display in the Action/Activity column.
+        * Never changes what's stored in the ACTION column itself.
+        */
+       public static String displayAction(String action) {
+           if (action == null || action.isBlank()) {
+               return "Activity";
+           }
+           String[] words = action.trim().toLowerCase().split("_");
+           StringBuilder sb = new StringBuilder();
+           for (String w : words) {
+               if (w.isEmpty()) continue;
+               if (sb.length() > 0) sb.append(' ');
+               sb.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1));
+           }
+           return sb.toString();
+       }
 
     /**
      * Returns records newest-first, formatted similarly to the old activity
@@ -307,6 +358,42 @@ public final class ActivityLogData {
                 }
                 break;
             }
+            
+            case "SENT_HOME": {
+                Matcher m = SENT_HOME_PATTERN.matcher(safeDetails);
+                if (m.matches()) {
+                    String name = m.group(1);
+                    return name + " was sent home";
+                }
+                break;
+            }
+
+            case "SENT_BACK": {
+                Matcher m = SENT_BACK_PATTERN.matcher(safeDetails);
+                if (m.matches()) {
+                    String name = m.group(1);
+                    return name + " was sent back to the classroom";
+                }
+                break;
+            }
+
+            case "EXPORT_REPORT": {
+                Matcher m = EXPORT_REPORT_PATTERN.matcher(safeDetails);
+                if (m.matches()) {
+                    String reportLabel = m.group(1);
+                    String isoDate = m.group(2);
+                    String label = Character.toUpperCase(reportLabel.charAt(0)) + reportLabel.substring(1);
+                    try {
+                        LocalDate reportDate = LocalDate.parse(isoDate);
+                        String prettyDate = reportDate.format(
+                                DateTimeFormatter.ofPattern("MMMM d, yyyy"));
+                        return label + " report for " + prettyDate + " was exported";
+                    } catch (DateTimeParseException ex) {
+                        return label + " report for " + isoDate + " was exported";
+                    }
+                }
+                break;
+            }
 
             case "CREATE_ACCOUNT": {
                 Matcher m = CREATE_ACCOUNT_PATTERN.matcher(safeDetails);
@@ -321,7 +408,7 @@ public final class ActivityLogData {
                 }
                 break;
             }
-
+            
             case "DELETE_ACCOUNT": {
                 Matcher m = DELETE_ACCOUNT_PATTERN.matcher(safeDetails);
                 if (m.matches()) {
@@ -402,6 +489,27 @@ public final class ActivityLogData {
         String product = m.group(3);
         return new UsageInfo(product, qty);
     }
+    
+    /**
+    * Parses a RESTOCK_MEDICINE details string (e.g. "Returned 1x Biogesic
+    * (visit edited)") into the medicine name and quantity returned. Returns
+    * null if the action isn't RESTOCK_MEDICINE or the details don't match
+    * the expected shape. Mirrors parseMedicineUsage() above so the daily
+    * report's Stock Overview section can net "given out" against "returned"
+    * for the same medicine on the same date.
+    */
+   public static UsageInfo parseMedicineRestock(String action, String details) {
+       if (!"RESTOCK_MEDICINE".equalsIgnoreCase(action) || details == null) {
+           return null;
+       }
+       Matcher m = RESTOCK_MEDICINE_PATTERN.matcher(details.trim());
+       if (!m.matches()) {
+           return null;
+       }
+       int qty = parseIntSafe(m.group(1));
+       String product = m.group(2);
+       return new UsageInfo(product, qty);
+   }
 
     /**
      * Imports the old plaintext log only once, when the database activity

@@ -296,6 +296,149 @@ private static String buildCheckInLogDetails(
         }
     }
  
+       /**
+     * Connection-based overload: reads the active visit using the caller's
+     * connection/transaction. Does NOT commit or close the connection.
+     */
+    CheckinSystem findActiveVisit(Connection conn, String lrn) throws SQLException {
+        String sql = "SELECT name, grade_section, lrn, reason, med_used, meds_qty, "
+            + "check_in_time, status, guardian_name, guardian_phone FROM VISITS "
+            + "WHERE lrn = ? AND status = 'In Clinic' AND archived = FALSE";
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, lrn);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new CheckinSystem(
+                            rs.getString("name"),
+                            rs.getString("grade_section"),
+                            rs.getString("lrn"),
+                            rs.getString("reason"),
+                            rs.getString("med_used"),
+                            rs.getInt("meds_qty"),
+                            rs.getString("check_in_time"),
+                            rs.getString("status"),
+                            rs.getString("guardian_name"),
+                            rs.getString("guardian_phone")
+                    );
+                }
+                return null;
+            }
+        }
+    }
+    
+      /** Connection-based overload: performs the UPDATE using the caller's connection/transaction. */
+    boolean markSentHome(Connection conn, String lrn) throws SQLException {
+        String sql = "UPDATE VISITS SET status = 'Sent Home' "
+            + "WHERE id = (SELECT id FROM VISITS WHERE lrn = ? AND status = 'In Clinic' AND archived = FALSE "
+            + "ORDER BY id ASC LIMIT 1)";
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, lrn);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /** Connection-based overload: performs the UPDATE using the caller's connection/transaction. */
+    boolean markSentBack(Connection conn, String lrn) throws SQLException {
+        String sql = "UPDATE VISITS SET status = 'Sent Back' "
+            + "WHERE id = (SELECT id FROM VISITS WHERE lrn = ? AND status = 'In Clinic' AND archived = FALSE "
+            + "ORDER BY id ASC LIMIT 1)";
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, lrn);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Transactional "sent home": finds the active visit, updates its status, and
+     * writes the matching ACTIVITY_LOG entry — all in one commit/rollback unit
+     * on a single shared Connection, same pattern as checkInWithMedicine() above.
+     * If any step fails, everything rolls back, so a status change can never
+     * exist without its audit log (or vice versa).
+     */
+    public boolean markSentHome(String lrn, String performedBy) throws SQLException {
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            conn.setAutoCommit(false);
+
+            try {
+                CheckinSystem visit = findActiveVisit(conn, lrn);
+                if (visit == null) {
+                    conn.rollback();
+                    return false;
+                }
+
+                boolean updated = markSentHome(conn, lrn);
+                if (!updated) {
+                    conn.rollback();
+                    return false;
+                }
+
+                String details = "Student \"" + visit.getName()
+                        + "\" (LRN: " + visit.getLrn() + ") was sent home.";
+
+                ActivityLogData.log(conn, "SENT_HOME", details, performedBy);
+
+                conn.commit();
+                return true;
+
+            } catch (SQLException | RuntimeException ex) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ignored) {
+                }
+                throw ex;
+
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    /**
+     * Transactional "sent back to classroom" — mirror of markSentHome(lrn, performedBy) above.
+     */
+    public boolean markSentBack(String lrn, String performedBy) throws SQLException {
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            conn.setAutoCommit(false);
+
+            try {
+                CheckinSystem visit = findActiveVisit(conn, lrn);
+                if (visit == null) {
+                    conn.rollback();
+                    return false;
+                }
+
+                boolean updated = markSentBack(conn, lrn);
+                if (!updated) {
+                    conn.rollback();
+                    return false;
+                }
+
+                String details = "Student \"" + visit.getName()
+                        + "\" (LRN: " + visit.getLrn() + ") was sent back to the classroom.";
+
+                ActivityLogData.log(conn, "SENT_BACK", details, performedBy);
+
+                conn.commit();
+                return true;
+
+            } catch (SQLException | RuntimeException ex) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ignored) {
+                }
+                throw ex;
+
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+    
     public boolean editVisit(String lrn, String newName, String newGradeSection,
                         
             String newReason, String newMedUsed, int newMedsQty,
