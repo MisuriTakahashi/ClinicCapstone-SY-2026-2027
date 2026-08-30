@@ -127,6 +127,39 @@ public class DatabaseManager {
                     + "NOT NULL DEFAULT FALSE"
             );
 
+            /*
+             * Indexes for the query patterns VisitData / ActivityLogData
+             * actually use. H2 supports IF NOT EXISTS, so this is safe to
+             * run on every startup and never touches existing data.
+             */
+            stmt.execute(
+                    "CREATE INDEX IF NOT EXISTS IDX_VISITS_LRN_STATUS_ARCHIVED "
+                    + "ON VISITS(lrn, status, archived)"
+            );
+            // Covers isCurrentlyCheckedIn(), findActiveVisit(),
+            // markSentHome(), markSentBack() — all filter on
+            // lrn + status + archived together.
+
+            stmt.execute(
+                    "CREATE INDEX IF NOT EXISTS IDX_VISITS_ARCHIVED "
+                    + "ON VISITS(archived)"
+            );
+            // Covers loadActive(), which filters on archived alone.
+
+            stmt.execute(
+                    "CREATE INDEX IF NOT EXISTS IDX_VISITS_CHECK_IN_TIME "
+                    + "ON VISITS(check_in_time)"
+            );
+            // Covers getTodayCounts(), getVisitsByDate(), archiveDate() —
+            // all filter with "check_in_time LIKE 'yyyy-MM-dd%'", a prefix
+            // pattern H2 can use a plain index for.
+
+            stmt.execute(
+                    "CREATE INDEX IF NOT EXISTS IDX_ACTIVITY_LOG_TIMESTAMP "
+                    + "ON ACTIVITY_LOG(timestamp, id)"
+            );
+            // Covers loadEntries(): "ORDER BY TIMESTAMP DESC, ID DESC".
+
             migrateAccountRolesAndPasswords(conn);
 
             protectExistingHeadAdmins(conn);

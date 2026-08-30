@@ -88,11 +88,16 @@ public class AdminPanel extends javax.swing.JFrame {
     ((AbstractDocument) ExpDate.getDocument()).setDocumentFilter(new DateInputFilter());
     setLocationRelativeTo(null);
     
-    refreshInventoryScreen();
-    refreshActivityLogDisplay();
-    
-    
-    refreshInventoryTable();
+   // AdminPanel.java constructor — replace:
+   //     refreshInventoryScreen();
+   //     refreshActivityLogDisplay();
+   //
+   //     refreshInventoryTable();
+   //     loadStatistics();
+   //     refreshAccountTable();
+   // with:
+
+    refreshInventoryScreen();   // already refreshes the activity log internally
     loadStatistics();
     refreshAccountTable();
 }
@@ -807,271 +812,281 @@ private JPanel createAccountFormPanel() {
     }
 
     private void refreshActivityLogDisplay() {
-        try {
-            ArrayList<String> log = productService.loadActivityLog();
-            StringBuilder sb = new StringBuilder();
+        DatabaseExecutor.run(
+                () -> productService.loadActivityLog(),
+                log -> {
+                    StringBuilder sb = new StringBuilder();
 
-            if (log.isEmpty()) {
-                sb.append("No recent activity.\n\nChanges to stock levels will be recorded here.");
-            } else {
-                // Newest first, with a blank line between entries so each log
-                // line reads as its own block instead of a cramped wall of text.
-                for (int i = log.size() - 1; i >= 0; i--) {
-                    sb.append(log.get(i)).append("\n\n");
-                }
-            }
+                    if (log.isEmpty()) {
+                        sb.append("No recent activity.\n\nChanges to stock levels will be recorded here.");
+                    } else {
+                        for (int i = log.size() - 1; i >= 0; i--) {
+                            sb.append(log.get(i)).append("\n\n");
+                        }
+                    }
 
-            InventoryLogs.setText(sb.toString());
-            InventoryLogs.setCaretPosition(0); // always open scrolled to the newest entry
-        } catch (IOException ex) {
-            JOptionPane.showMessageDialog(this, "Error loading activity log: " + ex.getMessage());
-        }
+                    InventoryLogs.setText(sb.toString());
+                    InventoryLogs.setCaretPosition(0);
+                },
+                ex -> JOptionPane.showMessageDialog(this, "Error loading activity log: " + ex.getMessage())
+        );
     }
-    
+   /* 
     private void refreshInventoryTable() {
-        try {
-            
-            currentProducts = productService.loadAll();
-            
-            DefaultTableModel model = (DefaultTableModel) stockTable.getModel();
-            model.setRowCount(0);
+            DatabaseExecutor.run(
+               () -> accountService.loadAll(),
+               accounts -> {
+                   DefaultTableModel model = (DefaultTableModel) ACTTable.getModel();
+                   model.setRowCount(0);
 
-            for (Medicine p : currentProducts) {
-                model.addRow(new Object[]{
-                    p.getStatus(),
-                    p.getname(),
-                    p.getquantity()
-                });
-            }
-            refreshActivityLogDisplay();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage());
-        }
+                   for (AccountSystem a : accounts) {
+                       model.addRow(new Object[]{a.GetName(), a.getRole()});
+                   }
+               },
+               ex -> JOptionPane.showMessageDialog(this, "Error loading accounts: " + ex.getMessage())
+       );
     }
+    */
     
     private void refreshInventoryScreen() {
-        try {
-            currentProducts = productService.loadAll();
-            DefaultTableModel model = (DefaultTableModel) stockTable.getModel();
-            model.setRowCount(0);
+        DatabaseExecutor.run(
+                () -> productService.loadAll(),
+                products -> {
+                    currentProducts = products;
+                    DefaultTableModel model = (DefaultTableModel) stockTable.getModel();
+                    model.setRowCount(0);
 
-            for (Medicine p : currentProducts) {
-                model.addRow(new Object[]{p.getStatus(), p.getname(), p.getquantity()});
-            }
-            refreshActivityLogDisplay();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage());
-        }  
+                    for (Medicine p : currentProducts) {
+                        model.addRow(new Object[]{p.getStatus(), p.getname(), p.getquantity()});
+                    }
+                    refreshActivityLogDisplay();
+                },
+                ex -> JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage())
+        );
     }
     
   private void loadStatistics() {
-        try {
-            
-            ArrayList<CheckinSystem> visits = new VisitData().loadAll();
-
-            int weeklyCheckins = 0;
-            int inClinic = 0;
-            int sentBack = 0;
-            int sentHome = 0;
-
-            int monday = 0;
-            int tuesday = 0;
-            int wednesday = 0;
-            int thursday = 0;
-            int friday = 0;
-
-            Map<String, Integer> reasonCount = new HashMap<>();
-            Map<String, Integer> medicineCount = new HashMap<>();
-
-            // Get the current week's Monday and Friday
-            LocalDate today = LocalDate.now();
-            LocalDate mondayOfWeek = today.with(DayOfWeek.MONDAY);
-            LocalDate fridayOfWeek = today.with(DayOfWeek.FRIDAY);
-
-            DateTimeFormatter formatter =
-                     DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a");
-
-
-            lblMondayDate.setText(
-                    String.valueOf(mondayOfWeek.getDayOfMonth())
-            );
-
-            lblTuesdayDate.setText(
-                    String.valueOf(mondayOfWeek.plusDays(1).getDayOfMonth())
-            );
-
-            lblWednesdayDate.setText(
-                    String.valueOf(mondayOfWeek.plusDays(2).getDayOfMonth())
-            );
-
-            lblThursdayDate.setText(
-                    String.valueOf(mondayOfWeek.plusDays(3).getDayOfMonth())
-            );
-
-            lblFridayDate.setText(
-                    String.valueOf(mondayOfWeek.plusDays(4).getDayOfMonth())
-            );
-
-
-            for (CheckinSystem v : visits) {
-                
-                LocalDate visitDate;
-
-                try {
-                    visitDate = LocalDateTime
-                            .parse(v.getCheckInTime(), formatter)
-                            .toLocalDate();
-
-                } catch (DateTimeParseException ex) {
-
-                    continue;
-                }
-
-                if (!visitDate.isBefore(mondayOfWeek)
-                        && !visitDate.isAfter(fridayOfWeek)) {
-
-                    weeklyCheckins++;
-
-                    switch (visitDate.getDayOfWeek()) {
-
-                        case MONDAY:
-                            monday++;
-                            break;
-
-                        case TUESDAY:
-                            tuesday++;
-                            break;
-
-                        case WEDNESDAY:
-                            wednesday++;
-                            break;
-
-                        case THURSDAY:
-                            thursday++;
-                            break;
-
-                        case FRIDAY:
-                            friday++;
-                            break;
-
-                        default:
-                            break;
-                    }
-                }
-
-
-                if ("In Clinic".equalsIgnoreCase(v.getStatus())) {
-                    inClinic++;
-                }
-                if ("Sent Back".equalsIgnoreCase(v.getStatus())) {
-                    sentBack++;
-                }
-
-                if ("Sent Home".equalsIgnoreCase(v.getStatus())) {
-                    sentHome++;
-                }
-
-
-                if (v.getReason() != null && !v.getReason().isBlank()) {
-                    reasonCount.put(
-                            v.getReason(),
-                            reasonCount.getOrDefault(v.getReason(), 0) + 1
-                    );
-                }
-
-
-                if (v.getMedUsed() != null && !v.getMedUsed().isBlank()) {
-                    medicineCount.put(
-                            v.getMedUsed(),
-                            medicineCount.getOrDefault(v.getMedUsed(), 0) + 1
-                    );
-                }
-            }
-            // --- Calculate Most Common Reason ---
-String topReason = "N/A";
-int maxReasonCount = 0;
-for (Map.Entry<String, Integer> entry : reasonCount.entrySet()) {
-    if (entry.getValue() > maxReasonCount) {
-        maxReasonCount = entry.getValue();
-        topReason = entry.getKey();
-    }
-}
-
-// --- Calculate Most Frequently Used Medicine ---
-String topMedicine = "N/A";
-int maxMedCount = 0;
-for (Map.Entry<String, Integer> entry : medicineCount.entrySet()) {
-    if (entry.getValue() > maxMedCount) {
-        maxMedCount = entry.getValue();
-        topMedicine = entry.getKey();
-    }
-}
-
-// Clean up "None" or empty medicine entries so it looks professional
-if (topMedicine.equalsIgnoreCase("None") || topMedicine.trim().isEmpty()) {
-    topMedicine = "No medicine used";
-}
-
-// --- Update the UI Labels ---
-CommonReasonLabel.setText(topReason);
-FrequentlyUsedLabel.setText(topMedicine);
-
-            lblWeeklyCheckInsValue.setText(
-                    String.valueOf(weeklyCheckins)
-            );
-
-            lblInClinicValue.setText(
-                    String.valueOf(inClinic)
-            );
-
-            lblSentHomeValue.setText(
-                    String.valueOf(sentHome)
-            );
-            
-            SentBackValue.setText(
-                    String.valueOf(sentBack)
-            );
-
-            lblMondayCount.setText(
-                    String.valueOf(monday)
-            );
-
-            lblTuesdayCount.setText(
-                    String.valueOf(tuesday)
-            );
-
-            lblWednesdayCount.setText(
-                    String.valueOf(wednesday)
-            );
-
-            lblThursdayCount.setText(
-                    String.valueOf(thursday)
-            );
-
-            lblFridayCount.setText(
-                    String.valueOf(friday)
-            );
-
-            DateTimeFormatter displayFormatter =
-                    DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-            lblReportingPeriod.setText(
-                    "Reporting period: "
-                    + mondayOfWeek.format(displayFormatter)
-                    + " to "
-                    + fridayOfWeek.format(displayFormatter)
-            );
-
-        } catch (Exception ex) {
-
-            JOptionPane.showMessageDialog(
+    // The only change: the JDBC call moves off the EDT. Everything that
+    // used to happen after loadAll() now happens in applyStatistics(),
+    // invoked here on the EDT once the background load finishes.
+    DatabaseExecutor.run(
+            () -> new VisitData().loadAll(),
+            this::applyStatistics,
+            ex -> JOptionPane.showMessageDialog(
                     this,
                     "Error loading statistics: " + ex.getMessage(),
                     "Statistics Error",
-                    JOptionPane.ERROR_MESSAGE
-            );
+                    JOptionPane.ERROR_MESSAGE)
+    );
+}
+
+/** Computes and displays the statistics cards from an already-loaded visit list. */
+private void applyStatistics(ArrayList<CheckinSystem> visits) {
+    try {
+
+        int weeklyCheckins = 0;
+        int inClinic = 0;
+        int sentBack = 0;
+        int sentHome = 0;
+
+        int monday = 0;
+        int tuesday = 0;
+        int wednesday = 0;
+        int thursday = 0;
+        int friday = 0;
+
+        Map<String, Integer> reasonCount = new HashMap<>();
+        Map<String, Integer> medicineCount = new HashMap<>();
+
+        // Get the current week's Monday and Friday
+        LocalDate today = LocalDate.now();
+        LocalDate mondayOfWeek = today.with(DayOfWeek.MONDAY);
+        LocalDate fridayOfWeek = today.with(DayOfWeek.FRIDAY);
+
+        DateTimeFormatter formatter =
+                 DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a");
+
+
+        lblMondayDate.setText(
+                String.valueOf(mondayOfWeek.getDayOfMonth())
+        );
+
+        lblTuesdayDate.setText(
+                String.valueOf(mondayOfWeek.plusDays(1).getDayOfMonth())
+        );
+
+        lblWednesdayDate.setText(
+                String.valueOf(mondayOfWeek.plusDays(2).getDayOfMonth())
+        );
+
+        lblThursdayDate.setText(
+                String.valueOf(mondayOfWeek.plusDays(3).getDayOfMonth())
+        );
+
+        lblFridayDate.setText(
+                String.valueOf(mondayOfWeek.plusDays(4).getDayOfMonth())
+        );
+
+
+        for (CheckinSystem v : visits) {
+
+            LocalDate visitDate;
+
+            try {
+                visitDate = LocalDateTime
+                        .parse(v.getCheckInTime(), formatter)
+                        .toLocalDate();
+
+            } catch (DateTimeParseException ex) {
+
+                continue;
+            }
+
+            if (!visitDate.isBefore(mondayOfWeek)
+                    && !visitDate.isAfter(fridayOfWeek)) {
+
+                weeklyCheckins++;
+
+                switch (visitDate.getDayOfWeek()) {
+
+                    case MONDAY:
+                        monday++;
+                        break;
+
+                    case TUESDAY:
+                        tuesday++;
+                        break;
+
+                    case WEDNESDAY:
+                        wednesday++;
+                        break;
+
+                    case THURSDAY:
+                        thursday++;
+                        break;
+
+                    case FRIDAY:
+                        friday++;
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
+
+            if ("In Clinic".equalsIgnoreCase(v.getStatus())) {
+                inClinic++;
+            }
+            if ("Sent Back".equalsIgnoreCase(v.getStatus())) {
+                sentBack++;
+            }
+
+            if ("Sent Home".equalsIgnoreCase(v.getStatus())) {
+                sentHome++;
+            }
+
+
+            if (v.getReason() != null && !v.getReason().isBlank()) {
+                reasonCount.put(
+                        v.getReason(),
+                        reasonCount.getOrDefault(v.getReason(), 0) + 1
+                );
+            }
+
+
+            if (v.getMedUsed() != null && !v.getMedUsed().isBlank()) {
+                medicineCount.put(
+                        v.getMedUsed(),
+                        medicineCount.getOrDefault(v.getMedUsed(), 0) + 1
+                );
+            }
         }
+        // --- Calculate Most Common Reason ---
+        String topReason = "N/A";
+        int maxReasonCount = 0;
+        for (Map.Entry<String, Integer> entry : reasonCount.entrySet()) {
+            if (entry.getValue() > maxReasonCount) {
+                maxReasonCount = entry.getValue();
+                topReason = entry.getKey();
+            }
+        }
+
+        // --- Calculate Most Frequently Used Medicine ---
+        String topMedicine = "N/A";
+        int maxMedCount = 0;
+        for (Map.Entry<String, Integer> entry : medicineCount.entrySet()) {
+            if (entry.getValue() > maxMedCount) {
+                maxMedCount = entry.getValue();
+                topMedicine = entry.getKey();
+            }
+        }
+
+        // Clean up "None" or empty medicine entries so it looks professional
+        if (topMedicine.equalsIgnoreCase("None") || topMedicine.trim().isEmpty()) {
+            topMedicine = "No medicine used";
+        }
+
+        // --- Update the UI Labels ---
+        CommonReasonLabel.setText(topReason);
+        FrequentlyUsedLabel.setText(topMedicine);
+
+        lblWeeklyCheckInsValue.setText(
+                String.valueOf(weeklyCheckins)
+        );
+
+        lblInClinicValue.setText(
+                String.valueOf(inClinic)
+        );
+
+        lblSentHomeValue.setText(
+                String.valueOf(sentHome)
+        );
+
+        SentBackValue.setText(
+                String.valueOf(sentBack)
+        );
+
+        lblMondayCount.setText(
+                String.valueOf(monday)
+        );
+
+        lblTuesdayCount.setText(
+                String.valueOf(tuesday)
+        );
+
+        lblWednesdayCount.setText(
+                String.valueOf(wednesday)
+        );
+
+        lblThursdayCount.setText(
+                String.valueOf(thursday)
+        );
+
+        lblFridayCount.setText(
+                String.valueOf(friday)
+        );
+
+        DateTimeFormatter displayFormatter =
+                DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        lblReportingPeriod.setText(
+                "Reporting period: "
+                + mondayOfWeek.format(displayFormatter)
+                + " to "
+                + fridayOfWeek.format(displayFormatter)
+        );
+
+    } catch (Exception ex) {
+
+        JOptionPane.showMessageDialog(
+                this,
+                "Error loading statistics: " + ex.getMessage(),
+                "Statistics Error",
+                JOptionPane.ERROR_MESSAGE
+        );
     }
+}
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -2310,19 +2325,20 @@ FrequentlyUsedLabel.setText(topMedicine);
             }
         }
             
-                    private void refreshAccountTable() {
-            try {
+private void refreshAccountTable() {
+    DatabaseExecutor.run(
+            () -> accountService.loadAll(),
+            accounts -> {
                 DefaultTableModel model = (DefaultTableModel) ACTTable.getModel();
                 model.setRowCount(0);
 
-                for (AccountSystem a : accountService.loadAll()) {
+                for (AccountSystem a : accounts) {
                     model.addRow(new Object[]{a.GetName(), a.getRole()});
                 }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error loading accounts: " + ex.getMessage());
-            }
-        }
-
+            },
+            ex -> JOptionPane.showMessageDialog(this, "Error loading accounts: " + ex.getMessage())
+    );
+}
     
     private void AccPasswordFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AccPasswordFieldActionPerformed
         // TODO add your handling code here:

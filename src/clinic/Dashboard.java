@@ -615,20 +615,18 @@ private int applySearchFilter() {
  
    //ComboBox problem 
     private void medicineBox(){
-        try{
-            ArrayList<Medicine> medicine = productService.loadAll();
+       DatabaseExecutor.run(
+        () -> productService.loadAll(),
+        medicine -> {
             DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
-            
-            for(Medicine p : medicine){
+            for (Medicine p : medicine) {
                 model.addElement(p.getname());
             }
-            
             jComboBox1.setModel(model);
-            
-        }catch(Exception ex){
-            JOptionPane.showMessageDialog(this, "Error Laoding message" + ex.getMessage());
-        }
-    }
+        },
+        ex -> JOptionPane.showMessageDialog(this, "Error loading medicine list: " + ex.getMessage())
+    );
+ }
 
 
     //ps this will help display the inventory on the "inventory status"
@@ -636,79 +634,61 @@ private int applySearchFilter() {
     private MedicineData productService = new MedicineData("inventory_activity.log");
     
     private void refreshInventoryStatusDisplay(){
-        try{
-             ArrayList<Medicine> medicine = productService.loadAll();
-                 StringBuilder sb = new StringBuilder();
-                 StringBuilder lowStockNames = new StringBuilder();
-                 int lowStockCount = 0;
+        DatabaseExecutor.run(
+            () -> productService.loadAll(),
+            medicine -> {
+                StringBuilder sb = new StringBuilder();
+                StringBuilder lowStockNames = new StringBuilder();
+                int lowStockCount = 0;
 
-                 if (medicine.isEmpty()) {
-                     sb.append("No items in inventory yet.");
-                 } else {
-                     for (Medicine p : medicine) {
-                      sb.append(p.getname())
+                if (medicine.isEmpty()) {
+                    sb.append("No items in inventory yet.");
+                } else {
+                    for (Medicine p : medicine) {
+                        sb.append(p.getname())
                           .append(" — ")
                           .append(p.getquantity())
                           .append(" pcs — ")
                           .append(p.getStatus());
-                              
-                      if (p.isLowStock()) {
-                        sb.append(" --LOW STOCK-- ");
-                        lowStockCount++;
-                        if (lowStockNames.length() > 0) lowStockNames.append(", ");
-                        lowStockNames.append(p.getname());
+
+                        if (p.isLowStock()) {
+                            sb.append(" --LOW STOCK-- ");
+                            lowStockCount++;
+                            if (lowStockNames.length() > 0) lowStockNames.append(", ");
+                            lowStockNames.append(p.getname());
+                        }
+                        sb.append("\n");
                     }
-                         sb.append("\n");
-            }
-        }
-                 
-             InventoryStatusArea.setText(sb.toString());
-             
-             
-            if (lowStockCount > 0) {
-                showTopAlertBanner( lowStockNames + " is low on stock: " + lowStockCount);
-            }
-             
-        
-        }catch(Exception ex){
-               JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage());
-        }
+                }
+
+                InventoryStatusArea.setText(sb.toString());
+
+                if (lowStockCount > 0) {
+                    showTopAlertBanner(lowStockNames + " is low on stock: " + lowStockCount);
+                }
+            },
+            ex -> JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage())
+        );
     }
     
         
     private ArrayList<CheckinSystem> currentVisits = new ArrayList<>();
     private String selectedVisitLrn = null;
+    private record DashboardCounts(ArrayList<CheckinSystem> visits, int[] counts) {}
     
     //pinapakita yun table and counters and inaupdate
     private void refreshTableAndCounters(){
-          try {
-                 
-              currentVisits = visitService.loadActive();
+          DatabaseExecutor.run(
+            () -> new DashboardCounts(visitService.loadActive(), visitService.getTodayCounts()),
+            result -> {
+                currentVisits = result.visits();
                 applySearchFilter(); // rebuilds the table, honoring the current search text
-              int[] counts = visitService.getTodayCounts();
-         
-             VisitCounter.setText(String.valueOf(counts[0]));
-             SentHomeCount.setText(String.valueOf(counts[1]));
-
-              // Update footer with last sent home info
-              /*CheckinSystem lastSentHome = null;
-              for (CheckinSystem v : visitService.loadAll()) {
-                  if ("Sent Home".equals(v.getStatus())) {
-                      lastSentHome = v;
-                  }
-              }
-              if (lastSentHome != null) {
-                  SentHomeFooterLabel.setText("Last: " + lastSentHome.getName() + " — " + lastSentHome.getReason() + " · " + lastSentHome.getCheckInTime());
-                  SentHomeFooterLabel.setForeground(new java.awt.Color(107, 114, 128));
-              } else {
-                  SentHomeFooterLabel.setText("No students sent home today.");
-                  SentHomeFooterLabel.setForeground(java.awt.Color.GRAY);
-              }*/
-
-               } catch (Exception ex) {
-
-                  JOptionPane.showMessageDialog(this, ex.getMessage());
-          }
+                int[] counts = result.counts();
+                VisitCounter.setText(String.valueOf(counts[0]));
+                SentHomeCount.setText(String.valueOf(counts[1]));
+            },
+            ex -> JOptionPane.showMessageDialog(this, ex.getMessage())
+        );
      }
     
  private void showToast(javax.swing.JPanel parentContainer, String message, boolean isSuccess) {
@@ -2005,35 +1985,24 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
     
     
     private void FinishBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_FinishBTNActionPerformed
-            String guardianName = ParentGurdianName.getText().trim();
+             String guardianName = ParentGurdianName.getText().trim();
             String guardianPhone = PhoneField.getText().trim();
            
             if (guardianName.isEmpty()) {
-                showToast(SentHomeInformationPanel,
-                        "Guardian name is required.",
-                        false);
+                showToast(SentHomeInformationPanel, "Guardian name is required.", false);
                 return;
             }
-
             if (guardianPhone.isEmpty()) {
-                showToast(SentHomeInformationPanel,
-                        "Guardian phone number is required.",
-                        false);
+                showToast(SentHomeInformationPanel, "Guardian phone number is required.", false);
                 return;
             }
-
             if (!guardianPhone.matches("^09\\d{9}$")) {
-                showToast(SentHomeInformationPanel,
-                        "Phone number must start with 09 and contain exactly 11 digits.",
-                        false);
+                showToast(SentHomeInformationPanel, "Phone number must start with 09 and contain exactly 11 digits.", false);
                 PhoneField.requestFocus();
                 return;
             }
-            
             if (!guardianName.matches("[\\p{L} .'-]+")) {
-                showToast(SentHomeInformationPanel,
-                        "Please enter a valid guardian name.",
-                        false);
+                showToast(SentHomeInformationPanel, "Please enter a valid guardian name.", false);
                 ParentGurdianName.requestFocus();
                 return;
             }
@@ -2044,37 +2013,33 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
          String reason = ReasonArea.getText().trim();
          String medUsed = pendingmedUsed;
 
-         
+         String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
 
-         try {
-             visitService.checkIn(name, gradeSection, lrn, reason, medUsed, pendingmedsQty, guardianName, guardianPhone);
-
-             if (!medUsed.equals("None")) {
-            String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
-            boolean deducted = productService.useMedicine(medUsed, name , pendingmedsQty, actor);
-                 if (!deducted) {
+         DatabaseExecutor.run(
+             () -> visitService.checkInWithMedicine(
+                     name, gradeSection, lrn, reason, medUsed, pendingmedsQty,
+                     guardianName, guardianPhone, productService, actor),
+             result -> {
+                 if (!medUsed.equals("None") && !result.medicineDeducted()) {
                      showToast(CheckInPanel, "Warning: " + medUsed + " is out of stock. Stock was not deducted.", false);
                  }
-             }
 
-             refreshTableAndCounters();
-             refreshInventoryStatusDisplay();
+                 refreshTableAndCounters();
+                 refreshInventoryStatusDisplay();
 
-             NameCheckIn.setText("");
-             GSCheckIn.setText("");
-             LRNField.setText("");
-             ReasonArea.setText("");
-             SentHomeInformationPanel.setVisible(false);
-             glassOverlay.setVisible(false);
+                 NameCheckIn.setText("");
+                 GSCheckIn.setText("");
+                 LRNField.setText("");
+                 ReasonArea.setText("");
+                 SentHomeInformationPanel.setVisible(false);
+                 glassOverlay.setVisible(false);
+                 this.revalidate();
+                 this.repaint();
 
-             this.revalidate();
-             this.repaint();
-
-             showToast(CheckInPanel, name + " checked in successfully. Guardian info recorded.", true);
-
-         } catch (Exception ex) {
-             showToast(CheckInPanel, "Error saving check-in: " + ex.getMessage(), false);
-         }
+                 showToast(CheckInPanel, name + " checked in successfully. Guardian info recorded.", true);
+             },
+             ex -> showToast(CheckInPanel, "Error saving check-in: " + ex.getMessage(), false)
+         );
     }//GEN-LAST:event_FinishBTNActionPerformed
 
     private void InformationBackBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_InformationBackBTNActionPerformed

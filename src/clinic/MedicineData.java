@@ -217,6 +217,12 @@ public class MedicineData {
         }
     }
 
+    /**
+     * Public entry point — opens its own connection and transaction.
+     * The stock UPDATE and the activity-log INSERT now commit together,
+     * so a crash between them can no longer desync the audit log from
+     * the actual stock count.
+     */
     public boolean useMedicine(
             String productName,
             String studentName,
@@ -224,15 +230,64 @@ public class MedicineData {
             String performedBy)
             throws SQLException, IOException {
 
+        try (Connection conn =
+                     DatabaseManager.getConnection()) {
+
+            conn.setAutoCommit(false);
+
+            try {
+
+                boolean deducted =
+                        useMedicine(
+                                conn,
+                                productName,
+                                studentName,
+                                quantity,
+                                performedBy
+                        );
+
+                conn.commit();
+
+                return deducted;
+
+            } catch (SQLException | RuntimeException ex) {
+
+                try {
+                    conn.rollback();
+                } catch (SQLException ignored) {
+                }
+
+                throw ex;
+
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    /**
+     * Connection-based overload: performs the atomic stock deduction and
+     * activity log insert using the caller's connection/transaction.
+     * Does NOT commit or close the connection — the caller owns that.
+     * Used by VisitData's transactional check-in/edit-visit methods so
+     * the visit write and the stock deduction commit or roll back
+     * together.
+     */
+    boolean useMedicine(
+            Connection conn,
+            String productName,
+            String studentName,
+            int quantity,
+            String performedBy)
+            throws SQLException {
+
         String sql =
                 "UPDATE MEDICINES "
                 + "SET quantity = quantity - ? "
                 + "WHERE name = ? "
                 + "AND quantity >= ?";
 
-        try (Connection conn =
-                     DatabaseManager.getConnection();
-             PreparedStatement ps =
+        try (PreparedStatement ps =
                      conn.prepareStatement(sql)) {
 
             ps.setInt(1, quantity);
@@ -247,7 +302,8 @@ public class MedicineData {
             }
         }
 
-        logActivity(
+        ActivityLogData.log(
+                conn,
                 "USE_MEDICINE",
                 "Student "
                 + studentName
@@ -261,6 +317,10 @@ public class MedicineData {
         return true;
     }
 
+    /**
+     * Public entry point — opens its own connection and transaction, so
+     * the stock UPDATE and its activity-log INSERT commit together.
+     */
     public boolean restockMedicine(
             String productName,
             int quantity,
@@ -274,6 +334,53 @@ public class MedicineData {
             return false;
         }
 
+        try (Connection conn =
+                     DatabaseManager.getConnection()) {
+
+            conn.setAutoCommit(false);
+
+            try {
+
+                boolean restocked =
+                        restockMedicine(
+                                conn,
+                                productName,
+                                quantity,
+                                performedBy
+                        );
+
+                conn.commit();
+
+                return restocked;
+
+            } catch (SQLException | RuntimeException ex) {
+
+                try {
+                    conn.rollback();
+                } catch (SQLException ignored) {
+                }
+
+                throw ex;
+
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    /**
+     * Connection-based overload, same shape as {@link #useMedicine(Connection,
+     * String, String, int, String)}. Does NOT validate productName/quantity —
+     * callers (the public overload above, or VisitData's transactional
+     * methods) are expected to have already checked those.
+     */
+    boolean restockMedicine(
+            Connection conn,
+            String productName,
+            int quantity,
+            String performedBy)
+            throws SQLException {
+
         String sql =
                 "UPDATE MEDICINES "
                 + "SET quantity = quantity + ? "
@@ -281,9 +388,7 @@ public class MedicineData {
 
         int rows;
 
-        try (Connection conn =
-                     DatabaseManager.getConnection();
-             PreparedStatement ps =
+        try (PreparedStatement ps =
                      conn.prepareStatement(sql)) {
 
             ps.setInt(1, quantity);
@@ -294,7 +399,8 @@ public class MedicineData {
 
         if (rows > 0) {
 
-            logActivity(
+            ActivityLogData.log(
+                    conn,
                     "RESTOCK_MEDICINE",
                     "Returned "
                     + quantity
