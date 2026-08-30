@@ -650,4 +650,196 @@ public class AccountData {
             String name,
             String passwordHash) {
     }
+    
+     private static void validatePassword(char[] password) {
+
+        if (password == null
+                || password.length == 0) {
+
+            throw new IllegalArgumentException(
+                    "Password is required."
+            );
+        }
+    }
+     
+      /**
+     * Resets another account's password. This is an administrative
+     * password RESET — the Head Admin does not need to know the old
+     * password.
+     *
+     * Only a Head Admin may call this, and only for an account other
+     * than their own. The actor's role is reloaded from H2 (not taken
+     * from the AccountSystem object passed in), so this cannot be
+     * bypassed by calling the method directly with a forged role.
+     *
+     * Returns true if the password was updated, false if the target
+     * account no longer exists by the time the update runs.
+     */
+    public boolean resetPassword(
+            AccountSystem actor,
+            String targetName,
+            char[] newPassword) throws SQLException {
+
+        AccountSystem currentActor =
+                requireHeadAdminActor(actor);
+
+        if (targetName == null
+                || targetName.trim().isEmpty()) {
+
+            throw new SecurityException(
+                    "Invalid password reset request."
+            );
+        }
+
+        String cleanTargetName = targetName.trim();
+
+        if (currentActor.GetName()
+                .equalsIgnoreCase(cleanTargetName)) {
+
+            throw new SecurityException(
+                    "You cannot reset your own password using this function."
+            );
+        }
+
+        validatePassword(newPassword);
+
+        String passwordHash =
+                PasswordHasher.hashPassword(newPassword);
+
+        String sql =
+                "UPDATE ACCOUNTS SET password = ? "
+                + "WHERE id = ?";
+
+        try (Connection conn =
+                     DatabaseManager.getConnection()) {
+
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement ps =
+                         conn.prepareStatement(sql)) {
+
+                // Re-read the target inside the transaction so the
+                // check runs against the current database state, not
+                // a stale in-memory copy.
+                AccountSystem freshTarget =
+                        findByName(cleanTargetName);
+
+                if (freshTarget == null) {
+
+                    conn.rollback();
+                    return false;
+                }
+
+                if (currentActor.GetName()
+                        .equalsIgnoreCase(
+                                freshTarget.GetName())) {
+
+                    conn.rollback();
+
+                    throw new SecurityException(
+                            "You cannot reset your own password using this function."
+                    );
+                }
+
+                int targetId =
+                        findId(conn, freshTarget.GetName());
+
+                if (targetId <= 0) {
+
+                    conn.rollback();
+                    return false;
+                }
+
+                ps.setString(1, passwordHash);
+                ps.setInt(2, targetId);
+
+                int rows = ps.executeUpdate();
+
+                if (rows == 0) {
+
+                    conn.rollback();
+                    return false;
+                }
+
+                ActivityLogData.log(
+                        conn,
+                        "PASSWORD_RESET",
+                        "Password for account \""
+                        + freshTarget.GetName()
+                        + "\" was updated by \""
+                        + currentActor.GetName()
+                        + "\".",
+                        currentActor.GetName()
+                );
+
+                conn.commit();
+
+                return true;
+
+            } catch (SQLException | RuntimeException ex) {
+
+                try {
+                    conn.rollback();
+                } catch (SQLException ignored) {
+                }
+
+                throw ex;
+
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    /**
+     * Same shape as requireCurrentActor(), but requires HEAD_ADMIN
+     * specifically rather than any admin role. Used only by
+     * resetPassword() so that an ADMIN or USER caller gets the exact
+     * "Only Head Admin accounts can reset passwords." message even if
+     * they call this method directly instead of going through the UI.
+     */
+    private AccountSystem requireHeadAdminActor(
+            AccountSystem actor)
+            throws SQLException {
+
+        if (actor == null
+                || actor.GetName() == null
+                || actor.GetName().trim().isEmpty()) {
+
+            throw new SecurityException(
+                    "You must be logged in to perform "
+                    + "this operation."
+            );
+        }
+
+        AccountSystem currentActor =
+                findByName(actor.GetName());
+
+        if (currentActor == null) {
+
+            throw new SecurityException(
+                    "The logged-in account no longer exists."
+            );
+        }
+
+        if (actor.GetPassword() == null
+                || !actor.GetPassword()
+                        .equals(
+                                currentActor.GetPassword()
+                        )) {
+
+            throw new SecurityException(
+                    "The authenticated account context is invalid."
+            );
+        }
+
+        if (!currentActor.isHeadAdmin()) {
+
+            throw new SecurityException(
+                    "Only Head Admin accounts can reset passwords."
+            );
+        }
+
+        return currentActor;
+    }
 }

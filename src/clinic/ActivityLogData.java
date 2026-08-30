@@ -27,12 +27,17 @@ import java.util.regex.Pattern;
  * PLAINTEXT inventory_activity.log file.
  */
 public final class ActivityLogData {
+    private static final Pattern CREATE_ACCOUNT_PATTERN =
+            Pattern.compile("^Created (protected )?(ADMIN|USER|HEAD_ADMIN) account: (.+)$");
 
+    private static final Pattern DELETE_ACCOUNT_PATTERN =
+            Pattern.compile("^Deleted (ADMIN|USER|HEAD_ADMIN) account: (.+)$");
+    
         private static final DateTimeFormatter LEGACY_TIMESTAMP_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    private static final DateTimeFormatter DISPLAY_FORMAT =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd h:mm a");
+       private static final DateTimeFormatter DISPLAY_FORMAT =
+            DateTimeFormatter.ofPattern("MMMM d, yyyy h:mm a");
 
     private ActivityLogData() {
     }
@@ -200,11 +205,11 @@ public final class ActivityLogData {
                             entry.details()
                     );
 
-            String actor =
+              String actor =
                     entry.actor() == null
                     || entry.actor().isBlank()
                     ? "Unknown"
-                    : entry.actor();
+                    : humanizeActor(entry.actor());
 
             lines.add(
                     "[" + time + "] "
@@ -303,14 +308,29 @@ public final class ActivityLogData {
                 break;
             }
 
-            case "CREATE_ACCOUNT":
-            case "DELETE_ACCOUNT":
-                // These are already written as plain sentences when logged
-                // (see AccountData / DatabaseManager) - just drop the
-                // "protected default" wording used for the system-generated
-                // default Head Admin message, and drop the technical prefix.
-                return safeDetails.replaceAll(
-                        "(?i)protected default ", "");
+            case "CREATE_ACCOUNT": {
+                Matcher m = CREATE_ACCOUNT_PATTERN.matcher(safeDetails);
+                if (m.matches()) {
+                    boolean isInitialSetup = m.group(1) != null;
+                    String roleLabel = roleLabel(m.group(2));
+                    String name = m.group(3);
+                    return isInitialSetup
+                            ? roleLabel + " account \"" + name
+                                    + "\" was created during the initial system setup."
+                            : roleLabel + " account \"" + name + "\" was created.";
+                }
+                break;
+            }
+
+            case "DELETE_ACCOUNT": {
+                Matcher m = DELETE_ACCOUNT_PATTERN.matcher(safeDetails);
+                if (m.matches()) {
+                    String roleLabel = roleLabel(m.group(1));
+                    String name = m.group(2);
+                    return roleLabel + " account \"" + name + "\" was deleted.";
+                }
+                break;
+            }
 
             default:
                 break;
@@ -331,6 +351,13 @@ public final class ActivityLogData {
         return Character.toUpperCase(words.charAt(0)) + words.substring(1);
     }
 
+     private static String humanizeActor(String actor) {
+        if ("SYSTEM_SETUP".equalsIgnoreCase(actor)) {
+            return "the system (initial setup)";
+        }
+        return actor;
+    }
+    
     private static String unit(int qty) {
         return qty == 1 ? "unit" : "units";
     }
@@ -340,6 +367,19 @@ public final class ActivityLogData {
             return Integer.parseInt(s.trim());
         } catch (Exception ex) {
             return 0;
+        }
+    }
+    
+       private static String roleLabel(String role) {
+        switch (role) {
+            case "HEAD_ADMIN":
+                return "Head Admin";
+            case "ADMIN":
+                return "Admin";
+            case "USER":
+                return "User";
+            default:
+                return "Account";
         }
     }
 

@@ -56,6 +56,7 @@ public class AdminPanel extends javax.swing.JFrame {
      * Creates the administrator inventory panel.
      */
    public AdminPanel(AccountSystem account) {
+       
     if (account == null || !account.canAccessAdminPanel()) {
         throw new SecurityException("Access denied. Administrator role required.");
         
@@ -476,9 +477,9 @@ private void configureAccountManagementUi() {
             loggedInAccount != null
             && loggedInAccount.isHeadAdmin()
         );
-        ResetPassword.setVisible(
-            loggedInAccount != null && loggedInAccount.isAdmin()
-);
+         ResetPassword.setVisible(
+             loggedInAccount != null && loggedInAccount.isHeadAdmin()
+    );
 
         // Both Head Admin and Admin can create Users.
         CUserBTN.setVisible(
@@ -2410,7 +2411,159 @@ FrequentlyUsedLabel.setText(topMedicine);
     }//GEN-LAST:event_jButton6ActionPerformed
 
     private void ResetPasswordActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ResetPasswordActionPerformed
-        // TODO add your handling code here:
+       
+        int viewRow = ACTTable.getSelectedRow();
+
+        if (viewRow == -1) {
+            JOptionPane.showMessageDialog(
+                this,
+                "Please select an account to reset the password for.",
+                "No Account Selected",
+                JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        String targetName = ACTTable.getValueAt(viewRow, 0).toString();
+
+        if (loggedInAccount == null || !loggedInAccount.isHeadAdmin()) {
+            JOptionPane.showMessageDialog(
+                this,
+                "Only Head Admin accounts can reset passwords.",
+                "Access Denied",
+                JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        if (loggedInAccount.GetName().equalsIgnoreCase(targetName)) {
+            JOptionPane.showMessageDialog(
+                this,
+                "You cannot reset your own password using this function.",
+                "Password Reset Not Available",
+                JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(
+            this,
+            "Are you sure you want to reset the password\nfor account \"" + targetName + "\"?",
+            "Reset Password",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE
+        );
+
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        char[] newPassword = null;
+        char[] confirmPassword = null;
+
+        try {
+            while (true) {
+
+                javax.swing.JPasswordField newPasswordField = new javax.swing.JPasswordField();
+                int newResult = JOptionPane.showConfirmDialog(
+                    this,
+                    new Object[]{"Enter a new password:", newPasswordField},
+                    "Set New Password",
+                    JOptionPane.OK_CANCEL_OPTION
+                );
+
+                if (newResult != JOptionPane.OK_OPTION) {
+                    return;
+                }
+
+                newPassword = newPasswordField.getPassword();
+
+                if (newPassword.length == 0) {
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "The new password cannot be empty.",
+                        "Invalid Password",
+                        JOptionPane.WARNING_MESSAGE
+                    );
+                    continue;
+                }
+
+                javax.swing.JPasswordField confirmPasswordField = new javax.swing.JPasswordField();
+                int confirmResult = JOptionPane.showConfirmDialog(
+                    this,
+                    new Object[]{"Re-enter the new password:", confirmPasswordField},
+                    "Confirm New Password",
+                    JOptionPane.OK_CANCEL_OPTION
+                );
+
+                if (confirmResult != JOptionPane.OK_OPTION) {
+                    return;
+                }
+
+                confirmPassword = confirmPasswordField.getPassword();
+
+                if (confirmPassword.length == 0) {
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "Please confirm the new password.",
+                        "Invalid Password",
+                        JOptionPane.WARNING_MESSAGE
+                    );
+                    continue;
+                }
+
+                if (!java.util.Arrays.equals(newPassword, confirmPassword)) {
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "The passwords do not match.\nPlease try again.",
+                        "Password Mismatch",
+                        JOptionPane.WARNING_MESSAGE
+                    );
+                    continue;
+                }
+
+                break;
+            }
+
+            boolean success = accountService.resetPassword(
+                loggedInAccount, targetName, newPassword
+            );
+
+            if (success) {
+                JOptionPane.showMessageDialog(
+                    this,
+                    "The password for account \"" + targetName + "\" has been\nsuccessfully updated.",
+                    "Password Updated",
+                    JOptionPane.INFORMATION_MESSAGE
+                );
+                refreshAccountTable();
+            } else {
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Unable to update the password.\nPlease try again.",
+                    "Password Update Failed",
+                    JOptionPane.ERROR_MESSAGE
+                );
+            }
+
+        } catch (SecurityException ex) {
+            JOptionPane.showMessageDialog(
+                this,
+                ex.getMessage(),
+                "Access Denied",
+                JOptionPane.WARNING_MESSAGE
+            );
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(
+                this,
+                "Unable to update the password.\nPlease try again.",
+                "Password Update Failed",
+                JOptionPane.ERROR_MESSAGE
+            );
+        } finally {
+            if (newPassword != null) java.util.Arrays.fill(newPassword, ' ');
+            if (confirmPassword != null) java.util.Arrays.fill(confirmPassword, ' ');
+        }
     }//GEN-LAST:event_ResetPasswordActionPerformed
 
     /**
