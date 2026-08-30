@@ -287,17 +287,14 @@ public class FirstRunSetup extends javax.swing.JFrame {
         jLabel6.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel6.setText("How many Head admin accounts would you like to create?");
 
-        NumberTxt.setBackground(new java.awt.Color(255, 255, 255));
         NumberTxt.setColumns(12);
-        NumberTxt.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
+        NumberTxt.setBorder(javax.swing.BorderFactory.createLineBorder(null));
         NumberTxt.addActionListener(this::NumberTxtActionPerformed);
 
         ContinueBtn.setBackground(new java.awt.Color(0, 102, 204));
         ContinueBtn.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
         ContinueBtn.setForeground(new java.awt.Color(255, 255, 255));
         ContinueBtn.setText("Continue");
-        ContinueBtn.putClientProperty("JButton.buttonType", "roundRect");
-        ContinueBtn.putClientProperty("FlatLaf.style", "font: 14 $font.family bold; background: #0066CC; foreground: #ffffff; arc: 12;");
         ContinueBtn.addActionListener(this::ContinueBtnActionPerformed);
 
         javax.swing.GroupLayout HowManyHadminPanelLayout = new javax.swing.GroupLayout(HowManyHadminPanel);
@@ -335,26 +332,21 @@ public class FirstRunSetup extends javax.swing.JFrame {
         CreatePanel.setBackground(new java.awt.Color(255, 255, 255));
 
         jLabel7.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
-        jLabel7.setForeground(new java.awt.Color(0, 0, 0));
         jLabel7.setText("Create Head Admin");
 
         NumberPlaceHolder.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
-        NumberPlaceHolder.setForeground(new java.awt.Color(0, 0, 0));
 
         AccNameField.addActionListener(this::AccNameFieldActionPerformed);
 
         AccountNameLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        AccountNameLabel.setForeground(new java.awt.Color(0, 0, 0));
         AccountNameLabel.setText("Account Name:");
 
         AccountPasswordLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        AccountPasswordLabel.setForeground(new java.awt.Color(0, 0, 0));
         AccountPasswordLabel.setText("Account Password:");
 
         AccPasswordField.addActionListener(this::AccPasswordFieldActionPerformed);
 
         ConfirmPasswordLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        ConfirmPasswordLabel.setForeground(new java.awt.Color(0, 0, 0));
         ConfirmPasswordLabel.setText("Confirm Password:");
 
         ConfirmPasswordField1.addActionListener(this::ConfirmPasswordField1ActionPerformed);
@@ -375,37 +367,35 @@ public class FirstRunSetup extends javax.swing.JFrame {
         CreatePanel.setLayout(CreatePanelLayout);
         CreatePanelLayout.setHorizontalGroup(
             CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CreatePanelLayout.createSequentialGroup()
+                .addContainerGap(556, Short.MAX_VALUE)
+                .addComponent(NextBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(14, 14, 14))
             .addGroup(CreatePanelLayout.createSequentialGroup()
-                .addContainerGap()
                 .addGroup(CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(CreatePanelLayout.createSequentialGroup()
+                        .addContainerGap()
                         .addComponent(jLabel7, javax.swing.GroupLayout.PREFERRED_SIZE, 222, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(NumberPlaceHolder, javax.swing.GroupLayout.PREFERRED_SIZE, 109, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CreatePanelLayout.createSequentialGroup()
-                        .addGap(0, 174, Short.MAX_VALUE)
+                        .addComponent(NumberPlaceHolder, javax.swing.GroupLayout.PREFERRED_SIZE, 109, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(CreatePanelLayout.createSequentialGroup()
+                        .addGap(140, 140, 140)
                         .addGroup(CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CreatePanelLayout.createSequentialGroup()
-                                .addComponent(NextBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(14, 14, 14))
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CreatePanelLayout.createSequentialGroup()
+                            .addGroup(CreatePanelLayout.createSequentialGroup()
+                                .addGroup(CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                    .addComponent(ConfirmPasswordLabel)
+                                    .addComponent(AccountPasswordLabel)
+                                    .addComponent(AccountNameLabel))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addGroup(CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addGroup(CreatePanelLayout.createSequentialGroup()
-                                        .addGroup(CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                            .addComponent(ConfirmPasswordLabel)
-                                            .addComponent(AccountPasswordLabel)
-                                            .addComponent(AccountNameLabel))
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                        .addGroup(CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                            .addComponent(AccNameField, javax.swing.GroupLayout.PREFERRED_SIZE, 230, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                            .addComponent(ConfirmPasswordField1, javax.swing.GroupLayout.PREFERRED_SIZE, 230, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                            .addComponent(AccPasswordField, javax.swing.GroupLayout.PREFERRED_SIZE, 230, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CreatePanelLayout.createSequentialGroup()
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 190, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(ConfirmBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 87, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addGap(82, 82, 82)))
-                                .addGap(171, 171, 171))))))
+                                    .addComponent(AccNameField, javax.swing.GroupLayout.PREFERRED_SIZE, 230, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(ConfirmPasswordField1, javax.swing.GroupLayout.PREFERRED_SIZE, 230, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(AccPasswordField, javax.swing.GroupLayout.PREFERRED_SIZE, 230, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CreatePanelLayout.createSequentialGroup()
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 190, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(ConfirmBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 87, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(82, 82, 82)))))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         CreatePanelLayout.setVerticalGroup(
             CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -414,7 +404,7 @@ public class FirstRunSetup extends javax.swing.JFrame {
                 .addGroup(CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel7)
                     .addComponent(NumberPlaceHolder, javax.swing.GroupLayout.DEFAULT_SIZE, 33, Short.MAX_VALUE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 243, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 212, Short.MAX_VALUE)
                 .addGroup(CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(AccNameField, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(AccountNameLabel))
@@ -428,7 +418,7 @@ public class FirstRunSetup extends javax.swing.JFrame {
                     .addComponent(ConfirmPasswordField1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
                 .addComponent(ConfirmBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(181, 181, 181)
+                .addGap(212, 212, 212)
                 .addComponent(NextBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );

@@ -468,6 +468,7 @@ private void configureAccountManagementUi() {
     // ---------- Buttons ----------
     stylePrimaryButton(CAdminBTN, "Create Admin", primary);
     stylePrimaryButton(CUserBTN,  "Create User",  primary);
+    styleSecondaryButton(ResetPassword, "Reset Password");
     styleDangerButton(AccDeleteBTN, "Delete");
     
     // Only Head Admin can create Admin accounts.
@@ -475,6 +476,9 @@ private void configureAccountManagementUi() {
             loggedInAccount != null
             && loggedInAccount.isHeadAdmin()
         );
+        ResetPassword.setVisible(
+            loggedInAccount != null && loggedInAccount.isAdmin()
+);
 
         // Both Head Admin and Admin can create Users.
         CUserBTN.setVisible(
@@ -724,7 +728,7 @@ private JPanel createAccountFormPanel() {
     JPanel form = new JPanel(new MigLayout(
         "fillx, insets 0, gap 8", 
         "[grow] [grow]", 
-        "[pref] [38px!] [pref] [38px!] [pref] [38px!] [16px!] [40px!]"
+        "[pref] [38px!] [pref] [38px!] [pref] [38px!] [16px!] [40px!] [8px!] [40px!]" // Added rows
     ));
     form.setOpaque(false);
 
@@ -740,9 +744,12 @@ private JPanel createAccountFormPanel() {
     form.add(ConfirmPasswordLabel, "cell 0 4 2 1, growx, gaptop 6");
     form.add(ConfirmPasswordField, "cell 0 5 2 1, growx, h 38px!");
 
-    // ===== BUTTONS (Create User & Create Admin Side-by-Side) =====
+    // ===== BUTTONS =====
     form.add(CUserBTN, "cell 0 7, growx, h 40!");
     form.add(CAdminBTN, "cell 1 7, growx, h 40!");
+    
+    // ===== RESET PASSWORD BUTTON =====
+    form.add(ResetPassword, "cell 0 9 2 1, growx, h 40!"); // <--- ADD THIS (spans 2 columns)
 
     return form;
 }
@@ -1094,6 +1101,7 @@ FrequentlyUsedLabel.setText(topMedicine);
         CAdminBTN = new javax.swing.JButton();
         CUserBTN = new javax.swing.JButton();
         AccDeleteBTN = new javax.swing.JButton();
+        ResetPassword = new javax.swing.JButton();
         statisticsContainer = new javax.swing.JPanel();
         jLabel7 = new javax.swing.JLabel();
         lblReportingPeriod = new javax.swing.JLabel();
@@ -1284,15 +1292,12 @@ FrequentlyUsedLabel.setText(topMedicine);
         ConfirmPasswordField.addActionListener(this::ConfirmPasswordFieldActionPerformed);
 
         AccountNameLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        AccountNameLabel.setForeground(new java.awt.Color(0, 0, 0));
         AccountNameLabel.setText("Account Name");
 
         AccountPasswordLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        AccountPasswordLabel.setForeground(new java.awt.Color(0, 0, 0));
         AccountPasswordLabel.setText("Account Password");
 
         ConfirmPasswordLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        ConfirmPasswordLabel.setForeground(new java.awt.Color(0, 0, 0));
         ConfirmPasswordLabel.setText("Confirm Password");
 
         CAdminBTN.setBackground(new java.awt.Color(0, 102, 204));
@@ -1313,31 +1318,40 @@ FrequentlyUsedLabel.setText(topMedicine);
         AccDeleteBTN.setText("Delete");
         AccDeleteBTN.addActionListener(this::AccDeleteBTNActionPerformed);
 
+        ResetPassword.setBackground(new java.awt.Color(0, 102, 204));
+        ResetPassword.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        ResetPassword.setForeground(new java.awt.Color(255, 255, 255));
+        ResetPassword.setText("Reset Password");
+        ResetPassword.addActionListener(this::ResetPasswordActionPerformed);
+
         javax.swing.GroupLayout AccountManagementPanelLayout = new javax.swing.GroupLayout(AccountManagementPanel);
         AccountManagementPanel.setLayout(AccountManagementPanelLayout);
         AccountManagementPanelLayout.setHorizontalGroup(
             AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(AccountManagementPanelLayout.createSequentialGroup()
-                .addContainerGap(146, Short.MAX_VALUE)
-                .addGroup(AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, AccountManagementPanelLayout.createSequentialGroup()
-                        .addGroup(AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(AccNameField)
-                            .addComponent(AccPasswordField)
-                            .addComponent(ConfirmPasswordField, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 253, Short.MAX_VALUE)
-                            .addComponent(AccountNameLabel)
-                            .addComponent(AccountPasswordLabel)
-                            .addComponent(ConfirmPasswordLabel)
-                            .addGroup(AccountManagementPanelLayout.createSequentialGroup()
-                                .addComponent(CUserBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                .addComponent(CAdminBTN)))
-                        .addGap(109, 109, 109)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, AccountManagementPanelLayout.createSequentialGroup()
+                .addContainerGap(130, Short.MAX_VALUE)
+                .addGroup(AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(AccNameField)
+                    .addComponent(AccPasswordField)
+                    .addComponent(ConfirmPasswordField, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 253, Short.MAX_VALUE)
+                    .addComponent(AccountNameLabel)
+                    .addComponent(AccountPasswordLabel)
+                    .addComponent(ConfirmPasswordLabel)
+                    .addGroup(AccountManagementPanelLayout.createSequentialGroup()
+                        .addComponent(CUserBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(CAdminBTN)))
+                .addGap(109, 109, 109)
+                .addGroup(AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addGroup(AccountManagementPanelLayout.createSequentialGroup()
                         .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(56, 56, 56))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, AccountManagementPanelLayout.createSequentialGroup()
+                    .addGroup(AccountManagementPanelLayout.createSequentialGroup()
+                        .addGap(6, 6, 6)
                         .addComponent(AccDeleteBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 134, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(209, 209, 209))))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(ResetPassword, javax.swing.GroupLayout.PREFERRED_SIZE, 134, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(81, 81, 81))))
         );
         AccountManagementPanelLayout.setVerticalGroup(
             AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1360,11 +1374,13 @@ FrequentlyUsedLabel.setText(topMedicine);
                     .addComponent(CAdminBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, AccountManagementPanelLayout.createSequentialGroup()
-                .addContainerGap(84, Short.MAX_VALUE)
+                .addContainerGap(88, Short.MAX_VALUE)
                 .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
-                .addComponent(AccDeleteBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(43, 43, 43))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(AccountManagementPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(AccDeleteBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(ResetPassword, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(49, 49, 49))
         );
 
         jPanel1.add(AccountManagementPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 30, 1000, 620));
@@ -1517,7 +1533,6 @@ FrequentlyUsedLabel.setText(topMedicine);
         jPanel7.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         jLabel11.setFont(new java.awt.Font("Segoe UI", 1, 16)); // NOI18N
-        jLabel11.setForeground(new java.awt.Color(0, 0, 0));
         jLabel11.setText("Daily Check-ins");
         jPanel7.add(jLabel11, new org.netbeans.lib.awtextra.AbsoluteConstraints(22, 18, 300, 20));
 
@@ -1645,8 +1660,6 @@ FrequentlyUsedLabel.setText(topMedicine);
 
         jPanel1.add(statisticsContainer, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 30, 1000, 620));
 
-        jPanel4.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
-
         stockTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
                 {null, null, null},
@@ -1682,26 +1695,23 @@ FrequentlyUsedLabel.setText(topMedicine);
         jPanel4.setLayout(jPanel4Layout);
         jPanel4Layout.setHorizontalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 646, Short.MAX_VALUE)
+            .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 650, Short.MAX_VALUE)
         );
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 466, Short.MAX_VALUE)
+            .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 470, Short.MAX_VALUE)
         );
 
         jPanel1.add(jPanel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 110, 650, 470));
 
         jLabel1.setFont(new java.awt.Font("Yu Gothic UI", 1, 24)); // NOI18N
-        jLabel1.setForeground(new java.awt.Color(0, 0, 0));
         jLabel1.setText("Inventory Logs");
         jPanel1.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(880, 70, 230, 40));
 
         jPanel5.setBackground(new java.awt.Color(180, 180, 180));
         jPanel5.setBorder(javax.swing.BorderFactory.createCompoundBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(180, 180, 180)), javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15)));
-        jPanel5.setForeground(new java.awt.Color(0, 0, 0));
 
         jLabel2.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        jLabel2.setForeground(new java.awt.Color(0, 0, 0));
         jLabel2.setText("Inventory Details");
 
         ProductName.addActionListener(this::ProductNameActionPerformed);
@@ -1726,15 +1736,12 @@ FrequentlyUsedLabel.setText(topMedicine);
         });
 
         jLabel3.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        jLabel3.setForeground(new java.awt.Color(0, 0, 0));
         jLabel3.setText("Product Name");
 
         jLabel4.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        jLabel4.setForeground(new java.awt.Color(0, 0, 0));
         jLabel4.setText("EXP Date");
 
         jLabel5.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        jLabel5.setForeground(new java.awt.Color(0, 0, 0));
         jLabel5.setText("Quantity");
 
         AddBTN.setText("Add");
@@ -1826,7 +1833,6 @@ FrequentlyUsedLabel.setText(topMedicine);
         jPanel1.add(jPanel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(870, 110, 320, 240));
 
         jLabel6.setFont(new java.awt.Font("Yu Gothic UI", 1, 24)); // NOI18N
-        jLabel6.setForeground(new java.awt.Color(0, 0, 0));
         jLabel6.setText("Stock");
         jPanel1.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 70, 210, 40));
 
@@ -2403,6 +2409,10 @@ FrequentlyUsedLabel.setText(topMedicine);
         showStatistics();
     }//GEN-LAST:event_jButton6ActionPerformed
 
+    private void ResetPasswordActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ResetPasswordActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_ResetPasswordActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -2444,6 +2454,7 @@ FrequentlyUsedLabel.setText(topMedicine);
     private javax.swing.JTextArea InventoryLogs;
     private javax.swing.JTextField ProductName;
     private javax.swing.JTextField Qty;
+    private javax.swing.JButton ResetPassword;
     private javax.swing.JLabel SentBackValue;
     private javax.swing.JLabel SentbackLabel;
     private javax.swing.JPanel SentbackPanel;
