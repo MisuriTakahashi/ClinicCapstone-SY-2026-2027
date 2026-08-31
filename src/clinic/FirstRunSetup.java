@@ -268,6 +268,7 @@ public class FirstRunSetup extends javax.swing.JFrame {
         ConfirmPasswordField1 = new javax.swing.JPasswordField();
         ConfirmBtn = new javax.swing.JButton();
         NextBtn = new javax.swing.JButton();
+        RetryBtn = new javax.swing.JButton();
         jPanel1 = new javax.swing.JPanel();
         jLabel1 = new javax.swing.JLabel();
         jLabel5 = new javax.swing.JLabel();
@@ -288,7 +289,7 @@ public class FirstRunSetup extends javax.swing.JFrame {
         jLabel6.setText("How many Head admin accounts would you like to create?");
 
         NumberTxt.setColumns(12);
-        NumberTxt.setBorder(javax.swing.BorderFactory.createLineBorder(null));
+        NumberTxt.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
         NumberTxt.addActionListener(this::NumberTxtActionPerformed);
 
         ContinueBtn.setBackground(new java.awt.Color(0, 102, 204));
@@ -363,12 +364,20 @@ public class FirstRunSetup extends javax.swing.JFrame {
         NextBtn.setText("Next");
         NextBtn.addActionListener(this::NextBtnActionPerformed);
 
+        RetryBtn.setBackground(new java.awt.Color(0, 102, 204));
+        RetryBtn.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
+        RetryBtn.setForeground(new java.awt.Color(255, 255, 255));
+        RetryBtn.setText("Retry");
+        RetryBtn.addActionListener(this::RetryBtnActionPerformed);
+
         javax.swing.GroupLayout CreatePanelLayout = new javax.swing.GroupLayout(CreatePanel);
         CreatePanel.setLayout(CreatePanelLayout);
         CreatePanelLayout.setHorizontalGroup(
             CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CreatePanelLayout.createSequentialGroup()
-                .addContainerGap(556, Short.MAX_VALUE)
+                .addContainerGap()
+                .addComponent(RetryBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 87, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(NextBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(14, 14, 14))
             .addGroup(CreatePanelLayout.createSequentialGroup()
@@ -395,7 +404,7 @@ public class FirstRunSetup extends javax.swing.JFrame {
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 190, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addComponent(ConfirmBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 87, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(82, 82, 82)))))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(211, Short.MAX_VALUE))
         );
         CreatePanelLayout.setVerticalGroup(
             CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -419,7 +428,9 @@ public class FirstRunSetup extends javax.swing.JFrame {
                 .addGap(18, 18, 18)
                 .addComponent(ConfirmBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(212, 212, 212)
-                .addComponent(NextBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(CreatePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(NextBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(RetryBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap())
         );
 
@@ -548,6 +559,46 @@ public class FirstRunSetup extends javax.swing.JFrame {
         // TODO add your handling code here:
     }//GEN-LAST:event_ConfirmPasswordField1ActionPerformed
 
+    private void RetryBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RetryBtnActionPerformed
+       retryHeadAdminSetup();
+    }//GEN-LAST:event_RetryBtnActionPerformed
+    
+    /**
+ * Resets the current Head Admin setup wizard.
+ *
+ * This allows the user to change the number of Head Admins
+ * before the setup is finally confirmed.
+ */
+private void retryHeadAdminSetup() {
+
+    // Clear all Head Admins that were entered during this attempt.
+    // These have NOT been inserted into the database yet.
+    pendingHeadAdmins.clear();
+
+    // Reset wizard state.
+    totalHeadAdmins = 0;
+    currentIndex = 0;
+
+    // Clear the number field.
+    NumberTxt.setText("");
+
+    // Clear all account fields.
+    AccNameField.setText("");
+    AccPasswordField.setText("");
+    ConfirmPasswordField1.setText("");
+
+    // Return to the "How many Head Admins?" screen.
+    CreatePanel.setVisible(false);
+    HowManyHadminPanel.setVisible(true);
+
+    // Refresh the layout.
+    getContentPane().revalidate();
+    getContentPane().repaint();
+
+    // Put the cursor back into the number field.
+    NumberTxt.requestFocusInWindow();
+}
+    
     /**
      * @param args the command line arguments
      */
@@ -576,6 +627,7 @@ public class FirstRunSetup extends javax.swing.JFrame {
     private javax.swing.JButton NextBtn;
     private javax.swing.JLabel NumberPlaceHolder;
     private javax.swing.JTextField NumberTxt;
+    private javax.swing.JButton RetryBtn;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
