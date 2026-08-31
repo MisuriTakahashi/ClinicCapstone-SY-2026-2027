@@ -458,9 +458,10 @@ private static String buildCheckInLogDetails(
             String newReason, String newMedUsed, int newMedsQty,
             String newGuardianName, String newGuardianPhone) throws SQLException {
  
-            String sql = "UPDATE VISITS SET name = ?, grade_section = ?, reason = ?, "
+                String sql = "UPDATE VISITS SET name = ?, grade_section = ?, reason = ?, "
                 + "med_used = ?, meds_qty = ?, guardian_name = ?, guardian_phone = ? "
-                + "WHERE lrn = ? AND archived = FALSE";
+                + "WHERE id = (SELECT id FROM VISITS WHERE lrn = ? AND archived = FALSE "
+                + "ORDER BY id DESC LIMIT 1)";
  
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, newName);
@@ -477,59 +478,228 @@ private static String buildCheckInLogDetails(
  
     /**
      * Transactional edit: reconciles medicine stock (restock the old
-     * medicine, deduct the new one) AND updates the visit record in a
-     * single commit/rollback unit.
+     * medicine, deduct the new one), updates the visit record, AND writes
+     * a single comprehensive EDIT audit-log entry — all in one
+     * commit/rollback unit on a shared Connection, same pattern as
+     * checkInWithMedicine()/markSentHome()/markSentBack() above.
      *
-     * This fixes a real bug in the previous uncoordinated flow: if the
-     * visit UPDATE failed (e.g. record no longer exists), the stock
-     * changes made just before it were never rolled back, silently
-     * corrupting inventory counts. Here, if editVisit reports no match,
-     * the whole transaction — including the stock adjustment — rolls back.
+     * The "before" state is read from the database at the START of this
+     * same transaction (not from whatever the caller had cached earlier),
+     * so the audit entry always reflects what was actually stored. If
+     * nothing about the record actually changes, no EDIT entry is written
+     * at all. If the visit UPDATE fails (e.g. record no longer exists),
+     * the whole transaction — including the stock adjustment and any log
+     * entry — rolls back, so a log entry can never exist without its
+     * matching data change (or vice versa).
      */
     public boolean editVisitWithMedicineAdjustment(
             String lrn, String newName, String newGradeSection, String newReason,
             String oldMedUsed, int oldMedsQty,
             String newMedUsed, int newMedsQty,
             String newGuardianName, String newGuardianPhone,
-            MedicineData medicineData, String performedBy) throws SQLException {
- 
+            MedicineData medicineData, String performedBy,
+            boolean changeMedicine) throws SQLException {
+
         try (Connection conn = DatabaseManager.getConnection()) {
- 
+
             conn.setAutoCommit(false);
- 
+
             try {
-                if (oldMedUsed != null && !oldMedUsed.equalsIgnoreCase("None") && oldMedsQty > 0) {
-                    medicineData.restockMedicine(conn, oldMedUsed, oldMedsQty, performedBy);
-                }
- 
-                if (newMedUsed != null && !newMedUsed.equalsIgnoreCase("None") && newMedsQty > 0) {
-                    medicineData.useMedicine(conn, newMedUsed, newName, newMedsQty, performedBy);
-                }
- 
-                boolean success = editVisit(conn, lrn, newName, newGradeSection, newReason,
-                        newMedUsed, newMedsQty, newGuardianName, newGuardianPhone);
- 
-                if (!success) {
+                
+                  CheckinSystem before = findVisitForEdit(conn, lrn);
+
+                if (before == null) {
                     conn.rollback();
                     return false;
                 }
- 
+
+                // Use the medicine actually stored on the row right now (read
+                // inside this same transaction) as the "old" side of the stock
+                // reconciliation, rather than the oldMedUsed/oldMedsQty the
+                // caller captured earlier when the row was selected. Keeps the
+                // restock amount correct even if the record changed in between.
+                String actualOldMedUsed = before.getMedUsed();
+                int actualOldMedsQty = before.getmedsQty();
+
+                // If the user explicitly chose NO to changing medicine, the
+                // database's current medicine is authoritative. Do not trust
+                // the cached table selection because it may be stale (for
+                // example, the table can still contain an older quantity).
+                // This prevents a no-op edit from being recorded as a
+                // medicine change such as 1x -> 14x.
+                if (!changeMedicine) {
+                    newMedUsed = actualOldMedUsed;
+                    newMedsQty = actualOldMedsQty;
+                }
+
+                boolean medicineUnchanged =
+                        nullToEmpty(actualOldMedUsed).equalsIgnoreCase(nullToEmpty(newMedUsed))
+                        && actualOldMedsQty == newMedsQty;
+
+                // Skip the restock/deduct pair entirely when nothing about the
+                // medicine actually changed — otherwise every edit (even a
+                // guardian-only or reason-only edit) would create a pointless
+                // RESTOCK_MEDICINE + USE_MEDICINE pair in the audit log.
+                if (!medicineUnchanged) {
+
+                    if (actualOldMedUsed != null && !actualOldMedUsed.equalsIgnoreCase("None") && actualOldMedsQty > 0) {
+                        medicineData.restockMedicine(conn, actualOldMedUsed, actualOldMedsQty, performedBy);
+                    }
+
+                    if (newMedUsed != null && !newMedUsed.equalsIgnoreCase("None") && newMedsQty > 0) {
+                        medicineData.useMedicine(conn, newMedUsed, newName, newMedsQty, performedBy);
+                    }
+                }
+                
+                String editDetails = buildEditLogDetails(
+                        before, newName, newGradeSection, newReason,
+                        newMedUsed, newMedsQty, newGuardianName, newGuardianPhone);
+
+                // True no-op edit: do not UPDATE the row, do not touch
+                // inventory, and do not create an EDIT audit entry.
+                if (editDetails == null) {
+                    conn.rollback();
+                    return true;
+                }
+
+                // IMPORTANT: actually persist the edited fields. The previous
+                // version generated the audit message and committed inventory
+                // changes without executing the VISITS UPDATE, which made the
+                // audit log claim that fields changed while the table still
+                // showed the old values.
+                boolean updated = editVisit(conn, lrn, newName, newGradeSection,
+                        newReason, newMedUsed, newMedsQty,
+                        newGuardianName, newGuardianPhone);
+
+                if (!updated) {
+                    throw new SQLException("The student record could not be updated.");
+                }
+
+                ActivityLogData.log(conn, "EDIT", editDetails, performedBy);
+
                 conn.commit();
                 return true;
- 
+
             } catch (SQLException | RuntimeException ex) {
- 
+
                 try {
                     conn.rollback();
                 } catch (SQLException ignored) {
                 }
- 
+
                 throw ex;
- 
+
             } finally {
                 conn.setAutoCommit(true);
             }
         }
+    }
+
+    /**
+     * Connection-based helper: reads the current row for a visit that is
+     * eligible for editing (same WHERE clause as editVisit() itself —
+     * "not archived", any status). Used to snapshot the "before" values
+     * for the EDIT audit entry inside editVisitWithMedicineAdjustment(),
+     * so the diff always reflects what's actually in the database, not a
+     * possibly-stale UI selection.
+     */
+    private CheckinSystem findVisitForEdit(Connection conn, String lrn) throws SQLException {
+        String sql = "SELECT name, grade_section, lrn, reason, med_used, meds_qty, "
+                + "check_in_time, status, guardian_name, guardian_phone FROM VISITS "
+                + "WHERE lrn = ? AND archived = FALSE ORDER BY id DESC LIMIT 1";
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, lrn);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new CheckinSystem(
+                            rs.getString("name"),
+                            rs.getString("grade_section"),
+                            rs.getString("lrn"),
+                            rs.getString("reason"),
+                            rs.getString("med_used"),
+                            rs.getInt("meds_qty"),
+                            rs.getString("check_in_time"),
+                            rs.getString("status"),
+                            rs.getString("guardian_name"),
+                            rs.getString("guardian_phone")
+                    );
+                }
+                return null;
+            }
+        }
+    }
+
+    /**
+     * Builds the human-readable EDIT audit details string by comparing the
+     * "before" record to the incoming new values. Returns null when every
+     * editable field is unchanged, so the caller skips writing an EDIT
+     * entry entirely (no-op edits are never logged).
+     */
+    private static String buildEditLogDetails(
+            CheckinSystem before, String newName, String newGradeSection, String newReason,
+            String newMedUsed, int newMedsQty,
+            String newGuardianName, String newGuardianPhone) {
+
+        ArrayList<String> changes = new ArrayList<>();
+
+        String oldName = nullToEmpty(before.getName());
+        String oldGradeSection = nullToEmpty(before.getGradeSection());
+        String oldReason = nullToEmpty(before.getReason());
+        String oldMedUsed = nullToEmpty(before.getMedUsed());
+        int oldMedsQty = before.getmedsQty();
+        String oldGuardianName = nullToEmpty(before.getGuardianName());
+        String oldGuardianPhone = nullToEmpty(before.getGuardianPhoneNums());
+
+        String safeNewName = nullToEmpty(newName);
+        String safeNewGradeSection = nullToEmpty(newGradeSection);
+        String safeNewReason = nullToEmpty(newReason);
+        String safeNewMedUsed = nullToEmpty(newMedUsed);
+        String safeNewGuardianName = nullToEmpty(newGuardianName);
+        String safeNewGuardianPhone = nullToEmpty(newGuardianPhone);
+
+        if (!oldName.equals(safeNewName)) {
+            changes.add("Name changed from \"" + oldName + "\" to \"" + safeNewName + "\"");
+        }
+
+        if (!oldGradeSection.equals(safeNewGradeSection)) {
+            changes.add("Grade/Section changed from \"" + oldGradeSection
+                    + "\" to \"" + safeNewGradeSection + "\"");
+        }
+
+        if (!oldReason.equals(safeNewReason)) {
+            changes.add("Reason changed");
+        }
+
+        boolean medicineChanged =
+                !oldMedUsed.equalsIgnoreCase(safeNewMedUsed) || oldMedsQty != newMedsQty;
+        if (medicineChanged) {
+            String fromMed = oldMedUsed.isEmpty() || oldMedUsed.equalsIgnoreCase("None")
+                    ? "no medicine" : oldMedsQty + "x " + oldMedUsed;
+            String toMed = safeNewMedUsed.isEmpty() || safeNewMedUsed.equalsIgnoreCase("None")
+                    ? "no medicine" : newMedsQty + "x " + safeNewMedUsed;
+            changes.add("Medicine changed from " + fromMed + " to " + toMed);
+        }
+
+        if (!oldGuardianName.equals(safeNewGuardianName)) {
+            changes.add("Guardian changed from \"" + oldGuardianName + "\" to \"" + safeNewGuardianName + "\"");
+        }
+
+        if (!oldGuardianPhone.equals(safeNewGuardianPhone)) {
+            changes.add("Guardian phone changed from \"" + oldGuardianPhone
+                    + "\" to \"" + safeNewGuardianPhone + "\"");
+        }
+
+        if (changes.isEmpty()) {
+            return null;
+        }
+
+        return "Student \"" + safeNewName + "\" (LRN: " + before.getLrn() + ") was edited. "
+                + String.join("; ", changes) + ".";
+    }
+
+    private static String nullToEmpty(String s) {
+        return s == null ? "" : s.trim();
     }
  
     public String findNameForLrn(String lrn) throws SQLException {

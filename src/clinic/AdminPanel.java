@@ -2296,75 +2296,118 @@ private void refreshAccountTable() {
         // TODO add your handling code here:
     }//GEN-LAST:event_AccPasswordFieldActionPerformed
    
+     /** Small holder so the background export task can report both the saved
+     *  file and whether the audit-log write succeeded, in one callback. */
+    private record ExportOutcome(java.io.File file, boolean auditLogged) {}
   
     
     private void ExportBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ExportBTNActionPerformed
-            // 1. Ask for the report date
-      javax.swing.JTextField dateField = new javax.swing.JTextField(LocalDate.now().toString());
-     ((javax.swing.text.AbstractDocument) dateField.getDocument())
-             .setDocumentFilter(new DateInputFilter());
-     int result = JOptionPane.showConfirmDialog(this, dateField,
-             "Report date (edit if you need a different day, e.g. 2026-1-1 or 2026-01-01):",
-             JOptionPane.OK_CANCEL_OPTION);
-     if (result != JOptionPane.OK_OPTION) return;
+         // 1. Ask for the report date
+        javax.swing.JTextField dateField = new javax.swing.JTextField(LocalDate.now().toString());
+        ((javax.swing.text.AbstractDocument) dateField.getDocument())
+                .setDocumentFilter(new DateInputFilter());
+        int result = JOptionPane.showConfirmDialog(this, dateField,
+                "Report date (edit if you need a different day, e.g. 2026-1-1 or 2026-01-01):",
+                JOptionPane.OK_CANCEL_OPTION);
+        if (result != JOptionPane.OK_OPTION) return;
 
-     LocalDate reportDate;
-     try {
-         reportDate = LocalDate.parse(normalizeDate(dateField.getText().trim()));
-     } catch (DateTimeParseException ex) {
-         JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2026-1-1 or 2026-01-01).");
-         return;
-     }
+        LocalDate reportDate;
+        try {
+            reportDate = LocalDate.parse(normalizeDate(dateField.getText().trim()));
+        } catch (DateTimeParseException ex) {
+            JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2026-1-1 or 2026-01-01).");
+            return;
+        }
 
-     String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
-     ReportExporter exporter = new ReportExporter(productService);
+        String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
+        ReportExporter exporter = new ReportExporter(productService);
 
-     try {
-         // 2. Check for records BEFORE asking where to save
-         if (!exporter.hasRecordsForDate(reportDate)) {
-             JOptionPane.showMessageDialog(this, "No records found for this date.");
-             return;
-         }
+        // 2. Check for records BEFORE asking where to save
+        try {
+            if (!exporter.hasRecordsForDate(reportDate)) {
+                JOptionPane.showMessageDialog(this, "No records found for this date.");
+                return;
+            }
+        } catch (SQLException | IOException ex) {
+            JOptionPane.showMessageDialog(this, "Error checking records for this date: " + ex.getMessage(),
+                    "Export Failed", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
-         // 3. Ask where to save
-         javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
-         String suggestedName = "Clinic_Report_" + reportDate + ".xlsx";
-         chooser.setSelectedFile(new java.io.File(suggestedName));
-         int choice = chooser.showSaveDialog(this);
-         if (choice != javax.swing.JFileChooser.APPROVE_OPTION) return;
+        // 3. Ask where to save
+        javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
+        String suggestedName = "Clinic_Report_" + reportDate + ".xlsx";
+        chooser.setSelectedFile(new java.io.File(suggestedName));
+        int choice = chooser.showSaveDialog(this);
+        if (choice != javax.swing.JFileChooser.APPROVE_OPTION) return; // cancelled -> never logged
 
-         java.io.File destination = chooser.getSelectedFile();
-         if (!destination.getName().toLowerCase().endsWith(".xlsx")) {
-             destination = new java.io.File(destination.getParentFile(), destination.getName() + ".xlsx");
-         }
+        java.io.File destination = chooser.getSelectedFile();
+        if (!destination.getName().toLowerCase().endsWith(".xlsx")) {
+            destination = new java.io.File(destination.getParentFile(), destination.getName() + ".xlsx");
+        }
+        final java.io.File finalDestination = destination;
 
-         // 4. Generate and save
-          exporter.writeDailyReport(reportDate, destination, actor);
+        // 4. Generate and save OFF the EDT via the existing DatabaseExecutor
+        // architecture, so POI's workbook build/style/autosize/write never
+        // blocks the UI. The button is disabled for the duration so a
+        // double-click can't kick off two overlapping exports.
+        ExportBTN.setEnabled(false);
+        ExportBTN.setText("Generating...");
 
-         // 5. Success message
-         JOptionPane.showMessageDialog(this, "Report exported successfully:\n" + destination.getAbsolutePath());
+        DatabaseExecutor.run(
+                () -> {
+                    boolean auditLogged = exporter.writeDailyReport(reportDate, finalDestination, actor);
+                    return new ExportOutcome(finalDestination, auditLogged);
+                },
+                outcome -> {
+                    ExportBTN.setEnabled(true);
+                    ExportBTN.setText("Export DB");
 
-         // --- Archive/reset confirmation (only after a successful, confirmed export) ---
-         int archiveChoice = JOptionPane.showConfirmDialog(this,
-                 "Report exported successfully. Do you want to archive and reset the daily check-in records?",
-                 "Archive Check-in Records", JOptionPane.YES_NO_OPTION);
+                    // 6. Refresh the Activities / Audit Log immediately — reuses the
+                    // existing implementation, no second loading system.
+                    refreshActivityLogDisplay();
 
-         if (archiveChoice == JOptionPane.YES_OPTION) {
-             VisitData visitData = new VisitData();
-             int archivedCount = visitData.archiveDate(reportDate.toString());
-             JOptionPane.showMessageDialog(this,
-                     archivedCount + " check-in record(s) for " + reportDate + " were archived.\n"
-                     + "They remain in the database for reports and statistics, "
-                     + "but no longer appear as active on the Dashboard.");
-         }
+                    // 5. Success message
+                    String successMsg = "Report exported successfully:\n" + outcome.file().getAbsolutePath();
+                    if (!outcome.auditLogged()) {
+                        successMsg += "\n\nNote: the file was saved, but the EXPORT_REPORT "
+                                + "activity could not be recorded in the audit log (database "
+                                + "issue). The exported file itself is complete and unaffected.";
+                    }
+                    JOptionPane.showMessageDialog(this, successMsg);
 
-     } catch (SQLException ex) {
-         JOptionPane.showMessageDialog(this, "Database error while exporting report: " + ex.getMessage(),
-                 "Export Failed", JOptionPane.ERROR_MESSAGE);
-     } catch (IOException ex) {
-         JOptionPane.showMessageDialog(this, "File error while exporting report: " + ex.getMessage(),
-                 "Export Failed", JOptionPane.ERROR_MESSAGE);
-     }
+                    // --- Archive/reset confirmation (only after a successful, confirmed export) ---
+                    int archiveChoice = JOptionPane.showConfirmDialog(this,
+                            "Report exported successfully. Do you want to archive and reset the daily check-in records?",
+                            "Archive Check-in Records", JOptionPane.YES_NO_OPTION);
+
+                    if (archiveChoice == JOptionPane.YES_OPTION) {
+                        DatabaseExecutor.run(
+                                () -> new VisitData().archiveDate(reportDate.toString()),
+                                archivedCount -> {
+                                    refreshInventoryScreen();
+                                    JOptionPane.showMessageDialog(this,
+                                            archivedCount + " check-in record(s) for " + reportDate + " were archived.\n"
+                                            + "They remain in the database for reports and statistics, "
+                                            + "but no longer appear as active on the Dashboard.");
+                                },
+                                ex -> JOptionPane.showMessageDialog(this,
+                                        "Error archiving records: " + ex.getMessage(),
+                                        "Archive Failed", JOptionPane.ERROR_MESSAGE)
+                        );
+                    }
+                },
+                ex -> {
+                    // Export failed: file save failed, or a DB error happened while
+                    // loading the records used to build the report. No EXPORT_REPORT
+                    // entry exists in this case (writeDailyReport only logs after the
+                    // .xlsx write already succeeded), so there's nothing to refresh.
+                    ExportBTN.setEnabled(true);
+                    ExportBTN.setText("Export DB");
+                    JOptionPane.showMessageDialog(this, "Error exporting report: " + ex.getMessage(),
+                            "Export Failed", JOptionPane.ERROR_MESSAGE);
+                }
+        );
     }//GEN-LAST:event_ExportBTNActionPerformed
 
     private void AccNameFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AccNameFieldActionPerformed

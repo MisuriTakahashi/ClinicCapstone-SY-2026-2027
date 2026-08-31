@@ -52,7 +52,7 @@ public class ReportExporter {
     }
 
     /** Writes the combined Check-in Logs + Inventory/Medicine Logs + Stock Overview + Statistics report as a real .xlsx workbook. */
-    public void writeDailyReport(LocalDate date, File destination, String performedBy) throws SQLException, IOException {
+   public boolean writeDailyReport(LocalDate date, File destination, String performedBy) throws SQLException, IOException {
         String iso = date.toString();
         ArrayList<CheckinSystem> visits = visitData.getVisitsByDate(iso);
 
@@ -167,9 +167,12 @@ public class ReportExporter {
             statValueCenterFont.setBold(true);
             statValueCenterStyle.setFont(statValueCenterFont);
 
-            // --- Activities / Audit Log section styles ---
-            // Distinct header color, zebra-striped bordered rows so entries don't
-            // blend together, and per-action font colors on the Action column.
+                       // --- Activities / Audit Log section styles ---
+            // Clean, light table: normal cells get a neutral background with
+            // thin borders only — no zebra striping. The Action / Activity
+            // column is the only place color is used (via a bold font color
+            // per action type), so the action type is scannable at a glance
+            // without darkening every row.
             CellStyle activitySectionStyle = workbook.createCellStyle();
             activitySectionStyle.cloneStyleFrom(sectionStyle);
             activitySectionStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
@@ -186,48 +189,30 @@ public class ReportExporter {
             activityHeaderStyle.setBorderRight(BorderStyle.THIN);
             activityHeaderStyle.setAlignment(HorizontalAlignment.CENTER);
 
-            CellStyle activityDateStyleEven = workbook.createCellStyle();
-            activityDateStyleEven.cloneStyleFrom(dateStyle);
-            activityDateStyleEven.setBorderTop(BorderStyle.THIN);
-            activityDateStyleEven.setBorderBottom(BorderStyle.THIN);
-            activityDateStyleEven.setBorderLeft(BorderStyle.THIN);
-            activityDateStyleEven.setBorderRight(BorderStyle.THIN);
-            activityDateStyleEven.setVerticalAlignment(VerticalAlignment.TOP);
+            CellStyle activityDateStyle = workbook.createCellStyle();
+            activityDateStyle.cloneStyleFrom(dateStyle);
+            activityDateStyle.setBorderTop(BorderStyle.THIN);
+            activityDateStyle.setBorderBottom(BorderStyle.THIN);
+            activityDateStyle.setBorderLeft(BorderStyle.THIN);
+            activityDateStyle.setBorderRight(BorderStyle.THIN);
+            activityDateStyle.setVerticalAlignment(VerticalAlignment.TOP);
 
-            // FIX: IndexedColors.GREY_10_PERCENT does not exist in Apache POI.
-            // Valid greys are GREY_25_PERCENT, GREY_50_PERCENT, GREY_80_PERCENT.
-            // Swapped to GREY_25_PERCENT below (in all 4 spots it was used).
-            CellStyle activityDateStyleOdd = workbook.createCellStyle();
-            activityDateStyleOdd.cloneStyleFrom(activityDateStyleEven);
-            activityDateStyleOdd.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-            activityDateStyleOdd.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            CellStyle activityDetailsStyle = workbook.createCellStyle();
+            activityDetailsStyle.cloneStyleFrom(wrapStyle);
+            activityDetailsStyle.setBorderTop(BorderStyle.THIN);
+            activityDetailsStyle.setBorderBottom(BorderStyle.THIN);
+            activityDetailsStyle.setBorderLeft(BorderStyle.THIN);
+            activityDetailsStyle.setBorderRight(BorderStyle.THIN);
 
-            CellStyle activityDetailsStyleEven = workbook.createCellStyle();
-            activityDetailsStyleEven.cloneStyleFrom(wrapStyle);
-            activityDetailsStyleEven.setBorderTop(BorderStyle.THIN);
-            activityDetailsStyleEven.setBorderBottom(BorderStyle.THIN);
-            activityDetailsStyleEven.setBorderLeft(BorderStyle.THIN);
-            activityDetailsStyleEven.setBorderRight(BorderStyle.THIN);
+            CellStyle activityActorStyle = workbook.createCellStyle();
+            activityActorStyle.setBorderTop(BorderStyle.THIN);
+            activityActorStyle.setBorderBottom(BorderStyle.THIN);
+            activityActorStyle.setBorderLeft(BorderStyle.THIN);
+            activityActorStyle.setBorderRight(BorderStyle.THIN);
+            activityActorStyle.setVerticalAlignment(VerticalAlignment.TOP);
 
-            CellStyle activityDetailsStyleOdd = workbook.createCellStyle();
-            activityDetailsStyleOdd.cloneStyleFrom(activityDetailsStyleEven);
-            activityDetailsStyleOdd.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-            activityDetailsStyleOdd.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-
-            CellStyle activityActorStyleEven = workbook.createCellStyle();
-            activityActorStyleEven.setBorderTop(BorderStyle.THIN);
-            activityActorStyleEven.setBorderBottom(BorderStyle.THIN);
-            activityActorStyleEven.setBorderLeft(BorderStyle.THIN);
-            activityActorStyleEven.setBorderRight(BorderStyle.THIN);
-            activityActorStyleEven.setVerticalAlignment(VerticalAlignment.TOP);
-
-            CellStyle activityActorStyleOdd = workbook.createCellStyle();
-            activityActorStyleOdd.cloneStyleFrom(activityActorStyleEven);
-            activityActorStyleOdd.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-            activityActorStyleOdd.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-
-            // Cache of per-action, per-row-parity styles for the Action column so
-            // repeated actions reuse the same style object instead of duplicating.
+            // Cache of per-action CellStyle for the Action column, so repeated
+            // actions reuse the same style object instead of duplicating it.
             java.util.Map<String, CellStyle> activityActionStyleCache = new java.util.HashMap<>();
 
             String[] checkinHeaders = {"Student Name", "Grade/Section", "LRN", "Check-in Date/Time", "Reason",
@@ -328,40 +313,37 @@ public class ReportExporter {
             // entriesForDate comes from loadEntries(), which orders newest-first; the report
             // reads more naturally in chronological order, so walk it back-to-front here
             // without mutating the shared list (still used above for usedTodayByMedicine).
-            int activityRowNumber = 0;
-            for (int i = entriesForDate.size() - 1; i >= 0; i--) {
+                        for (int i = entriesForDate.size() - 1; i >= 0; i--) {
                 ActivityLogData.Entry entry = entriesForDate.get(i);
-                boolean altRow = (activityRowNumber % 2 == 1);
-                activityRowNumber++;
 
                 Row row = sheet.createRow(rowIndex++);
 
                 Cell dateCell = row.createCell(0);
                 dateCell.setCellValue(entry.timestamp().toLocalDateTime());
-                dateCell.setCellStyle(altRow ? activityDateStyleOdd : activityDateStyleEven);
+                dateCell.setCellStyle(activityDateStyle);
 
                 // Natural label ("Use Medicine") instead of the raw DB code
                 // ("USE_MEDICINE") - the stored code itself is untouched.
                 Cell actionCell = row.createCell(1);
                 actionCell.setCellValue(safe(ActivityLogData.displayAction(entry.action())));
                 actionCell.setCellStyle(getActivityActionStyle(
-                        workbook, activityActionStyleCache, entry.action(), altRow));
+                        workbook, activityActionStyleCache, entry.action()));
 
                 String detailsText =
                         ActivityLogData.humanizeDetails(entry.action(), entry.details());
                 Cell detailsCell = row.createCell(2);
                 detailsCell.setCellValue(safe(detailsText));
-                detailsCell.setCellStyle(altRow ? activityDetailsStyleOdd : activityDetailsStyleEven);
+                detailsCell.setCellStyle(activityDetailsStyle);
 
                 // The actual logged-in account name - never overwritten with "Unknown"
                 // unless the stored record itself has no actor.
                 Cell actorCell = row.createCell(3);
                 actorCell.setCellValue(safe(ActivityLogData.displayActor(entry.actor())));
-                actorCell.setCellStyle(altRow ? activityActorStyleOdd : activityActorStyleEven);
+                actorCell.setCellStyle(activityActorStyle);
 
                 autoFitWrappedRow(row, detailsText, 50);
             }
-            if (entriesForDate.isEmpty()) {
+                        if (entriesForDate.isEmpty()) {
                 sheet.createRow(rowIndex++).createCell(0).setCellValue("No activities for this date.");
             }
 
@@ -542,22 +524,28 @@ public class ReportExporter {
                 }
             }
 
-            // --- Save the workbook as a real .xlsx file ---
+                // --- Save the workbook as a real .xlsx file ---
             try (OutputStream out = new FileOutputStream(destination)) {
                 workbook.write(out);
             }
 
             // Log the export only now that the .xlsx has actually been saved to disk.
-            // If the log insert itself fails (e.g. DB unreachable), the export is NOT
-            // considered failed — the file already exists — so this is reported to
-            // stderr only, same pattern as the legacy-log import in DatabaseManager.
+            // The file save is what defines "the export succeeded" — a failure to
+            // write the audit row does NOT roll back or delete the file, but it is
+            // no longer silently swallowed: the caller gets a boolean it can show
+            // to the user instead of only a stderr line nobody sees.
+            boolean auditLogged;
             try {
                 String details = "Exported daily clinic report for " + iso
                         + " to: " + destination.getAbsolutePath();
                 ActivityLogData.log("EXPORT_REPORT", details, performedBy);
+                auditLogged = true;
             } catch (SQLException logEx) {
                 System.err.println("Could not record EXPORT_REPORT activity log: " + logEx.getMessage());
+                auditLogged = false;
             }
+
+            return auditLogged;
         }
     }
 
@@ -713,55 +701,67 @@ public class ReportExporter {
         return value == null ? "" : value;
     }
     
+       /**
+         * Gets (or lazily creates) a bordered CellStyle for the Action/Activity
+         * column. Only the font color communicates the action type — the cell
+         * itself has no fill — so the table stays light while the action is
+         * still scannable at a glance. Cached per action so repeated actions
+         * reuse the same style object instead of creating duplicates.
+         */
+        private CellStyle getActivityActionStyle(XSSFWorkbook workbook,
+                java.util.Map<String, CellStyle> cache, String action) {
+
+            String key = (action == null ? "" : action);
+            CellStyle cached = cache.get(key);
+            if (cached != null) {
+                return cached;
+            }
+
+            CellStyle style = workbook.createCellStyle();
+            style.setBorderTop(BorderStyle.THIN);
+            style.setBorderBottom(BorderStyle.THIN);
+            style.setBorderLeft(BorderStyle.THIN);
+            style.setBorderRight(BorderStyle.THIN);
+            style.setVerticalAlignment(VerticalAlignment.TOP);
+
+            Font font = workbook.createFont();
+            font.setBold(true);
+            font.setColor(actionFontColor(action).getIndex());
+            style.setFont(font);
+
+            cache.put(key, style);
+            return style;
+        }
+
         /**
-     * Gets (or lazily creates) a bordered CellStyle for the Action/Activity
-     * column, colored by action category so DELETE/EDIT/ADD-type events are
-     * visually distinct at a glance. Cached per action+row-parity so repeat
-     * actions reuse the same style object instead of creating duplicates.
-     */
-    private CellStyle getActivityActionStyle(XSSFWorkbook workbook,
-            java.util.Map<String, CellStyle> cache, String action, boolean altRow) {
+         * Maps an ACTION code to the color its label renders in:
+         * Check In = green, Edit = light blue, Sent Home/Sent Back = orange,
+         * Export Report = blue, Use Medicine = medicine green, Delete = red,
+         * account/login actions = violet.
+         */
+        private IndexedColors actionFontColor(String action) {
+            String upper = action == null ? "" : action.toUpperCase();
 
-        String key = (action == null ? "" : action) + "|" + altRow;
-        CellStyle cached = cache.get(key);
-        if (cached != null) {
-            return cached;
+            if (upper.contains("DELETE")) {
+                return IndexedColors.RED;
+            } else if (upper.equals("CHECK_IN")) {
+                return IndexedColors.GREEN;
+            } else if (upper.equals("EDIT") || upper.equals("EDIT_MEDICINE")) {
+                return IndexedColors.SKY_BLUE;
+            } else if (upper.equals("SENT_HOME") || upper.equals("SENT_BACK")) {
+                return IndexedColors.ORANGE;
+            } else if (upper.contains("EXPORT")) {
+                return IndexedColors.BLUE;
+            } else if (upper.equals("USE_MEDICINE")) {
+                return IndexedColors.SEA_GREEN;
+            } else if (upper.equals("ADD_MEDICINE") || upper.equals("RESTOCK_MEDICINE")) {
+                return IndexedColors.DARK_GREEN;
+            } else if (upper.contains("ACCOUNT") || upper.contains("LOGIN") || upper.contains("LOGOUT")) {
+                return IndexedColors.VIOLET;
+            } else {
+                return IndexedColors.BLACK;
+            }
         }
-
-        CellStyle style = workbook.createCellStyle();
-        style.setBorderTop(BorderStyle.THIN);
-        style.setBorderBottom(BorderStyle.THIN);
-        style.setBorderLeft(BorderStyle.THIN);
-        style.setBorderRight(BorderStyle.THIN);
-        style.setVerticalAlignment(VerticalAlignment.TOP);
-        if (altRow) {
-            style.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-            style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        }
-
-        Font font = workbook.createFont();
-        font.setBold(true);
-
-        String upper = action == null ? "" : action.toUpperCase();
-        if (upper.contains("DELETE")) {
-            font.setColor(IndexedColors.DARK_RED.getIndex());
-        } else if (upper.contains("ADD") || upper.contains("CHECK_IN")) {
-            font.setColor(IndexedColors.DARK_GREEN.getIndex());
-        } else if (upper.contains("EDIT") || upper.contains("UPDATE")
-                || upper.contains("SENT_HOME") || upper.contains("SENT_BACK")) {
-            font.setColor(IndexedColors.ORANGE.getIndex());
-        } else if (upper.contains("EXPORT")) {
-            font.setColor(IndexedColors.BLUE.getIndex());
-        } else if (upper.contains("LOGIN") || upper.contains("LOGOUT") || upper.contains("ACCOUNT")) {
-            font.setColor(IndexedColors.VIOLET.getIndex());
-        } else {
-            font.setColor(IndexedColors.BLACK.getIndex());
-        }
-
-        style.setFont(font);
-        cache.put(key, style);
-        return style;
-    }
 
     /**
      * Grows a row's height to fit wrapped text at roughly `charWidth`

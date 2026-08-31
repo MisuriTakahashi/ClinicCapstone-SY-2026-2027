@@ -1478,10 +1478,10 @@ NOT modify this code. The content of this method is always
     //edit btn
     private void EditBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditBTNActionPerformed
             
+      
         String newName = NameCheckIn.getText().trim();
         String newGradeSection = GSCheckIn.getText().trim();
         String newReason = ReasonArea.getText().trim();
-        Object selectedMed = jComboBox1.getSelectedItem();
 
         if (newName.isEmpty() || newGradeSection.isEmpty()) {
             JOptionPane.showMessageDialog(
@@ -1491,147 +1491,178 @@ NOT modify this code. The content of this method is always
             return;
         }
 
-       String newMedUsed;
-
-    if (selectedMed == null) {
-        // Combo box has nothing to pick from (inventory is empty) — ask the nurse
-        // whether they still want to proceed, keeping the record's existing medicine.
-        int forceEdit = JOptionPane.showConfirmDialog(
+        // STEP 1: ask up front whether the medicine should change at all. This
+        // happens BEFORE any medicine-selection UI is shown — answering "No"
+        // leaves the student's existing medicine and quantity completely
+        // untouched: no selection dialog, no quantity prompt, no stock
+        // adjustment, and no medicine-change wording in the audit entry.
+        int wantsMedicineChange = JOptionPane.showConfirmDialog(
                 this,
-                "The medicine inventory has no medicine available, please check first.\n"
-                + "Would you still like to continue editing without changing the medicine?",
-                "Inventory Empty",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE
+                "Does this student want to change their medicine?",
+                "Change Medicine?",
+                JOptionPane.YES_NO_OPTION
         );
 
-        if (forceEdit != JOptionPane.YES_OPTION) {
-            return; // nurse chose to go check inventory first
+        if (wantsMedicineChange == JOptionPane.CLOSED_OPTION) {
+            return;
         }
 
-        newMedUsed = selectedOldMedUsed; // keep whatever medicine this record already had
-    } else {
-        newMedUsed = selectedMed.toString();
-    }
+        String newMedUsed;
+        int newMedsQty;
 
+        if (wantsMedicineChange == JOptionPane.NO_OPTION) {
+            // Keep the student's existing medicine and quantity exactly as-is.
+            newMedUsed = selectedOldMedUsed;
+            newMedsQty = selectedOldMedsQty;
 
-     
-
-
-boolean medicineChanged = !newMedUsed.equalsIgnoreCase(selectedOldMedUsed);
-
-// Confirm with the nurse first if they actually picked a different medicine
-if (medicineChanged) {
-    String fromLabel = selectedOldMedUsed.equalsIgnoreCase("None") ? "no medicine" : selectedOldMedUsed;
-    String toLabel = newMedUsed.equalsIgnoreCase("None") ? "no medicine" : newMedUsed;
-
-    int confirmChange = JOptionPane.showConfirmDialog(
-            this,
-            "Change this student's medicine from \"" + fromLabel + "\" to \"" + toLabel + "\"?",
-            "Confirm Medicine Change",
-            JOptionPane.YES_NO_OPTION
-    );
-
-    if (confirmChange != JOptionPane.YES_OPTION) {
-        return; // nurse backed out, leave everything untouched
-    }
-}
-
-// Ask for the new medicine quantity
-int newMedsQty = 0;
-
-if (!newMedUsed.equalsIgnoreCase("None")) {
-
-    try {
-        Medicine medProduct = productService.findByName(newMedUsed);
-
-                if (medProduct != null && medProduct.isExpired()) {
-                    JOptionPane.showMessageDialog(
-                            this,
-                            newMedUsed + " is expired and cannot be given. Please choose another medicine."
-                    );
-                    return;
-                }
-
-                // If the medicine wasn't changed, the old pills are about to be returned
-                // to stock, so they should count as available for the new amount too.
-                int availableStock = (medProduct != null) ? medProduct.getquantity() : 0;
-                if (!medicineChanged) {
-                    availableStock += selectedOldMedsQty;
-                }
-
-                String defaultQty = !medicineChanged ? String.valueOf(selectedOldMedsQty) : "1";
-
-                String qtyInput = JOptionPane.showInputDialog(
-                        this,
-                        "How many pills of " + newMedUsed + "? (" + availableStock + " available)",
-                        defaultQty
-                );
-
-                // User pressed Cancel
-                if (qtyInput == null) {
-                    return;
-                }
-
-                newMedsQty = Integer.parseInt(qtyInput.trim());
-
-                if (newMedsQty <= 0) {
-                    JOptionPane.showMessageDialog(
-                            this,
-                            "Medicine quantity must be greater than 0."
-                    );
-                    return;
-                }
-
-                if (newMedsQty > availableStock) {
-                    JOptionPane.showMessageDialog(
-                            this,
-                            newMedUsed + " only has " + availableStock + " pcs available. Please enter a smaller amount."
-                    );
-                    return;
-                }
-
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Please enter a valid number for the medicine quantity."
-                );
+        } else {
+            // STEP 2: show a medicine-selection list built from the current
+            // inventory via the existing MedicineData.loadAll() — no duplicate
+            // inventory loader. Expired medicine is never selectable; medicine
+            // with zero stock is excluded from the list entirely.
+            ArrayList<Medicine> allMedicine;
+            try {
+                allMedicine = productService.loadAll();
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(this, "Error loading medicine inventory: " + ex.getMessage());
                 return;
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(
+            }
+
+            ArrayList<Medicine> selectable = new ArrayList<>();
+            for (Medicine m : allMedicine) {
+                if (m.isExpired()) continue;
+                if (m.getquantity() <= 0) continue;
+                selectable.add(m);
+            }
+
+            final String NONE_LABEL = "None (no medicine)";
+
+            if (selectable.isEmpty()) {
+                int proceedNoMed = JOptionPane.showConfirmDialog(
                         this,
-                        "Error checking medicine stock: " + ex.getMessage()
+                        "There is no medicine currently available in inventory.\n"
+                        + "Do you want to remove this student's medicine instead?",
+                        "No Medicine Available",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE
                 );
-                return;
+
+                if (proceedNoMed != JOptionPane.YES_OPTION) {
+                    return; // nurse backed out — nothing changed, edit aborted
+                }
+
+                newMedUsed = "None";
+                newMedsQty = 0;
+
+            } else {
+                String[] choices = new String[selectable.size() + 1];
+                choices[0] = NONE_LABEL;
+                for (int i = 0; i < selectable.size(); i++) {
+                    Medicine m = selectable.get(i);
+                    choices[i + 1] = m.getname() + " \u2014 " + m.getquantity() + " available";
+                }
+
+                Object picked = JOptionPane.showInputDialog(
+                        this,
+                        "Select Medicine",
+                        "Select Medicine",
+                        JOptionPane.PLAIN_MESSAGE,
+                        null,
+                        choices,
+                        choices[0]
+                );
+
+                if (picked == null) {
+                    return; // nurse cancelled the medicine selection — abort the whole edit
+                }
+
+                String pickedLabel = picked.toString();
+
+                if (pickedLabel.equals(NONE_LABEL)) {
+                    newMedUsed = "None";
+                    newMedsQty = 0;
+
+                } else {
+                    Medicine pickedMed = null;
+                    for (int i = 0; i < selectable.size(); i++) {
+                        if (choices[i + 1].equals(pickedLabel)) {
+                            pickedMed = selectable.get(i);
+                            break;
+                        }
+                    }
+
+                    if (pickedMed == null) {
+                        JOptionPane.showMessageDialog(this, "That medicine is no longer available. Please try again.");
+                        return;
+                    }
+
+                    int available = pickedMed.getquantity();
+                    int qty;
+
+                    // STEP 3: ask for quantity, re-prompting until it's valid or
+                    // the nurse cancels — never let the edit continue with a bad
+                    // quantity.
+                    while (true) {
+                        String qtyInput = JOptionPane.showInputDialog(
+                                this,
+                                "How many pills of " + pickedMed.getname() + "?\n" + available + " available",
+                                "1"
+                        );
+
+                        if (qtyInput == null) {
+                            return; // cancelled — abort the whole edit
+                        }
+
+                        try {
+                            qty = Integer.parseInt(qtyInput.trim());
+                        } catch (NumberFormatException ex) {
+                            JOptionPane.showMessageDialog(this, "Please enter a valid quantity.");
+                            continue;
+                        }
+
+                        if (qty <= 0 || qty > available) {
+                            JOptionPane.showMessageDialog(this, "Please enter a valid quantity.");
+                            continue;
+                        }
+
+                        break;
+                    }
+
+                    newMedUsed = pickedMed.getname();
+                    newMedsQty = qty;
+                }
             }
         }
 
-                    // Ask if the guardian's info needs updating too — controlled loop
-          // with Retry / Back / Cancel instead of aborting on first mistake.
-            String[] guardianResult = promptGuardianUpdate(selectedGuardianName, selectedGuardianPhone);
+        // Ask if the guardian's info needs updating too — controlled loop
+        // with Retry / Back / Cancel instead of aborting on first mistake.
+        String[] guardianResult = promptGuardianUpdate(selectedGuardianName, selectedGuardianPhone);
 
-            if (guardianResult == null) {
-                return; // nurse cancelled -> abort the whole edit, nothing saved
-            }
+        if (guardianResult == null) {
+            return; // nurse cancelled -> abort the whole edit, nothing saved
+        }
 
-            String newGuardianName = guardianResult[0];
-            String newGuardianPhone = guardianResult[1];
+        String newGuardianName = guardianResult[0];
+        String newGuardianPhone = guardianResult[1];
 
         try {
-            // Reconcile medicine stock: return the old medicine, deduct the new one
-          String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
-            if (!selectedOldMedUsed.equalsIgnoreCase("None") && selectedOldMedsQty > 0) {
-                productService.restockMedicine(selectedOldMedUsed, selectedOldMedsQty, actor);
-            }
-            if (!newMedUsed.equalsIgnoreCase("None") && newMedsQty > 0) {
-                boolean deducted = productService.useMedicine(newMedUsed, newName, newMedsQty, actor);
-                if (!deducted) {
-                    showToast(CheckInPanel, "Warning: " + newMedUsed + " is out of stock. Stock was not deducted.", false);
-                }
-            }
+            // Reconcile medicine stock, update the visit record, and write the
+            // EDIT audit-log entry in ONE transaction (editVisitWithMedicineAdjustment
+            // in VisitData.java). A successful edit always produces exactly one
+            // audit entry, and a failed edit can never leave stock adjustments
+            // applied without the matching record change.
+            String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
 
-            boolean success = visitService.editVisit(selectedVisitLrn, newName, newGradeSection,
-                    newReason, newMedUsed, newMedsQty, newGuardianName, newGuardianPhone);
+          boolean success = visitService.editVisitWithMedicineAdjustment(
+            selectedVisitLrn,
+            newName,
+            newGradeSection,
+            newReason,
+            selectedOldMedUsed, selectedOldMedsQty,
+            newMedUsed, newMedsQty,
+            newGuardianName, newGuardianPhone,
+            productService, actor,
+            wantsMedicineChange == JOptionPane.YES_OPTION);
 
             if (!success) {
                 JOptionPane.showMessageDialog(this, "Could not find that student's record.");
@@ -1737,6 +1768,7 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
             NameCheckIn.setText("");
             GSCheckIn.setText("");
             LRNField.setText("");
+            LRNField.setEditable(true); // re-enable for the next new check-in
             ReasonArea.setText("");
             selectedVisitLrn = null;
             ReasonTable.clearSelection();
@@ -2106,6 +2138,7 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
         NameCheckIn.setText(selected.getName());
         GSCheckIn.setText(selected.getGradeSection());
         LRNField.setText(selected.getLrn());
+        LRNField.setEditable(false);
         ReasonArea.setText(selected.getReason());
         jComboBox1.setSelectedItem(selected.getMedUsed());
          
