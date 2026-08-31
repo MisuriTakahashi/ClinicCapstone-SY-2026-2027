@@ -251,7 +251,7 @@ public class Dashboard extends javax.swing.JFrame {
 
             // Apply the starting light theme
             applyTheme();
-            checkExpiredProducts();
+            refreshInventoryStatusDisplay();
 
         }
      private void applyMigLayouts() {
@@ -633,13 +633,30 @@ private int applySearchFilter() {
     private VisitData visitService = new VisitData();
     private MedicineData productService = new MedicineData("inventory_activity.log");
     
+    // Tracks the last alert content we've already shown, so refreshing the
+    // dashboard doesn't keep re-popping the same banner on every call.
+     private String lastAlertSignature = "";
+
+    /**
+     * Single entry point for the inventory panel: reloads medicines, redraws
+     * InventoryStatusArea, and checks low stock + expiration in one pass
+     * using the real exp_date column. Safe to call after any inventory
+     * change (add/edit/delete/restock/use) or a plain UI refresh — a banner
+     * only pops when the alert contents actually changed since last time.
+     */
     private void refreshInventoryStatusDisplay(){
         DatabaseExecutor.run(
             () -> productService.loadAll(),
             medicine -> {
                 StringBuilder sb = new StringBuilder();
                 StringBuilder lowStockNames = new StringBuilder();
+                StringBuilder expiredNames = new StringBuilder();
+                StringBuilder expiringTodayNames = new StringBuilder();
                 int lowStockCount = 0;
+
+                LocalDate today = LocalDate.now();
+                java.time.format.DateTimeFormatter fmt =
+                        java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
                 if (medicine.isEmpty()) {
                     sb.append("No items in inventory yet.");
@@ -657,15 +674,67 @@ private int applySearchFilter() {
                             if (lowStockNames.length() > 0) lowStockNames.append(", ");
                             lowStockNames.append(p.getname());
                         }
+
+                        // Use the real exp_date column, not the getStatus() string.
+                        LocalDate expDate = null;
+                        try {
+                            if (p.getExpDate() != null && !p.getExpDate().isBlank()) {
+                                expDate = LocalDate.parse(p.getExpDate().trim(), fmt);
+                            }
+                        } catch (Exception ignored) {
+                            // exp_date isn't in yyyy-MM-dd format — skip expiry check for this item
+                        }
+
+                        if (expDate != null) {
+                            if (expDate.isBefore(today)) {
+                                sb.append(" --EXPIRED-- ");
+                                if (expiredNames.length() > 0) expiredNames.append(", ");
+                                expiredNames.append(p.getname()).append(" (Exp: ").append(p.getExpDate()).append(")");
+                            } else if (expDate.isEqual(today)) {
+                                sb.append(" --EXPIRES TODAY-- ");
+                                if (expiringTodayNames.length() > 0) expiringTodayNames.append(", ");
+                                expiringTodayNames.append(p.getname());
+                            }
+                        }
+
                         sb.append("\n");
                     }
                 }
 
                 InventoryStatusArea.setText(sb.toString());
 
-                if (lowStockCount > 0) {
-                    showTopAlertBanner(lowStockNames + " is low on stock: " + lowStockCount);
+                // Build ONE combined banner covering low stock + expired + expiring
+                // today, and only pop it when the content actually changed. Calling
+                // showTopAlertBanner() more than once per refresh stacks banners on
+                // top of each other at the same spot, hiding all but the last one —
+                // so everything gets folded into a single message instead.
+                String lowStockSignature = lowStockNames.toString();
+                String expirySignature = expiredNames + "|" + expiringTodayNames;
+                String combinedSignature = lowStockSignature + "||" + expirySignature;
+
+                boolean hasAlerts = !lowStockSignature.isEmpty()
+                        || expiredNames.length() > 0
+                        || expiringTodayNames.length() > 0;
+
+                if (hasAlerts && !combinedSignature.equals(lastAlertSignature)) {
+                    StringBuilder banner = new StringBuilder();
+
+                    if (!lowStockSignature.isEmpty()) {
+                        banner.append("Low on stock (").append(lowStockCount)
+                              .append("): ").append(lowStockSignature);
+                    }
+                    if (expiredNames.length() > 0) {
+                        if (banner.length() > 0) banner.append("   |   ");
+                        banner.append("⚠️ EXPIRED: ").append(expiredNames);
+                    }
+                    if (expiringTodayNames.length() > 0) {
+                        if (banner.length() > 0) banner.append("   |   ");
+                        banner.append("⚠️ Expiring today: ").append(expiringTodayNames);
+                    }
+
+                    showTopAlertBanner(banner.toString());
                 }
+                lastAlertSignature = combinedSignature;
             },
             ex -> JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage())
         );
@@ -1537,35 +1606,16 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
             }
         }
 
-          // Ask if the guardian's info needs updating too
-            int changeGuardian = JOptionPane.showConfirmDialog(this,
-                    "Do you also want to update the guardian's name and phone number?",
-                    "Update Guardian Info",
-                    JOptionPane.YES_NO_OPTION);
+                    // Ask if the guardian's info needs updating too — controlled loop
+          // with Retry / Back / Cancel instead of aborting on first mistake.
+            String[] guardianResult = promptGuardianUpdate(selectedGuardianName, selectedGuardianPhone);
 
-            String newGuardianName = selectedGuardianName;
-            String newGuardianPhone = selectedGuardianPhone;
-
-            if (changeGuardian == JOptionPane.YES_OPTION) {
-                String guardianNameInput = JOptionPane.showInputDialog(this, "Guardian's Name:", selectedGuardianName);
-                if (guardianNameInput == null) return; // cancelled
-                guardianNameInput = guardianNameInput.trim();
-                if (!guardianNameInput.matches("[\\p{L} .'-]+")) {
-                    JOptionPane.showMessageDialog(this, "Please enter a valid guardian name.");
-                    return;
-                }
-
-                String guardianPhoneInput = JOptionPane.showInputDialog(this, "Guardian's Phone Number:", selectedGuardianPhone);
-                if (guardianPhoneInput == null) return; // cancelled
-                guardianPhoneInput = guardianPhoneInput.trim();
-                if (!guardianPhoneInput.matches("^09\\d{9}$")) {
-                    JOptionPane.showMessageDialog(this, "Phone number must start with 09 and contain exactly 11 digits.");
-                    return;
-                }
-
-                newGuardianName = guardianNameInput;
-                newGuardianPhone = guardianPhoneInput;
+            if (guardianResult == null) {
+                return; // nurse cancelled -> abort the whole edit, nothing saved
             }
+
+            String newGuardianName = guardianResult[0];
+            String newGuardianPhone = guardianResult[1];
 
         try {
             // Reconcile medicine stock: return the old medicine, deduct the new one
@@ -1592,10 +1642,96 @@ if (!newMedUsed.equalsIgnoreCase("None")) {
                 JOptionPane.showMessageDialog(this, "Student record updated.");
             }
 
-} catch (Exception ex) {
-    JOptionPane.showMessageDialog(this, "Error editing record: " + ex.getMessage());
-}
-       }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error editing record: " + ex.getMessage());
+        }
+    }
+       
+    
+            /**
+     * Guardian name/phone update flow as a controlled loop.
+     * Returns {name, phone} on success (or the original values if the
+     * nurse said "No" to updating). Returns null only if the nurse
+     * cancels outright — the whole edit should then be aborted.
+     */
+    private String[] promptGuardianUpdate(String defaultName, String defaultPhone) {
+
+        final int STEP_CONFIRM = 0, STEP_NAME = 1, STEP_PHONE = 2;
+        int step = STEP_CONFIRM;
+        String nameValue = defaultName;
+        String phoneValue = defaultPhone;
+
+        while (true) {
+            switch (step) {
+
+                case STEP_CONFIRM: {
+                    int changeGuardian = JOptionPane.showConfirmDialog(this,
+                            "Do you also want to update the guardian's name and phone number?",
+                            "Update Guardian Info",
+                            JOptionPane.YES_NO_OPTION);
+
+                    if (changeGuardian != JOptionPane.YES_OPTION) {
+                        return new String[]{ defaultName, defaultPhone }; // keep as-is
+                    }
+                    step = STEP_NAME;
+                    break;
+                }
+
+                case STEP_NAME: {
+                    String input = JOptionPane.showInputDialog(this, "Guardian's Name:", nameValue);
+                    if (input == null) return null; // dialog closed -> cancel whole edit
+
+                    input = input.trim();
+                    if (!input.isEmpty() && input.matches("[\\p{L} .'-]+")) {
+                        nameValue = input;
+                        step = STEP_PHONE;
+                        break;
+                    }
+
+                    int choice = JOptionPane.showOptionDialog(this,
+                            "Please enter a valid guardian name.",
+                            "Invalid Guardian Name",
+                            JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
+                            null, new String[]{"Retry", "Back", "Cancel"}, "Retry");
+
+                    if (choice == 0) {
+                        nameValue = input; // Retry, keep what they typed
+                    } else if (choice == 1) {
+                        step = STEP_CONFIRM; // Back to the yes/no question
+                    } else {
+                        return null; // Cancel or closed
+                    }
+                    break;
+                }
+
+                case STEP_PHONE: {
+                    String input = JOptionPane.showInputDialog(this, "Guardian's Phone Number:", phoneValue);
+                    if (input == null) return null;
+
+                    input = input.trim();
+                    if (input.matches("^09\\d{9}$")) {
+                        return new String[]{ nameValue, input };
+                    }
+
+                    int choice = JOptionPane.showOptionDialog(this,
+                            "Invalid phone number. Please enter exactly 11 digits starting with 09.",
+                            "Invalid Phone Number",
+                            JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
+                            null, new String[]{"Retry", "Back", "Cancel"}, "Retry");
+
+                    if (choice == 0) {
+                        phoneValue = input; // Retry
+                    } else if (choice == 1) {
+                        step = STEP_NAME; // Back to name step
+                    } else {
+                        return null;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+    
 
         private void clearCheckInForm() {
             NameCheckIn.setText("");
@@ -2429,7 +2565,7 @@ private String safeText(String value) {
     
     slideTimer.start();
 }
-    private void checkExpiredProducts() {
+    /*private void checkExpiredProducts() {
     try {
         
         ArrayList<Medicine> medicine = productService.loadAll();
@@ -2465,7 +2601,8 @@ private String safeText(String value) {
     } catch (Exception ex) {
         logger.log(java.util.logging.Level.SEVERE, "Error checking product expiration", ex);
     }
-}
+}*/
+    
     private void toggleSentHomePanel(boolean visible) {
     SentHomeInformationPanel.setVisible(visible);
     

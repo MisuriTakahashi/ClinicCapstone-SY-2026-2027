@@ -14,33 +14,39 @@ import javax.swing.text.DocumentFilter;
  * @author PC
  */
 public class PhoneNumberFilter extends DocumentFilter {
-    
-    // filters phone number input to allow digits only with a maximum of 11 digits onlly
-    // Example 09342435321
-    @Override
-    public void insertString(FilterBypass fb, int offset,
-            String string, AttributeSet attr)
-            throws BadLocationException {
 
+    private static final int MAX_DIGITS = 11;
+
+    @Override
+    public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr)
+            throws BadLocationException {
         replace(fb, offset, 0, string, attr);
     }
 
     @Override
-    public void replace(FilterBypass fb,
-            int offset,
-            int length,
-            String text,
-            AttributeSet attrs)
+    public void remove(FilterBypass fb, int offset, int length) throws BadLocationException {
+        super.remove(fb, offset, length); // always allow deleting/backspacing
+    }
+
+    @Override
+    public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
             throws BadLocationException {
 
-        String oldText = fb.getDocument().getText(0, fb.getDocument().getLength());
-        String newText = oldText.substring(0, offset)
-                + text
-                + oldText.substring(offset + length);
+        if (text == null) text = "";
 
-        // Allow only digits and max length of 11
-        if (newText.matches("\\d*") && newText.length() <= 11) {
-            super.replace(fb, offset, length, text, attrs);
+        // Strip non-digits instead of rejecting the whole paste — keeps
+        // pasting "0912-345-6789" or "0912 345 6789" from feeling broken.
+        String digitsOnly = text.replaceAll("\\D", "");
+
+        int currentLength = fb.getDocument().getLength();
+        int roomLeft = MAX_DIGITS - (currentLength - length);
+
+        if (roomLeft <= 0) return; // already at the limit
+
+        if (digitsOnly.length() > roomLeft) {
+            digitsOnly = digitsOnly.substring(0, roomLeft);
         }
+
+        super.replace(fb, offset, length, digitsOnly, attrs);
     }
 }

@@ -160,15 +160,79 @@ public class ReportExporter {
             statValueStyle.setBorderLeft(BorderStyle.THIN);
             statValueStyle.setBorderRight(BorderStyle.THIN);
 
-            CellStyle statValueCenterStyle = workbook.createCellStyle();
+                       CellStyle statValueCenterStyle = workbook.createCellStyle();
             statValueCenterStyle.cloneStyleFrom(statValueStyle);
             statValueCenterStyle.setAlignment(HorizontalAlignment.CENTER);
             Font statValueCenterFont = workbook.createFont();
             statValueCenterFont.setBold(true);
             statValueCenterStyle.setFont(statValueCenterFont);
 
+            // --- Activities / Audit Log section styles ---
+            // Distinct header color, zebra-striped bordered rows so entries don't
+            // blend together, and per-action font colors on the Action column.
+            CellStyle activitySectionStyle = workbook.createCellStyle();
+            activitySectionStyle.cloneStyleFrom(sectionStyle);
+            activitySectionStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+            activitySectionStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            activitySectionStyle.setBorderBottom(BorderStyle.MEDIUM);
+            activitySectionStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+            CellStyle activityHeaderStyle = workbook.createCellStyle();
+            activityHeaderStyle.cloneStyleFrom(headerStyle);
+            activityHeaderStyle.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+            activityHeaderStyle.setBorderTop(BorderStyle.THIN);
+            activityHeaderStyle.setBorderBottom(BorderStyle.MEDIUM);
+            activityHeaderStyle.setBorderLeft(BorderStyle.THIN);
+            activityHeaderStyle.setBorderRight(BorderStyle.THIN);
+            activityHeaderStyle.setAlignment(HorizontalAlignment.CENTER);
+
+            CellStyle activityDateStyleEven = workbook.createCellStyle();
+            activityDateStyleEven.cloneStyleFrom(dateStyle);
+            activityDateStyleEven.setBorderTop(BorderStyle.THIN);
+            activityDateStyleEven.setBorderBottom(BorderStyle.THIN);
+            activityDateStyleEven.setBorderLeft(BorderStyle.THIN);
+            activityDateStyleEven.setBorderRight(BorderStyle.THIN);
+            activityDateStyleEven.setVerticalAlignment(VerticalAlignment.TOP);
+
+            // FIX: IndexedColors.GREY_10_PERCENT does not exist in Apache POI.
+            // Valid greys are GREY_25_PERCENT, GREY_50_PERCENT, GREY_80_PERCENT.
+            // Swapped to GREY_25_PERCENT below (in all 4 spots it was used).
+            CellStyle activityDateStyleOdd = workbook.createCellStyle();
+            activityDateStyleOdd.cloneStyleFrom(activityDateStyleEven);
+            activityDateStyleOdd.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+            activityDateStyleOdd.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            CellStyle activityDetailsStyleEven = workbook.createCellStyle();
+            activityDetailsStyleEven.cloneStyleFrom(wrapStyle);
+            activityDetailsStyleEven.setBorderTop(BorderStyle.THIN);
+            activityDetailsStyleEven.setBorderBottom(BorderStyle.THIN);
+            activityDetailsStyleEven.setBorderLeft(BorderStyle.THIN);
+            activityDetailsStyleEven.setBorderRight(BorderStyle.THIN);
+
+            CellStyle activityDetailsStyleOdd = workbook.createCellStyle();
+            activityDetailsStyleOdd.cloneStyleFrom(activityDetailsStyleEven);
+            activityDetailsStyleOdd.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+            activityDetailsStyleOdd.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            CellStyle activityActorStyleEven = workbook.createCellStyle();
+            activityActorStyleEven.setBorderTop(BorderStyle.THIN);
+            activityActorStyleEven.setBorderBottom(BorderStyle.THIN);
+            activityActorStyleEven.setBorderLeft(BorderStyle.THIN);
+            activityActorStyleEven.setBorderRight(BorderStyle.THIN);
+            activityActorStyleEven.setVerticalAlignment(VerticalAlignment.TOP);
+
+            CellStyle activityActorStyleOdd = workbook.createCellStyle();
+            activityActorStyleOdd.cloneStyleFrom(activityActorStyleEven);
+            activityActorStyleOdd.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+            activityActorStyleOdd.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            // Cache of per-action, per-row-parity styles for the Action column so
+            // repeated actions reuse the same style object instead of duplicating.
+            java.util.Map<String, CellStyle> activityActionStyleCache = new java.util.HashMap<>();
+
             String[] checkinHeaders = {"Student Name", "Grade/Section", "LRN", "Check-in Date/Time", "Reason",
                     "Medicine Used", "Medicine Quantity", "Status", "Guardian Name", "Guardian Phone"};
+            
             String[] inventoryHeaders = {"Date/Time", "Action / Activity", "Details", "Performed By"};
             String[] stockHeaders = {"Medicine Name", "Current Quantity", "Expiration Date", "Status",
                     "Given Out (This Date)", "Returned (Edited Visits)"};
@@ -246,42 +310,56 @@ public class ReportExporter {
             // activity. Built from entriesForDate (structured Entry records, computed above),
             // never from loadFormatted() strings, so this no longer depends on any particular
             // display date format.
-            Row inventorySectionRow = sheet.createRow(rowIndex++);
+             Row inventorySectionRow = sheet.createRow(rowIndex++);
             Cell inventorySectionCell = inventorySectionRow.createCell(0);
             inventorySectionCell.setCellValue("ACTIVITIES / AUDIT LOG");
-            inventorySectionCell.setCellStyle(sectionStyle);
+            inventorySectionCell.setCellStyle(activitySectionStyle);
+            sheet.addMergedRegion(new CellRangeAddress(
+                    inventorySectionRow.getRowNum(), inventorySectionRow.getRowNum(),
+                    0, inventoryHeaders.length - 1));
 
             Row inventoryHeaderRow = sheet.createRow(rowIndex++);
             for (int col = 0; col < inventoryHeaders.length; col++) {
                 Cell cell = inventoryHeaderRow.createCell(col);
                 cell.setCellValue(inventoryHeaders[col]);
-                cell.setCellStyle(headerStyle);
+                cell.setCellStyle(activityHeaderStyle);
             }
 
             // entriesForDate comes from loadEntries(), which orders newest-first; the report
             // reads more naturally in chronological order, so walk it back-to-front here
             // without mutating the shared list (still used above for usedTodayByMedicine).
+            int activityRowNumber = 0;
             for (int i = entriesForDate.size() - 1; i >= 0; i--) {
                 ActivityLogData.Entry entry = entriesForDate.get(i);
+                boolean altRow = (activityRowNumber % 2 == 1);
+                activityRowNumber++;
 
                 Row row = sheet.createRow(rowIndex++);
 
                 Cell dateCell = row.createCell(0);
                 dateCell.setCellValue(entry.timestamp().toLocalDateTime());
-                dateCell.setCellStyle(dateStyle);
+                dateCell.setCellStyle(altRow ? activityDateStyleOdd : activityDateStyleEven);
 
-                row.createCell(1).setCellValue(safe(entry.action()));
+                // Natural label ("Use Medicine") instead of the raw DB code
+                // ("USE_MEDICINE") - the stored code itself is untouched.
+                Cell actionCell = row.createCell(1);
+                actionCell.setCellValue(safe(ActivityLogData.displayAction(entry.action())));
+                actionCell.setCellStyle(getActivityActionStyle(
+                        workbook, activityActionStyleCache, entry.action(), altRow));
 
                 String detailsText =
                         ActivityLogData.humanizeDetails(entry.action(), entry.details());
                 Cell detailsCell = row.createCell(2);
                 detailsCell.setCellValue(safe(detailsText));
-                detailsCell.setCellStyle(wrapStyle);
+                detailsCell.setCellStyle(altRow ? activityDetailsStyleOdd : activityDetailsStyleEven);
 
                 // The actual logged-in account name - never overwritten with "Unknown"
                 // unless the stored record itself has no actor.
-                row.createCell(3).setCellValue(
-                        safe(ActivityLogData.displayActor(entry.actor())));
+                Cell actorCell = row.createCell(3);
+                actorCell.setCellValue(safe(ActivityLogData.displayActor(entry.actor())));
+                actorCell.setCellStyle(altRow ? activityActorStyleOdd : activityActorStyleEven);
+
+                autoFitWrappedRow(row, detailsText, 50);
             }
             if (entriesForDate.isEmpty()) {
                 sheet.createRow(rowIndex++).createCell(0).setCellValue("No activities for this date.");
@@ -293,12 +371,21 @@ public class ReportExporter {
             // Shows the CURRENT inventory (not historical to this date - the database only
             // tracks live quantities), flagged for expiry/low stock, plus:
             //   - "Given Out (This Date)": the NET amount actually given out on this date
-            //     (raw USE_MEDICINE total minus anything returned the same date via an
-            //     edited visit), so it never shows units as "given out" once they've been
-            //     put back.
-            //   - "Returned (Edited Visits)": the raw RESTOCK_MEDICINE total for this date,
-            //     shown on its own so a return is visible instead of just silently zeroing
-            //     out the given-out figure.
+            //     (raw USE_MEDICINE total minus raw RESTOCK_MEDICINE total, floored at 0),
+            //     so it always matches the medicine's actual current assignment across
+            //     today's visits, no matter how many times a visit was edited.
+            //   - "Returned (Edited Visits)": the RAW cumulative RESTOCK_MEDICINE total for
+            //     this date - intentionally NOT netted against uses. Netting it would hide
+            //     real single-edit returns (e.g. a visit's medicine entirely swapped from
+            //     Biogesic to Paracetamol shows Biogesic's raw use and raw restock as equal,
+            //     and netting silently turns both into 0 - which loses the very information
+            //     this column exists to show). Trade-off: if the SAME visit is edited more
+            //     than once with the SAME medicine/quantity re-saved, each edit still logs
+            //     its own restock+use pair, so this raw total can look larger than the
+            //     current net Given Out figure. That is expected, not a bug - it is an
+            //     accurate count of restock activity, not a "current outstanding" number.
+            //     The full chronological detail is always visible above in
+            //     ACTIVITIES / AUDIT LOG for anyone who wants to see why.
             Row stockSectionRow = sheet.createRow(rowIndex++);
             Cell stockSectionCell = stockSectionRow.createCell(0);
             stockSectionCell.setCellValue("STOCK OVERVIEW");
@@ -322,18 +409,24 @@ public class ReportExporter {
                 int rawGivenOutToday = usedTodayByMedicine.getOrDefault(med.getname(), 0);
                 int rawReturnedToday = returnedTodayByMedicine.getOrDefault(med.getname(), 0);
 
-                // Net BOTH sides against each other, the same way a ledger nets debits
-                // against credits. Every edit fires a matched RESTOCK (undo old amount)
-                // + USE (apply new amount) pair, so editing the same visit twice adds two
-                // of each - summing raw restocks alone was inflating "Returned" (e.g. 200)
-                // even when the day's net effect on that medicine was actually zero.
-                // Netting both ways means exactly one side is non-zero (or both zero),
-                // and it always matches the medicine's truly-current given-out amount.
-                // The full step-by-step history (every individual restock/use) is still
-                // visible above in ACTIVITIES / AUDIT LOG - nothing is hidden, this just
-                // stops double-counting the same units bouncing back and forth.
+                // "Given Out" is the TRUE net amount currently deducted from stock today for
+                // this medicine (raw uses minus raw restocks, floored at 0) - this always
+                // matches the medicine's actual current assignment across today's visits,
+                // no matter how many times a visit was edited.
+                //
+                // "Returned" is a RAW cumulative count of every RESTOCK_MEDICINE event for
+                // this medicine today - intentionally NOT netted against uses. Netting it
+                // would hide real single-edit returns (e.g. a visit's medicine entirely
+                // swapped from Biogesic to Paracetamol shows Biogesic's raw use and raw
+                // restock as equal, and netting silently turns both into 0 - which loses
+                // the very information this column exists to show). The trade-off: if the
+                // SAME visit is edited more than once with the SAME medicine/quantity
+                // re-saved, each edit still logs its own restock+use pair, so this raw
+                // total can look larger than the current net Given Out figure. That is
+                // expected, not a bug - it is an accurate count of restock activity, not a
+                // "current outstanding" number. The full chronological detail is always
+                // visible above in ACTIVITIES / AUDIT LOG for anyone who wants to see why.
                 int netGivenOutToday = Math.max(0, rawGivenOutToday - rawReturnedToday);
-                int netReturnedToday = Math.max(0, rawReturnedToday - rawGivenOutToday);
 
                 Row row = sheet.createRow(rowIndex++);
 
@@ -358,7 +451,7 @@ public class ReportExporter {
                 if (rowStyle != null) givenOutCell.setCellStyle(rowStyle);
 
                 Cell returnedCell = row.createCell(5);
-                returnedCell.setCellValue(netReturnedToday);
+                returnedCell.setCellValue(rawReturnedToday);
                 if (rowStyle != null) returnedCell.setCellStyle(rowStyle);
             }
             if (inventory.isEmpty()) {
@@ -618,5 +711,84 @@ public class ReportExporter {
     /** Returns an empty string instead of null, for safe writing into Excel cells. */
     private String safe(String value) {
         return value == null ? "" : value;
+    }
+    
+        /**
+     * Gets (or lazily creates) a bordered CellStyle for the Action/Activity
+     * column, colored by action category so DELETE/EDIT/ADD-type events are
+     * visually distinct at a glance. Cached per action+row-parity so repeat
+     * actions reuse the same style object instead of creating duplicates.
+     */
+    private CellStyle getActivityActionStyle(XSSFWorkbook workbook,
+            java.util.Map<String, CellStyle> cache, String action, boolean altRow) {
+
+        String key = (action == null ? "" : action) + "|" + altRow;
+        CellStyle cached = cache.get(key);
+        if (cached != null) {
+            return cached;
+        }
+
+        CellStyle style = workbook.createCellStyle();
+        style.setBorderTop(BorderStyle.THIN);
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        style.setVerticalAlignment(VerticalAlignment.TOP);
+        if (altRow) {
+            style.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+            style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        }
+
+        Font font = workbook.createFont();
+        font.setBold(true);
+
+        String upper = action == null ? "" : action.toUpperCase();
+        if (upper.contains("DELETE")) {
+            font.setColor(IndexedColors.DARK_RED.getIndex());
+        } else if (upper.contains("ADD") || upper.contains("CHECK_IN")) {
+            font.setColor(IndexedColors.DARK_GREEN.getIndex());
+        } else if (upper.contains("EDIT") || upper.contains("UPDATE")
+                || upper.contains("SENT_HOME") || upper.contains("SENT_BACK")) {
+            font.setColor(IndexedColors.ORANGE.getIndex());
+        } else if (upper.contains("EXPORT")) {
+            font.setColor(IndexedColors.BLUE.getIndex());
+        } else if (upper.contains("LOGIN") || upper.contains("LOGOUT") || upper.contains("ACCOUNT")) {
+            font.setColor(IndexedColors.VIOLET.getIndex());
+        } else {
+            font.setColor(IndexedColors.BLACK.getIndex());
+        }
+
+        style.setFont(font);
+        cache.put(key, style);
+        return style;
+    }
+
+    /**
+     * Grows a row's height to fit wrapped text at roughly `charWidth`
+     * characters per line, so the Details column doesn't look cramped.
+     * POI doesn't compute wrapped-text height automatically, so this is a
+     * heuristic — it errs toward a taller row rather than a cut-off one.
+     */
+    private void autoFitWrappedRow(Row row, String text, int charWidth) {
+        if (text == null || text.isEmpty()) {
+            return;
+        }
+
+        int lines = 1;
+        int lineLen = 0;
+        for (String word : text.split(" ")) {
+            if (lineLen + word.length() + 1 > charWidth) {
+                lines++;
+                lineLen = word.length();
+            } else {
+                lineLen += word.length() + 1;
+            }
+        }
+        lines = Math.max(lines, text.split("\n").length); // explicit newlines too
+
+        float neededHeight = lines * 15f;
+        if (neededHeight > row.getHeightInPoints()) {
+            row.setHeightInPoints(neededHeight);
+        }
     }
 }
