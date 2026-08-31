@@ -19,6 +19,17 @@ import java.util.ArrayList;
  
  
 public class VisitData {
+
+    /** Tracks whether the most recent edit actually changed the record. */
+    private boolean lastEditHadChanges = false;
+
+    /**
+     * Returns true when the most recent edit operation actually changed
+     * at least one editable field. Returns false for a no-op edit.
+     */
+    public boolean wasLastEditChanged() {
+        return lastEditHadChanges;
+    }
      private static final DateTimeFormatter TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a");
  
@@ -440,42 +451,59 @@ private static String buildCheckInLogDetails(
     }
     
     public boolean editVisit(String lrn, String newName, String newGradeSection,
-                        
             String newReason, String newMedUsed, int newMedsQty,
             String newGuardianName, String newGuardianPhone) throws SQLException {
- 
+
+        // Backward-compatible overload: if the caller does not provide a
+        // separate new LRN, keep the existing LRN unchanged.
+        return editVisit(lrn, newName, newGradeSection, lrn, newReason,
+                newMedUsed, newMedsQty, newGuardianName, newGuardianPhone);
+    }
+
+    /**
+     * LRN-aware public edit method. oldLrn identifies the existing record;
+     * newLrn is the value that will actually be saved.
+     */
+    public boolean editVisit(String oldLrn, String newName, String newGradeSection,
+            String newLrn, String newReason, String newMedUsed, int newMedsQty,
+            String newGuardianName, String newGuardianPhone) throws SQLException {
+
         try (Connection conn = DatabaseManager.getConnection()) {
-            return editVisit(conn, lrn, newName, newGradeSection, newReason, newMedUsed, newMedsQty,
+            return editVisit(conn, oldLrn, newName, newGradeSection, newLrn,
+                    newReason, newMedUsed, newMedsQty,
                     newGuardianName, newGuardianPhone);
         }
     }
- 
+
     /**
      * Connection-based overload: performs the UPDATE using the caller's
      * connection/transaction. Does NOT commit or close the connection.
+     * oldLrn is used to locate the existing row; newLrn is saved into it.
      */
-    boolean editVisit(Connection conn, String lrn, String newName, String newGradeSection,
-            String newReason, String newMedUsed, int newMedsQty,
+    boolean editVisit(Connection conn, String oldLrn, String newName, String newGradeSection,
+            String newLrn, String newReason, String newMedUsed, int newMedsQty,
             String newGuardianName, String newGuardianPhone) throws SQLException {
- 
-                String sql = "UPDATE VISITS SET name = ?, grade_section = ?, reason = ?, "
+
+        String sql = "UPDATE VISITS SET name = ?, grade_section = ?, lrn = ?, reason = ?, "
                 + "med_used = ?, meds_qty = ?, guardian_name = ?, guardian_phone = ? "
                 + "WHERE id = (SELECT id FROM VISITS WHERE lrn = ? AND archived = FALSE "
                 + "ORDER BY id DESC LIMIT 1)";
- 
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setString(1, newName);
-                ps.setString(2, newGradeSection);
-                ps.setString(3, newReason);
-                ps.setString(4, newMedUsed);
-                ps.setInt(5, newMedsQty);
-                ps.setString(6, newGuardianName);
-                ps.setString(7, newGuardianPhone);
-                ps.setString(8, lrn);
-                return ps.executeUpdate() > 0;
-            }
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, newName);
+            ps.setString(2, newGradeSection);
+            ps.setString(3, newLrn);
+            ps.setString(4, newReason);
+            ps.setString(5, newMedUsed);
+            ps.setInt(6, newMedsQty);
+            ps.setString(7, newGuardianName);
+            ps.setString(8, newGuardianPhone);
+            // IMPORTANT: use the OLD LRN to locate the existing record.
+            ps.setString(9, oldLrn);
+            return ps.executeUpdate() > 0;
+        }
     }
- 
+
     /**
      * Transactional edit: reconciles medicine stock (restock the old
      * medicine, deduct the new one), updates the visit record, AND writes
@@ -500,33 +528,76 @@ private static String buildCheckInLogDetails(
             MedicineData medicineData, String performedBy,
             boolean changeMedicine) throws SQLException {
 
-        try (Connection conn = DatabaseManager.getConnection()) {
+        // Backward-compatible overload: keep the current LRN when the caller
+        // has not yet been updated to provide a separate new LRN.
+        return editVisitWithMedicineAdjustment(
+                lrn, newName, newGradeSection, lrn, newReason,
+                oldMedUsed, oldMedsQty, newMedUsed, newMedsQty,
+                newGuardianName, newGuardianPhone, medicineData,
+                performedBy, changeMedicine);
+    }
 
+    /**
+     * Transactional edit with an editable LRN. The old LRN identifies the
+     * existing row and newLrn is the value saved to the database.
+     *
+     * The entire operation is one transaction: the student update, medicine
+     * inventory adjustment, and EDIT audit entry either all commit together
+     * or all roll back. A true no-op edit produces no UPDATE and no EDIT log.
+     */
+    public boolean editVisitWithMedicineAdjustment(
+            String lrn, String newName, String newGradeSection, String newLrn, String newReason,
+            String oldMedUsed, int oldMedsQty,
+            String newMedUsed, int newMedsQty,
+            String newGuardianName, String newGuardianPhone,
+            MedicineData medicineData, String performedBy,
+            boolean changeMedicine) throws SQLException {
+
+        lastEditHadChanges = false;
+
+        if (newLrn == null || !newLrn.trim().matches("\\d{12}")) {
+            throw new SQLException("The LRN must contain exactly 12 digits.");
+        }
+
+        newLrn = newLrn.trim();
+
+        try (Connection conn = DatabaseManager.getConnection()) {
             conn.setAutoCommit(false);
 
             try {
-                
-                  CheckinSystem before = findVisitForEdit(conn, lrn);
+                CheckinSystem before = findVisitForEdit(conn, lrn);
 
                 if (before == null) {
                     conn.rollback();
                     return false;
                 }
 
-                // Use the medicine actually stored on the row right now (read
-                // inside this same transaction) as the "old" side of the stock
-                // reconciliation, rather than the oldMedUsed/oldMedsQty the
-                // caller captured earlier when the row was selected. Keeps the
-                // restock amount correct even if the record changed in between.
                 String actualOldMedUsed = before.getMedUsed();
                 int actualOldMedsQty = before.getmedsQty();
+                String actualOldLrn = nullToEmpty(before.getLrn());
 
-                // If the user explicitly chose NO to changing medicine, the
-                // database's current medicine is authoritative. Do not trust
-                // the cached table selection because it may be stale (for
-                // example, the table can still contain an older quantity).
-                // This prevents a no-op edit from being recorded as a
-                // medicine change such as 1x -> 14x.
+                // Prevent assigning an LRN that belongs to another active
+                // student/visit. The current row is excluded by old LRN.
+                if (!actualOldLrn.equals(newLrn)) {
+                    String duplicateSql =
+                            "SELECT COUNT(*) FROM VISITS "
+                            + "WHERE lrn = ? AND archived = FALSE AND lrn <> ?";
+
+                    try (PreparedStatement ps = conn.prepareStatement(duplicateSql)) {
+                        ps.setString(1, newLrn);
+                        ps.setString(2, actualOldLrn);
+
+                        try (ResultSet rs = ps.executeQuery()) {
+                            if (rs.next() && rs.getInt(1) > 0) {
+                                throw new SQLException(
+                                        "The new LRN is already assigned to another student.");
+                            }
+                        }
+                    }
+                }
+
+                // If the user chose NO for medicine, the database's current
+                // medicine is authoritative. Never use stale UI values.
                 if (!changeMedicine) {
                     newMedUsed = actualOldMedUsed;
                     newMedsQty = actualOldMedsQty;
@@ -536,40 +607,39 @@ private static String buildCheckInLogDetails(
                         nullToEmpty(actualOldMedUsed).equalsIgnoreCase(nullToEmpty(newMedUsed))
                         && actualOldMedsQty == newMedsQty;
 
-                // Skip the restock/deduct pair entirely when nothing about the
-                // medicine actually changed — otherwise every edit (even a
-                // guardian-only or reason-only edit) would create a pointless
-                // RESTOCK_MEDICINE + USE_MEDICINE pair in the audit log.
-                if (!medicineUnchanged) {
-
-                    if (actualOldMedUsed != null && !actualOldMedUsed.equalsIgnoreCase("None") && actualOldMedsQty > 0) {
-                        medicineData.restockMedicine(conn, actualOldMedUsed, actualOldMedsQty, performedBy);
-                    }
-
-                    if (newMedUsed != null && !newMedUsed.equalsIgnoreCase("None") && newMedsQty > 0) {
-                        medicineData.useMedicine(conn, newMedUsed, newName, newMedsQty, performedBy);
-                    }
-                }
-                
+                // Build the diff BEFORE touching inventory. If nothing changed,
+                // this is a genuine no-op: no UPDATE, no inventory changes, no log.
                 String editDetails = buildEditLogDetails(
-                        before, newName, newGradeSection, newReason,
+                        before, newName, newGradeSection, newLrn, newReason,
                         newMedUsed, newMedsQty, newGuardianName, newGuardianPhone);
 
-                // True no-op edit: do not UPDATE the row, do not touch
-                // inventory, and do not create an EDIT audit entry.
                 if (editDetails == null) {
+                    lastEditHadChanges = false;
                     conn.rollback();
                     return true;
                 }
 
-                // IMPORTANT: actually persist the edited fields. The previous
-                // version generated the audit message and committed inventory
-                // changes without executing the VISITS UPDATE, which made the
-                // audit log claim that fields changed while the table still
-                // showed the old values.
-                boolean updated = editVisit(conn, lrn, newName, newGradeSection,
-                        newReason, newMedUsed, newMedsQty,
-                        newGuardianName, newGuardianPhone);
+                // Only reconcile inventory when medicine actually changed.
+                if (!medicineUnchanged) {
+                    if (actualOldMedUsed != null
+                            && !actualOldMedUsed.equalsIgnoreCase("None")
+                            && actualOldMedsQty > 0) {
+                        medicineData.restockMedicine(
+                                conn, actualOldMedUsed, actualOldMedsQty, performedBy);
+                    }
+
+                    if (newMedUsed != null
+                            && !newMedUsed.equalsIgnoreCase("None")
+                            && newMedsQty > 0) {
+                        medicineData.useMedicine(
+                                conn, newMedUsed, newName, newMedsQty, performedBy);
+                    }
+                }
+
+                // Persist all edited fields, including the NEW LRN.
+                boolean updated = editVisit(
+                        conn, lrn, newName, newGradeSection, newLrn, newReason,
+                        newMedUsed, newMedsQty, newGuardianName, newGuardianPhone);
 
                 if (!updated) {
                     throw new SQLException("The student record could not be updated.");
@@ -578,15 +648,15 @@ private static String buildCheckInLogDetails(
                 ActivityLogData.log(conn, "EDIT", editDetails, performedBy);
 
                 conn.commit();
+                lastEditHadChanges = true;
                 return true;
 
             } catch (SQLException | RuntimeException ex) {
-
                 try {
                     conn.rollback();
                 } catch (SQLException ignored) {
                 }
-
+                lastEditHadChanges = false;
                 throw ex;
 
             } finally {
@@ -637,7 +707,7 @@ private static String buildCheckInLogDetails(
      * entry entirely (no-op edits are never logged).
      */
     private static String buildEditLogDetails(
-            CheckinSystem before, String newName, String newGradeSection, String newReason,
+            CheckinSystem before, String newName, String newGradeSection, String newLrn, String newReason,
             String newMedUsed, int newMedsQty,
             String newGuardianName, String newGuardianPhone) {
 
@@ -645,6 +715,7 @@ private static String buildCheckInLogDetails(
 
         String oldName = nullToEmpty(before.getName());
         String oldGradeSection = nullToEmpty(before.getGradeSection());
+        String oldLrn = nullToEmpty(before.getLrn());
         String oldReason = nullToEmpty(before.getReason());
         String oldMedUsed = nullToEmpty(before.getMedUsed());
         int oldMedsQty = before.getmedsQty();
@@ -653,6 +724,7 @@ private static String buildCheckInLogDetails(
 
         String safeNewName = nullToEmpty(newName);
         String safeNewGradeSection = nullToEmpty(newGradeSection);
+        String safeNewLrn = nullToEmpty(newLrn);
         String safeNewReason = nullToEmpty(newReason);
         String safeNewMedUsed = nullToEmpty(newMedUsed);
         String safeNewGuardianName = nullToEmpty(newGuardianName);
@@ -667,12 +739,18 @@ private static String buildCheckInLogDetails(
                     + "\" to \"" + safeNewGradeSection + "\"");
         }
 
+        if (!oldLrn.equals(safeNewLrn)) {
+            changes.add("LRN changed from \"" + oldLrn
+                    + "\" to \"" + safeNewLrn + "\"");
+        }
+
         if (!oldReason.equals(safeNewReason)) {
             changes.add("Reason changed");
         }
 
         boolean medicineChanged =
                 !oldMedUsed.equalsIgnoreCase(safeNewMedUsed) || oldMedsQty != newMedsQty;
+
         if (medicineChanged) {
             String fromMed = oldMedUsed.isEmpty() || oldMedUsed.equalsIgnoreCase("None")
                     ? "no medicine" : oldMedsQty + "x " + oldMedUsed;
@@ -682,7 +760,8 @@ private static String buildCheckInLogDetails(
         }
 
         if (!oldGuardianName.equals(safeNewGuardianName)) {
-            changes.add("Guardian changed from \"" + oldGuardianName + "\" to \"" + safeNewGuardianName + "\"");
+            changes.add("Guardian changed from \"" + oldGuardianName
+                    + "\" to \"" + safeNewGuardianName + "\"");
         }
 
         if (!oldGuardianPhone.equals(safeNewGuardianPhone)) {
@@ -694,7 +773,10 @@ private static String buildCheckInLogDetails(
             return null;
         }
 
-        return "Student \"" + safeNewName + "\" (LRN: " + before.getLrn() + ") was edited. "
+        // Use the NEW LRN in the heading because that is the value the
+        // student has after a successful LRN change. The change itself also
+        // explicitly records OLD -> NEW above.
+        return "Student \"" + safeNewName + "\" (LRN: " + safeNewLrn + ") was edited. "
                 + String.join("; ", changes) + ".";
     }
 
@@ -724,6 +806,4 @@ private static String buildCheckInLogDetails(
             return ps.executeUpdate() > 0;
         }
     }
-    
-    
 }

@@ -1479,203 +1479,407 @@ NOT modify this code. The content of this method is always
     private void EditBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditBTNActionPerformed
             
       
-        String newName = NameCheckIn.getText().trim();
-        String newGradeSection = GSCheckIn.getText().trim();
-        String newReason = ReasonArea.getText().trim();
+         String newName = NameCheckIn.getText().trim();
+         String newGradeSection = GSCheckIn.getText().trim();
+         String newLrn = LRNField.getText().trim();
+         String newReason = ReasonArea.getText().trim();
 
-        if (newName.isEmpty() || newGradeSection.isEmpty()) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Name and Grade/Section cannot be empty."
-            );
-            return;
-        }
+         // ---------------------------------------------------------
+         // BASIC VALIDATION
+         // ---------------------------------------------------------
 
-        // STEP 1: ask up front whether the medicine should change at all. This
-        // happens BEFORE any medicine-selection UI is shown — answering "No"
-        // leaves the student's existing medicine and quantity completely
-        // untouched: no selection dialog, no quantity prompt, no stock
-        // adjustment, and no medicine-change wording in the audit entry.
-        int wantsMedicineChange = JOptionPane.showConfirmDialog(
-                this,
-                "Does this student want to change their medicine?",
-                "Change Medicine?",
-                JOptionPane.YES_NO_OPTION
-        );
+         if (newName.isEmpty() || newGradeSection.isEmpty()) {
+             JOptionPane.showMessageDialog(
+                     this,
+                     "Name and Grade/Section cannot be empty.",
+                     "Invalid Information",
+                     JOptionPane.WARNING_MESSAGE
+             );
+             return;
+         }
 
-        if (wantsMedicineChange == JOptionPane.CLOSED_OPTION) {
-            return;
-        }
+         if (!newLrn.matches("\\d{12}")) {
+             JOptionPane.showMessageDialog(
+                     this,
+                     "The LRN must contain exactly 12 digits.",
+                     "Invalid LRN",
+                     JOptionPane.WARNING_MESSAGE
+             );
+             LRNField.requestFocus();
+             return;
+         }
 
-        String newMedUsed;
-        int newMedsQty;
+         // ---------------------------------------------------------
+         // ASK WHETHER MEDICINE SHOULD BE CHANGED
+         // ---------------------------------------------------------
 
-        if (wantsMedicineChange == JOptionPane.NO_OPTION) {
-            // Keep the student's existing medicine and quantity exactly as-is.
-            newMedUsed = selectedOldMedUsed;
-            newMedsQty = selectedOldMedsQty;
+         int wantsMedicineChange = JOptionPane.showConfirmDialog(
+                 this,
+                 "Does this student want to change their medicine?",
+                 "Change Medicine?",
+                 JOptionPane.YES_NO_OPTION,
+                 JOptionPane.QUESTION_MESSAGE
+         );
 
-        } else {
-            // STEP 2: show a medicine-selection list built from the current
-            // inventory via the existing MedicineData.loadAll() — no duplicate
-            // inventory loader. Expired medicine is never selectable; medicine
-            // with zero stock is excluded from the list entirely.
-            ArrayList<Medicine> allMedicine;
-            try {
-                allMedicine = productService.loadAll();
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this, "Error loading medicine inventory: " + ex.getMessage());
-                return;
-            }
+         if (wantsMedicineChange == JOptionPane.CLOSED_OPTION) {
+             return;
+         }
 
-            ArrayList<Medicine> selectable = new ArrayList<>();
-            for (Medicine m : allMedicine) {
-                if (m.isExpired()) continue;
-                if (m.getquantity() <= 0) continue;
-                selectable.add(m);
-            }
+         String newMedUsed;
+         int newMedsQty;
 
-            final String NONE_LABEL = "None (no medicine)";
+         // ---------------------------------------------------------
+         // NO MEDICINE CHANGE
+         // ---------------------------------------------------------
 
-            if (selectable.isEmpty()) {
-                int proceedNoMed = JOptionPane.showConfirmDialog(
-                        this,
-                        "There is no medicine currently available in inventory.\n"
-                        + "Do you want to remove this student's medicine instead?",
-                        "No Medicine Available",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.WARNING_MESSAGE
-                );
+         if (wantsMedicineChange == JOptionPane.NO_OPTION) {
 
-                if (proceedNoMed != JOptionPane.YES_OPTION) {
-                    return; // nurse backed out — nothing changed, edit aborted
-                }
+             // Keep the existing medicine exactly as it is.
+             newMedUsed = selectedOldMedUsed;
+             newMedsQty = selectedOldMedsQty;
 
-                newMedUsed = "None";
-                newMedsQty = 0;
+         } else {
 
-            } else {
-                String[] choices = new String[selectable.size() + 1];
-                choices[0] = NONE_LABEL;
-                for (int i = 0; i < selectable.size(); i++) {
-                    Medicine m = selectable.get(i);
-                    choices[i + 1] = m.getname() + " \u2014 " + m.getquantity() + " available";
-                }
+             // -----------------------------------------------------
+             // LOAD CURRENT MEDICINE INVENTORY
+             // -----------------------------------------------------
 
-                Object picked = JOptionPane.showInputDialog(
-                        this,
-                        "Select Medicine",
-                        "Select Medicine",
-                        JOptionPane.PLAIN_MESSAGE,
-                        null,
-                        choices,
-                        choices[0]
-                );
+             ArrayList<Medicine> allMedicine;
 
-                if (picked == null) {
-                    return; // nurse cancelled the medicine selection — abort the whole edit
-                }
+             try {
+                 allMedicine = productService.loadAll();
 
-                String pickedLabel = picked.toString();
+             } catch (SQLException ex) {
 
-                if (pickedLabel.equals(NONE_LABEL)) {
-                    newMedUsed = "None";
-                    newMedsQty = 0;
+                 JOptionPane.showMessageDialog(
+                         this,
+                         "Unable to load the medicine inventory.\n\n"
+                         + ex.getMessage(),
+                         "Medicine Inventory Error",
+                         JOptionPane.ERROR_MESSAGE
+                 );
 
-                } else {
-                    Medicine pickedMed = null;
-                    for (int i = 0; i < selectable.size(); i++) {
-                        if (choices[i + 1].equals(pickedLabel)) {
-                            pickedMed = selectable.get(i);
-                            break;
-                        }
-                    }
+                 return;
+             }
 
-                    if (pickedMed == null) {
-                        JOptionPane.showMessageDialog(this, "That medicine is no longer available. Please try again.");
-                        return;
-                    }
+             ArrayList<Medicine> selectable = new ArrayList<>();
 
-                    int available = pickedMed.getquantity();
-                    int qty;
+             for (Medicine m : allMedicine) {
 
-                    // STEP 3: ask for quantity, re-prompting until it's valid or
-                    // the nurse cancels — never let the edit continue with a bad
-                    // quantity.
-                    while (true) {
-                        String qtyInput = JOptionPane.showInputDialog(
-                                this,
-                                "How many pills of " + pickedMed.getname() + "?\n" + available + " available",
-                                "1"
-                        );
+                 // Don't allow expired medicine.
+                 if (m.isExpired()) {
+                     continue;
+                 }
 
-                        if (qtyInput == null) {
-                            return; // cancelled — abort the whole edit
-                        }
+                 // Don't allow medicine with zero stock.
+                 if (m.getquantity() <= 0) {
+                     continue;
+                 }
 
-                        try {
-                            qty = Integer.parseInt(qtyInput.trim());
-                        } catch (NumberFormatException ex) {
-                            JOptionPane.showMessageDialog(this, "Please enter a valid quantity.");
-                            continue;
-                        }
+                 selectable.add(m);
+             }
 
-                        if (qty <= 0 || qty > available) {
-                            JOptionPane.showMessageDialog(this, "Please enter a valid quantity.");
-                            continue;
-                        }
+             final String NONE_LABEL = "None (no medicine)";
 
-                        break;
-                    }
+             // -----------------------------------------------------
+             // NO MEDICINE AVAILABLE
+             // -----------------------------------------------------
 
-                    newMedUsed = pickedMed.getname();
-                    newMedsQty = qty;
-                }
-            }
-        }
+             if (selectable.isEmpty()) {
 
-        // Ask if the guardian's info needs updating too — controlled loop
-        // with Retry / Back / Cancel instead of aborting on first mistake.
-        String[] guardianResult = promptGuardianUpdate(selectedGuardianName, selectedGuardianPhone);
+                 int proceedNoMed = JOptionPane.showConfirmDialog(
+                         this,
+                         "There is no medicine currently available in inventory.\n"
+                         + "Do you want to remove this student's medicine?",
+                         "No Medicine Available",
+                         JOptionPane.YES_NO_OPTION,
+                         JOptionPane.WARNING_MESSAGE
+                 );
 
-        if (guardianResult == null) {
-            return; // nurse cancelled -> abort the whole edit, nothing saved
-        }
+                 if (proceedNoMed != JOptionPane.YES_OPTION) {
+                     return;
+                 }
 
-        String newGuardianName = guardianResult[0];
-        String newGuardianPhone = guardianResult[1];
+                 newMedUsed = "None";
+                 newMedsQty = 0;
 
-        try {
-            // Reconcile medicine stock, update the visit record, and write the
-            // EDIT audit-log entry in ONE transaction (editVisitWithMedicineAdjustment
-            // in VisitData.java). A successful edit always produces exactly one
-            // audit entry, and a failed edit can never leave stock adjustments
-            // applied without the matching record change.
-            String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
+             } else {
 
-          boolean success = visitService.editVisitWithMedicineAdjustment(
-            selectedVisitLrn,
-            newName,
-            newGradeSection,
-            newReason,
-            selectedOldMedUsed, selectedOldMedsQty,
-            newMedUsed, newMedsQty,
-            newGuardianName, newGuardianPhone,
-            productService, actor,
-            wantsMedicineChange == JOptionPane.YES_OPTION);
+                 // -------------------------------------------------
+                 // BUILD MEDICINE CHOICES
+                 // -------------------------------------------------
 
-            if (!success) {
-                JOptionPane.showMessageDialog(this, "Could not find that student's record.");
-            } else {
-                refreshTableAndCounters();
-                refreshInventoryStatusDisplay();
-                clearCheckInForm();
-                JOptionPane.showMessageDialog(this, "Student record updated.");
-            }
+                 String[] choices = new String[selectable.size() + 1];
 
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error editing record: " + ex.getMessage());
-        }
+                 choices[0] = NONE_LABEL;
+
+                 for (int i = 0; i < selectable.size(); i++) {
+
+                     Medicine m = selectable.get(i);
+
+                     choices[i + 1] =
+                             m.getname()
+                             + " — "
+                             + m.getquantity()
+                             + " available";
+                 }
+
+                 Object picked = JOptionPane.showInputDialog(
+                         this,
+                         "Select the new medicine:",
+                         "Change Medicine",
+                         JOptionPane.PLAIN_MESSAGE,
+                         null,
+                         choices,
+                         choices[0]
+                 );
+
+                 // User cancelled.
+                 if (picked == null) {
+                     return;
+                 }
+
+                 String pickedLabel = picked.toString();
+
+                 // -------------------------------------------------
+                 // REMOVE MEDICINE
+                 // -------------------------------------------------
+
+                 if (pickedLabel.equals(NONE_LABEL)) {
+
+                     newMedUsed = "None";
+                     newMedsQty = 0;
+
+                 } else {
+
+                     Medicine pickedMed = null;
+
+                     for (int i = 0; i < selectable.size(); i++) {
+
+                         if (choices[i + 1].equals(pickedLabel)) {
+
+                             pickedMed = selectable.get(i);
+                             break;
+                         }
+                     }
+
+                     if (pickedMed == null) {
+
+                         JOptionPane.showMessageDialog(
+                                 this,
+                                 "That medicine is no longer available.\n"
+                                 + "Please try again.",
+                                 "Medicine Unavailable",
+                                 JOptionPane.WARNING_MESSAGE
+                         );
+
+                         return;
+                     }
+
+                     int available = pickedMed.getquantity();
+                     int qty;
+
+                     // -------------------------------------------------
+                     // ASK FOR QUANTITY
+                     // -------------------------------------------------
+
+                     while (true) {
+
+                         String qtyInput = JOptionPane.showInputDialog(
+                                 this,
+                                 "How many pills of "
+                                 + pickedMed.getname()
+                                 + "?\n"
+                                 + available
+                                 + " available.",
+                                 "1"
+                         );
+
+                         if (qtyInput == null) {
+                             return;
+                         }
+
+                         try {
+
+                             qty = Integer.parseInt(qtyInput.trim());
+
+                         } catch (NumberFormatException ex) {
+
+                             JOptionPane.showMessageDialog(
+                                     this,
+                                     "Please enter a valid whole number.",
+                                     "Invalid Quantity",
+                                     JOptionPane.WARNING_MESSAGE
+                             );
+
+                             continue;
+                         }
+
+                         if (qty <= 0) {
+
+                             JOptionPane.showMessageDialog(
+                                     this,
+                                     "Quantity must be at least 1.",
+                                     "Invalid Quantity",
+                                     JOptionPane.WARNING_MESSAGE
+                             );
+
+                             continue;
+                         }
+
+                         if (qty > available) {
+
+                             JOptionPane.showMessageDialog(
+                                     this,
+                                     "Only "
+                                     + available
+                                     + " pill(s) are available.",
+                                     "Insufficient Stock",
+                                     JOptionPane.WARNING_MESSAGE
+                             );
+
+                             continue;
+                         }
+
+                         break;
+                     }
+
+                     newMedUsed = pickedMed.getname();
+                     newMedsQty = qty;
+                 }
+             }
+         }
+
+         // ---------------------------------------------------------
+         // GUARDIAN INFORMATION
+         // ---------------------------------------------------------
+
+         String[] guardianResult =
+                 promptGuardianUpdate(
+                         selectedGuardianName,
+                         selectedGuardianPhone
+                 );
+
+         if (guardianResult == null) {
+             return;
+         }
+
+         String newGuardianName = guardianResult[0];
+         String newGuardianPhone = guardianResult[1];
+
+         // ---------------------------------------------------------
+         // PERFORM EDIT
+         // ---------------------------------------------------------
+
+         try {
+
+             String actor =
+                     (loggedInAccount != null)
+                     ? loggedInAccount.GetName()
+                     : "Unknown";
+
+             /*
+              * IMPORTANT:
+              *
+              * selectedVisitLrn = OLD LRN
+              * newLrn          = NEW LRN
+              *
+              * The old LRN identifies the existing student.
+              * The new LRN is the value that gets saved.
+              */
+             boolean success =
+                     visitService.editVisitWithMedicineAdjustment(
+                             selectedVisitLrn,
+                             newName,
+                             newGradeSection,
+                             newLrn,
+                             newReason,
+                             selectedOldMedUsed,
+                             selectedOldMedsQty,
+                             newMedUsed,
+                             newMedsQty,
+                             newGuardianName,
+                             newGuardianPhone,
+                             productService,
+                             actor,
+                             wantsMedicineChange == JOptionPane.YES_OPTION
+                     );
+
+             // -----------------------------------------------------
+             // EDIT FAILED
+             // -----------------------------------------------------
+
+             if (!success) {
+
+                 JOptionPane.showMessageDialog(
+                         this,
+                         "The student record could not be found or updated.",
+                         "Update Failed",
+                         JOptionPane.ERROR_MESSAGE
+                 );
+
+                 return;
+             }
+
+             // -----------------------------------------------------
+             // REFRESH ONLY AFTER SUCCESSFUL DATABASE OPERATION
+             // -----------------------------------------------------
+
+             refreshTableAndCounters();
+             refreshInventoryStatusDisplay();
+
+             /*
+              * Check whether the database actually detected a change.
+              */
+             if (visitService.wasLastEditChanged()) {
+
+                 clearCheckInForm();
+
+                 JOptionPane.showMessageDialog(
+                         this,
+                         "Student record updated successfully.",
+                         "Update Successful",
+                         JOptionPane.INFORMATION_MESSAGE
+                 );
+
+             } else {
+
+                 /*
+                  * TRUE NO-OP:
+                  *
+                  * Nothing changed, therefore:
+                  * - No database UPDATE
+                  * - No EDIT audit log
+                  * - No medicine adjustment
+                  */
+                 JOptionPane.showMessageDialog(
+                         this,
+                         "No changes were made to the student record.",
+                         "No Changes Made",
+                         JOptionPane.INFORMATION_MESSAGE
+                 );
+             }
+
+         } catch (SQLException ex) {
+
+             JOptionPane.showMessageDialog(
+                     this,
+                     "The student record could not be updated.\n\n"
+                     + ex.getMessage(),
+                     "Update Failed",
+                     JOptionPane.ERROR_MESSAGE
+             );
+
+         } catch (Exception ex) {
+
+             JOptionPane.showMessageDialog(
+                     this,
+                     "An unexpected error occurred while editing the student record.\n\n"
+                     + ex.getMessage(),
+                     "Edit Error",
+                     JOptionPane.ERROR_MESSAGE
+             );
+         }
     }
        
     
@@ -2138,7 +2342,7 @@ NOT modify this code. The content of this method is always
         NameCheckIn.setText(selected.getName());
         GSCheckIn.setText(selected.getGradeSection());
         LRNField.setText(selected.getLrn());
-        LRNField.setEditable(false);
+        LRNField.setEditable(true);
         ReasonArea.setText(selected.getReason());
         jComboBox1.setSelectedItem(selected.getMedUsed());
          
