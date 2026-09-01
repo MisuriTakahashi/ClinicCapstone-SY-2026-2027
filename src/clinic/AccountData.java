@@ -662,15 +662,26 @@ public class AccountData {
         }
     }
      
-      /**
+       /**
      * Resets another account's password. This is an administrative
      * password RESET — the Head Admin does not need to know the old
      * password.
      *
      * Only a Head Admin may call this, and only for an account other
-     * than their own. The actor's role is reloaded from H2 (not taken
-     * from the AccountSystem object passed in), so this cannot be
-     * bypassed by calling the method directly with a forged role.
+     * than their own.
+     *
+     * Head Admin accounts are NOT blocked as reset targets — this is
+     * intentional, so a locked-out Head Admin can be recovered by a
+     * fellow Head Admin. Instead of a hard block, a reset where the
+     * target is also a Head Admin is logged under a distinct,
+     * clearly-flagged activity type (HEAD_ADMIN_PASSWORD_RESET) so it
+     * stands out during an audit. The extra "are you sure" friction for
+     * this case lives in AdminPanel's UI layer — this method still logs
+     * the sensitive action even if called directly.
+     *
+     * The actor's role is reloaded from H2 (not taken from the
+     * AccountSystem object passed in), so this cannot be bypassed by
+     * calling the method directly with a forged role.
      *
      * Returns true if the password was updated, false if the target
      * account no longer exists by the time the update runs.
@@ -761,14 +772,32 @@ public class AccountData {
                     return false;
                 }
 
+                // Flag Head-Admin-to-Head-Admin resets distinctly in
+                // the activity log so they're easy to spot in an audit.
+                boolean targetIsHeadAdmin =
+                        freshTarget.isHeadAdmin();
+
+                String action = targetIsHeadAdmin
+                        ? "HEAD_ADMIN_PASSWORD_RESET"
+                        : "PASSWORD_RESET";
+
+                String details = targetIsHeadAdmin
+                        ? "SECURITY: Head Admin account \""
+                          + freshTarget.GetName()
+                          + "\" had its password reset by fellow "
+                          + "Head Admin \""
+                          + currentActor.GetName()
+                          + "\"."
+                        : "Password for account \""
+                          + freshTarget.GetName()
+                          + "\" was updated by \""
+                          + currentActor.GetName()
+                          + "\".";
+
                 ActivityLogData.log(
                         conn,
-                        "PASSWORD_RESET",
-                        "Password for account \""
-                        + freshTarget.GetName()
-                        + "\" was updated by \""
-                        + currentActor.GetName()
-                        + "\".",
+                        action,
+                        details,
                         currentActor.GetName()
                 );
 
@@ -790,7 +819,7 @@ public class AccountData {
             }
         }
     }
-
+    
     /**
      * Same shape as requireCurrentActor(), but requires HEAD_ADMIN
      * specifically rather than any admin role. Used only by
@@ -842,4 +871,123 @@ public class AccountData {
 
         return currentActor;
     }
+    /**
+     * Lets the currently logged-in account change its OWN password,
+     * after verifying the CURRENT password against the hash stored in H2.
+     *
+     * This is intentionally a separate method from resetPassword():
+     * resetPassword() is an administrative reset that does NOT require
+     * knowing the old password and is restricted to Head Admin acting on
+     * OTHER accounts. changeOwnPassword() is the opposite shape — it only
+     * ever touches the caller's own row, and always demands proof of the
+     * current password first.
+     *
+     * Returns true if the password was changed, false if the account no
+     * longer exists. Throws SecurityException if the current password is
+     * wrong.
+     */
+    
+    public boolean changeOwnPassword(
+            AccountSystem actor,
+            char[] currentPassword,
+            char[] newPassword) throws SQLException {
+
+        if (actor == null
+                || actor.GetName() == null
+                || actor.GetName().trim().isEmpty()) {
+
+            throw new SecurityException(
+                    "You must be logged in to change your password."
+            );
+        }
+
+        if (newPassword == null || newPassword.length == 0) {
+
+            throw new IllegalArgumentException(
+                    "New password is required."
+            );
+        }
+
+        String sql =
+                "UPDATE ACCOUNTS SET password = ? "
+                + "WHERE id = ?";
+
+        try (Connection conn =
+                     DatabaseManager.getConnection()) {
+
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement ps =
+                         conn.prepareStatement(sql)) {
+
+                // Re-read the caller's own record inside the transaction so
+                // the current-password check runs against the live database
+                // state, not a stale in-memory copy.
+                AccountSystem freshActor =
+                        findByName(actor.GetName());
+
+                if (freshActor == null) {
+                    conn.rollback();
+                    return false;
+                }
+
+                if (!PasswordHasher.verifyPassword(
+                        currentPassword,
+                        freshActor.GetPassword())) {
+
+                    conn.rollback();
+
+                    throw new SecurityException(
+                            "The current password you entered is incorrect."
+                    );
+                }
+
+                int actorId =
+                        findId(conn, freshActor.GetName());
+
+                if (actorId <= 0) {
+                    conn.rollback();
+                    return false;
+                }
+
+                String passwordHash =
+                        PasswordHasher.hashPassword(newPassword);
+
+                ps.setString(1, passwordHash);
+                ps.setInt(2, actorId);
+
+                int rows = ps.executeUpdate();
+
+                if (rows == 0) {
+                    conn.rollback();
+                    return false;
+                }
+
+                ActivityLogData.log(
+                        conn,
+                        "PASSWORD_CHANGE",
+                        "Account \"" + freshActor.GetName()
+                        + "\" changed their own password.",
+                        freshActor.GetName()
+                );
+
+                conn.commit();
+
+                return true;
+
+            } catch (SQLException | RuntimeException ex) {
+
+                try {
+                    conn.rollback();
+                } catch (SQLException ignored) {
+                }
+
+                throw ex;
+
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
 }

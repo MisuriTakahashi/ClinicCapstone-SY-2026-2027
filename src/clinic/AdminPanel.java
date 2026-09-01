@@ -305,7 +305,7 @@ for (javax.swing.JLabel lbl : dayCountLabels) {
     configureSidebarHover(AccManageBTN);
     AccManageBTN.addActionListener(event -> showAccountManagement());
     
-    stylePrimaryButton(ExportBTN, "Export DB", Color.decode("#7C3AED"));
+    stylePrimaryButton(ExportBTN, "Make Report", Color.decode("#7C3AED"));
     stylePrimaryButton(AddBTN, "Add item", primary);
     styleSecondaryButton(EditBtn, "Edit");
     styleDangerButton(DeleteBTN, "Delete");
@@ -1231,7 +1231,7 @@ public record WeeklyStats(
 
         ExportBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 10)); // NOI18N
         ExportBTN.setForeground(new java.awt.Color(255, 255, 255));
-        ExportBTN.setText("Export Data To CSV");
+        ExportBTN.setText("Make report");
         ExportBTN.addActionListener(this::ExportBTNActionPerformed);
 
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
@@ -2049,6 +2049,41 @@ public record WeeklyStats(
             }
 
             try {
+                Medicine original = productService.findByName(selectedProductName);
+
+                if (original == null) {
+                    JOptionPane.showMessageDialog(this, "Product not found.");
+                    return;
+                }
+
+                // Normalize the stored expiration date the same way the
+                // form input was normalized above, so "2028-1-9" vs
+                // "2028-01-09" isn't mistaken for a real change.
+                String originalExpDate;
+                try {
+                    originalExpDate = normalizeDate(original.getExpDate());
+                } catch (DateTimeParseException ex) {
+                    // Fall back to the raw stored value rather than
+                    // blocking the edit if an older record predates
+                    // normalized storage.
+                    originalExpDate = original.getExpDate();
+                }
+
+                boolean unchanged =
+                        original.getname().equals(newName)
+                        && originalExpDate.equals(newExpDate)
+                        && original.getquantity() == newQuantity;
+
+                if (unchanged) {
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "No changes were made to the medicine details.",
+                        "No Changes Detected",
+                        JOptionPane.INFORMATION_MESSAGE
+                    );
+                    return;
+                }
+
                 String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
                 boolean success = productService.editItem(selectedProductName, newName, newExpDate, newQuantity, actor);
                 if (!success) {
@@ -2062,7 +2097,7 @@ public record WeeklyStats(
                 JOptionPane.showMessageDialog(this, "Error editing item: " + ex.getMessage());
             }
     }//GEN-LAST:event_EditBtnActionPerformed
-
+            
     private void QtyActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_QtyActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_QtyActionPerformed
@@ -2497,14 +2532,72 @@ private void refreshAccountTable() {
             return;
         }
 
+                // Head Admin selected their OWN account: this is a "change my
+        // password" flow, not a reset, and requires proving the
+        // current password first.
         if (loggedInAccount.GetName().equalsIgnoreCase(targetName)) {
+            changeOwnPasswordFlow();
+            return;
+        }
+
+        // Extra friction when the target is ANOTHER Head Admin: a
+        // strong warning plus a typed confirmation, on top of the
+        // normal "are you sure" dialog below. This doesn't block the
+        // action (recovery must stay possible) - it just makes sure
+        // it can't happen by accident or a stray misclick.
+        boolean targetIsHeadAdmin;
+        try {
+            AccountSystem targetAccount = accountService.findByName(targetName);
+            targetIsHeadAdmin = targetAccount != null && targetAccount.isHeadAdmin();
+        } catch (Exception ex) {
             JOptionPane.showMessageDialog(
                 this,
-                "You cannot reset your own password using this function.",
-                "Password Reset Not Available",
-                JOptionPane.WARNING_MESSAGE
+                "Unable to verify the selected account: " + ex.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE
             );
             return;
+        }
+
+        if (targetIsHeadAdmin) {
+
+            int strongWarning = JOptionPane.showConfirmDialog(
+                this,
+                "WARNING: \"" + targetName + "\" is a HEAD ADMIN account.\n\n"
+                + "Resetting another Head Admin's password is a highly\n"
+                + "sensitive action and will be recorded in the activity log\n"
+                + "under a flagged entry.\n\n"
+                + "Only do this for legitimate account recovery.\n\n"
+                + "Continue?",
+                "Sensitive Action: Head Admin Password Reset",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+            );
+
+            if (strongWarning != JOptionPane.YES_OPTION) {
+                return;
+            }
+
+            String typedConfirmation = JOptionPane.showInputDialog(
+                this,
+                "To confirm, type the exact account name \"" + targetName + "\" below:",
+                "Confirm Head Admin Reset",
+                JOptionPane.WARNING_MESSAGE
+            );
+
+            if (typedConfirmation == null) {
+                return; // Cancelled
+            }
+
+            if (!typedConfirmation.trim().equals(targetName)) {
+                JOptionPane.showMessageDialog(
+                    this,
+                    "The typed account name did not match. Password reset cancelled.",
+                    "Confirmation Failed",
+                    JOptionPane.ERROR_MESSAGE
+                );
+                return;
+            }
         }
 
         int confirm = JOptionPane.showConfirmDialog(
@@ -2626,7 +2719,160 @@ private void refreshAccountTable() {
             if (confirmPassword != null) java.util.Arrays.fill(confirmPassword, ' ');
         }
     }//GEN-LAST:event_ResetPasswordActionPerformed
+    
+            /**
+     * FEATURE 1A: Head Admin changing their OWN password.
+     *
+     * Verification of the current password is done for real by
+     * accountService.changeOwnPassword() against the H2-stored hash — the
+     * check here is only a friendlier "let them retry" loop so a wrong
+     * entry doesn't force them to redo the new-password step too.
+     */
+    private void changeOwnPasswordFlow() {
 
+        char[] currentPassword = null;
+        char[] newPassword = null;
+        char[] confirmPassword = null;
+
+        try {
+            // Steps 1-3: ask for and verify the CURRENT password.
+            while (true) {
+
+                javax.swing.JPasswordField currentPasswordField = new javax.swing.JPasswordField();
+                int currentResult = JOptionPane.showConfirmDialog(
+                    this,
+                    new Object[]{"Enter your CURRENT password:", currentPasswordField},
+                    "Verify Current Password",
+                    JOptionPane.OK_CANCEL_OPTION
+                );
+
+                if (currentResult != JOptionPane.OK_OPTION) {
+                    return;
+                }
+
+                currentPassword = currentPasswordField.getPassword();
+
+                if (currentPassword.length == 0) {
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "Please enter your current password.",
+                        "Invalid Password",
+                        JOptionPane.WARNING_MESSAGE
+                    );
+                    continue;
+                }
+
+                if (!PasswordHasher.verifyPassword(currentPassword, loggedInAccount.GetPassword())) {
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "The current password you entered is incorrect.\nPlease try again.",
+                        "Incorrect Password",
+                        JOptionPane.WARNING_MESSAGE
+                    );
+                    java.util.Arrays.fill(currentPassword, ' ');
+                    currentPassword = null;
+                    continue;
+                }
+
+                break;
+            }
+
+            // Steps 4-5: ask for and confirm the NEW password.
+            while (true) {
+
+                javax.swing.JPasswordField newPasswordField = new javax.swing.JPasswordField();
+                int newResult = JOptionPane.showConfirmDialog(
+                    this,
+                    new Object[]{"Enter a new password:", newPasswordField},
+                    "Set New Password",
+                    JOptionPane.OK_CANCEL_OPTION
+                );
+
+                if (newResult != JOptionPane.OK_OPTION) {
+                    return;
+                }
+
+                newPassword = newPasswordField.getPassword();
+
+                if (newPassword.length == 0) {
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "The new password cannot be empty.",
+                        "Invalid Password",
+                        JOptionPane.WARNING_MESSAGE
+                    );
+                    continue;
+                }
+
+                javax.swing.JPasswordField confirmPasswordField = new javax.swing.JPasswordField();
+                int confirmResult = JOptionPane.showConfirmDialog(
+                    this,
+                    new Object[]{"Re-enter the new password:", confirmPasswordField},
+                    "Confirm New Password",
+                    JOptionPane.OK_CANCEL_OPTION
+                );
+
+                if (confirmResult != JOptionPane.OK_OPTION) {
+                    return;
+                }
+
+                confirmPassword = confirmPasswordField.getPassword();
+
+                if (!java.util.Arrays.equals(newPassword, confirmPassword)) {
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "The passwords do not match.\nPlease try again.",
+                        "Password Mismatch",
+                        JOptionPane.WARNING_MESSAGE
+                    );
+                    java.util.Arrays.fill(newPassword, ' ');
+                    java.util.Arrays.fill(confirmPassword, ' ');
+                    newPassword = null;
+                    confirmPassword = null;
+                    continue;
+                }
+
+                break;
+            }
+
+            // Step 6: commit the change.
+            boolean success = accountService.changeOwnPassword(
+                loggedInAccount, currentPassword, newPassword
+            );
+
+            if (success) {
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Your password has been successfully updated.",
+                    "Password Updated",
+                    JOptionPane.INFORMATION_MESSAGE
+                );
+                refreshAccountTable();
+            } else {
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Unable to update your password.\nPlease try again.",
+                    "Password Update Failed",
+                    JOptionPane.ERROR_MESSAGE
+                );
+            }
+
+        } catch (SecurityException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Access Denied", JOptionPane.WARNING_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(
+                this,
+                "Unable to update your password.\nPlease try again.",
+                "Password Update Failed",
+                JOptionPane.ERROR_MESSAGE
+            );
+        } finally {
+            if (currentPassword != null) java.util.Arrays.fill(currentPassword, ' ');
+            if (newPassword != null) java.util.Arrays.fill(newPassword, ' ');
+            if (confirmPassword != null) java.util.Arrays.fill(confirmPassword, ' ');
+        }
+    }
+    
     /**
      * @param args the command line arguments
      */
