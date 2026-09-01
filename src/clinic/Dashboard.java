@@ -1525,17 +1525,18 @@ NOT modify this code. The content of this method is always
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
            if (loggedInAccount == null || !loggedInAccount.canAccessAdminPanel()) {
 
-        showToast(
-                MainPanel,
-                "Access denied. Admin role required.",
-                false
-        );
+            showToast(
+                    MainPanel,
+                    "Access denied. Admin role required.",
+                    false
+            );
 
-        return;
-    }
+            return;
+        }
 
-        new AdminPanel(loggedInAccount).setVisible(true);
-        this.dispose(); 
+            stopSessionTimeoutMonitoring();
+            new AdminPanel(loggedInAccount).setVisible(true);
+            this.dispose(); 
     }//GEN-LAST:event_jButton1ActionPerformed
 
     
@@ -1573,6 +1574,27 @@ NOT modify this code. The content of this method is always
             DefaultTableModel reasonModel = (DefaultTableModel) ReasonTable.getModel();
             Object statusValue = reasonModel.getValueAt(editModelRow, 0);
             String currentStatus = (statusValue == null) ? "" : statusValue.toString();
+
+            // STALE-SELECTION GUARD:
+            // selectedVisitLrn (and the loaded form fields) are populated only by
+            // ReasonTableMouseClicked. If the table selection changed since the last
+            // click (e.g. via keyboard arrow keys), the highlighted row can be a
+            // DIFFERENT student than the one the form is about to save. Without this
+            // check, Edit would silently apply the loaded form data to the wrong LRN.
+            Object lrnValue = reasonModel.getValueAt(editModelRow, 3);
+            String highlightedLrn = (lrnValue == null) ? "" : lrnValue.toString().trim();
+
+            if (selectedVisitLrn == null || !selectedVisitLrn.equals(highlightedLrn)) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "The highlighted row no longer matches the loaded form. "
+                        + "Please click the student's row again before editing.",
+                        "Selection Changed",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                clearCheckInForm();
+                return;
+            }
 
             if (!"In Clinic".equals(currentStatus)) {
                 JOptionPane.showMessageDialog(
@@ -2534,7 +2556,7 @@ NOT modify this code. The content of this method is always
     
     
     private void FinishBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_FinishBTNActionPerformed
-             String guardianName = ParentGurdianName.getText().trim();
+            String guardianName = ParentGurdianName.getText().trim();
             String guardianPhone = PhoneField.getText().trim();
            
             if (guardianName.isEmpty()) {
@@ -2562,33 +2584,40 @@ NOT modify this code. The content of this method is always
          String reason = ReasonArea.getText().trim();
          String medUsed = pendingmedUsed;
 
-         String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
+        String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
 
-         DatabaseExecutor.run(
-             () -> visitService.checkInWithMedicine(
-                     name, gradeSection, lrn, reason, medUsed, pendingmedsQty,
-                     guardianName, guardianPhone, productService, actor),
-             result -> {
-                 if (!medUsed.equals("None") && !result.medicineDeducted()) {
-                     showToast(CheckInPanel, "Warning: " + medUsed + " is out of stock. Stock was not deducted.", false);
-                 }
+        FinishBTN.setEnabled(false);
 
-                 refreshTableAndCounters();
-                 refreshInventoryStatusDisplay();
+        DatabaseExecutor.run(
+            () -> visitService.checkInWithMedicine(
+                    name, gradeSection, lrn, reason, medUsed, pendingmedsQty,
+                    guardianName, guardianPhone, productService, actor),
+            result -> {
+                FinishBTN.setEnabled(true);
 
-                 NameCheckIn.setText("");
-                 GSCheckIn.setText("");
-                 LRNField.setText("");
-                 ReasonArea.setText("");
-                 SentHomeInformationPanel.setVisible(false);
-                 glassOverlay.setVisible(false);
-                 this.revalidate();
-                 this.repaint();
+                if (!medUsed.equals("None") && !result.medicineDeducted()) {
+                    showToast(CheckInPanel, "Warning: " + medUsed + " is out of stock. Stock was not deducted.", false);
+                }
 
-                 showToast(CheckInPanel, name + " checked in successfully. Guardian info recorded.", true);
-             },
-             ex -> showToast(CheckInPanel, "Error saving check-in: " + ex.getMessage(), false)
-         );
+                refreshTableAndCounters();
+                refreshInventoryStatusDisplay();
+
+                NameCheckIn.setText("");
+                GSCheckIn.setText("");
+                LRNField.setText("");
+                ReasonArea.setText("");
+                SentHomeInformationPanel.setVisible(false);
+                glassOverlay.setVisible(false);
+                this.revalidate();
+                this.repaint();
+
+                showToast(CheckInPanel, name + " checked in successfully. Guardian info recorded.", true);
+            },
+            ex -> {
+                FinishBTN.setEnabled(true);
+                showToast(CheckInPanel, "Error saving check-in: " + ex.getMessage(), false);
+            }
+        );
     }//GEN-LAST:event_FinishBTNActionPerformed
 
     private void InformationBackBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_InformationBackBTNActionPerformed

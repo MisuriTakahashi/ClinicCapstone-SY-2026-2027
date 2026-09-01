@@ -61,7 +61,7 @@ public class MedicineData {
         return medicine;
     }
 
-    public void addItem(
+       public void addItem(
             String name,
             String expDate,
             int quantity,
@@ -73,50 +73,33 @@ public class MedicineData {
                 + "name, exp_date, quantity"
                 + ") VALUES(?, ?, ?)";
 
-        try (Connection conn =
-                     DatabaseManager.getConnection();
-             PreparedStatement ps =
-                     conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseManager.getConnection()) {
 
-            ps.setString(1, name);
-            ps.setString(2, expDate);
-            ps.setInt(3, quantity);
+            conn.setAutoCommit(false);
 
-            ps.executeUpdate();
-        }
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
 
-        logActivity(
-                "ADD_MEDICINE",
-                quantity + "x " + name,
-                performedBy
-        );
-    }
+                ps.setString(1, name);
+                ps.setString(2, expDate);
+                ps.setInt(3, quantity);
+                ps.executeUpdate();
 
-    private void logActivity(
-            String action,
-            String details,
-            String performedBy)
-            throws IOException {
+                ActivityLogData.log(
+                        conn, "ADD_MEDICINE",
+                        quantity + "x " + name, performedBy);
 
-        try {
+                conn.commit();
 
-            ActivityLogData.log(
-                    action,
-                    details,
-                    performedBy
-            );
-
-        } catch (SQLException ex) {
-
-            throw new IOException(
-                    "Could not save activity to "
-                    + "the H2 database.",
-                    ex
-            );
+            } catch (SQLException | RuntimeException ex) {
+                try { conn.rollback(); } catch (SQLException ignored) { }
+                throw ex;
+            } finally {
+                conn.setAutoCommit(true);
+            }
         }
     }
 
-    public boolean editItem(
+       public boolean editItem(
             String currentName,
             String newName,
             String newExpDate,
@@ -125,75 +108,74 @@ public class MedicineData {
             throws SQLException, IOException {
 
         String sql =
-                "UPDATE MEDICINES "
-                + "SET name = ?, exp_date = ?, quantity = ? "
-                + "WHERE name = ?";
+                "UPDATE MEDICINES SET name = ?, exp_date = ?, quantity = ? WHERE name = ?";
 
-        int rows;
+        try (Connection conn = DatabaseManager.getConnection()) {
 
-        try (Connection conn =
-                     DatabaseManager.getConnection();
-             PreparedStatement ps =
-                     conn.prepareStatement(sql)) {
+            conn.setAutoCommit(false);
 
-            ps.setString(1, newName);
-            ps.setString(2, newExpDate);
-            ps.setInt(3, newQuantity);
-            ps.setString(4, currentName);
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            rows = ps.executeUpdate();
+                ps.setString(1, newName);
+                ps.setString(2, newExpDate);
+                ps.setInt(3, newQuantity);
+                ps.setString(4, currentName);
+
+                int rows = ps.executeUpdate();
+                if (rows == 0) {
+                    conn.rollback();
+                    return false;
+                }
+
+                ActivityLogData.log(
+                        conn, "EDIT_MEDICINE",
+                        currentName + " -> " + newName + " (" + newQuantity + "x)",
+                        performedBy);
+
+                conn.commit();
+                return true;
+
+            } catch (SQLException | RuntimeException ex) {
+                try { conn.rollback(); } catch (SQLException ignored) { }
+                throw ex;
+            } finally {
+                conn.setAutoCommit(true);
+            }
         }
-
-        if (rows == 0) {
-            return false;
-        }
-
-        logActivity(
-                "EDIT_MEDICINE",
-                currentName
-                + " -> "
-                + newName
-                + " ("
-                + newQuantity
-                + "x)",
-                performedBy
-        );
-
-        return true;
     }
 
-    public boolean deleteItem(
+       public boolean deleteItem(
             String name,
             String performedBy)
             throws SQLException, IOException {
 
-        String sql =
-                "DELETE FROM MEDICINES "
-                + "WHERE name = ?";
+        String sql = "DELETE FROM MEDICINES WHERE name = ?";
 
-        int rows;
+        try (Connection conn = DatabaseManager.getConnection()) {
 
-        try (Connection conn =
-                     DatabaseManager.getConnection();
-             PreparedStatement ps =
-                     conn.prepareStatement(sql)) {
+            conn.setAutoCommit(false);
 
-            ps.setString(1, name);
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            rows = ps.executeUpdate();
+                ps.setString(1, name);
+                int rows = ps.executeUpdate();
+                if (rows == 0) {
+                    conn.rollback();
+                    return false;
+                }
+
+                ActivityLogData.log(conn, "DELETE_MEDICINE", name, performedBy);
+
+                conn.commit();
+                return true;
+
+            } catch (SQLException | RuntimeException ex) {
+                try { conn.rollback(); } catch (SQLException ignored) { }
+                throw ex;
+            } finally {
+                conn.setAutoCommit(true);
+            }
         }
-
-        if (rows == 0) {
-            return false;
-        }
-
-        logActivity(
-                "DELETE_MEDICINE",
-                name,
-                performedBy
-        );
-
-        return true;
     }
 
     /**

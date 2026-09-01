@@ -1974,6 +1974,21 @@ public record WeeklyStats(
          Qty.setText(String.valueOf(selected.getquantity()));
         
     }//GEN-LAST:event_stockTableMouseClicked
+    
+    private Medicine getSingleSelectedMedicine() {
+        if (stockTable.getSelectedRowCount() != 1) {
+            return null;
+        }
+        int viewRow = stockTable.getSelectedRow();
+        if (viewRow == -1) {
+            return null;
+        }
+        int modelRow = stockTable.convertRowIndexToModel(viewRow);
+        if (modelRow < 0 || modelRow >= currentProducts.size()) {
+            return null;
+        }
+        return currentProducts.get(modelRow);
+    }
 
     private void DeleteBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DeleteBTNActionPerformed
          int[] selectedRows = stockTable.getSelectedRows();
@@ -2026,10 +2041,24 @@ public record WeeklyStats(
     }//GEN-LAST:event_DeleteBTNActionPerformed
 
     private void EditBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditBtnActionPerformed
-              if (selectedProductName == null) {
-                JOptionPane.showMessageDialog(this, "Select a product from the table first.");
-                return;
-            }
+              int selectedCount = stockTable.getSelectedRowCount();
+               
+              if (selectedCount == 0) {
+                    JOptionPane.showMessageDialog(this, "Please select one medicine to edit.");
+                    return;
+                }
+                if (selectedCount > 1) {
+                    JOptionPane.showMessageDialog(this, "Please select only one medicine to edit.");
+                    return;
+                }
+                Medicine targetMedicine = getSingleSelectedMedicine();
+                if (targetMedicine == null) {
+                    JOptionPane.showMessageDialog(this, "Table is out of sync - please try again.");
+                    refreshInventoryScreen();
+                    return;
+                }
+               
+                String targetProductName = targetMedicine.getname();
 
             String newName = ProductName.getText().trim();
             String quantityText = Qty.getText().trim();
@@ -2057,7 +2086,8 @@ public record WeeklyStats(
             }
 
             try {
-                Medicine original = productService.findByName(selectedProductName);
+                
+                Medicine original = productService.findByName(targetProductName);
 
                 if (original == null) {
                     JOptionPane.showMessageDialog(this, "Product not found.");
@@ -2093,7 +2123,8 @@ public record WeeklyStats(
                 }
 
                 String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
-                boolean success = productService.editItem(selectedProductName, newName, newExpDate, newQuantity, actor);
+                boolean success = productService.editItem(targetProductName, newName, newExpDate, newQuantity, actor);
+                
                 if (!success) {
                     JOptionPane.showMessageDialog(this, "Product not found.");
                 } else {
@@ -2516,19 +2547,19 @@ private void refreshAccountTable() {
 
     private void ResetPasswordActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ResetPasswordActionPerformed
        
-        int viewRow = ACTTable.getSelectedRow();
-
-        if (viewRow == -1) {
-            JOptionPane.showMessageDialog(
-                this,
-                "Please select an account to reset the password for.",
-                "No Account Selected",
-                JOptionPane.WARNING_MESSAGE
-            );
+     int[] selectedRows = ACTTable.getSelectedRows();
+        if (selectedRows.length == 0) {
+            JOptionPane.showMessageDialog(this, "Please select one account to reset the password for.",
+                "No Account Selected", JOptionPane.WARNING_MESSAGE);
             return;
         }
-
-        String targetName = ACTTable.getValueAt(viewRow, 0).toString();
+        if (selectedRows.length > 1) {
+            JOptionPane.showMessageDialog(this, "Please select only one account to reset the password.",
+                "Multiple Accounts Selected", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+            int viewRow = selectedRows[0];
+            String targetName = ACTTable.getValueAt(viewRow, 0).toString();
 
         if (loggedInAccount == null || !loggedInAccount.isHeadAdmin()) {
             JOptionPane.showMessageDialog(

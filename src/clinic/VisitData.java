@@ -22,6 +22,7 @@ public class VisitData {
 
     /** Tracks whether the most recent edit actually changed the record. */
     private boolean lastEditHadChanges = false;
+    private boolean lastEditMedicineDeducted = true;
 
     /**
      * Returns true when the most recent edit operation actually changed
@@ -30,6 +31,11 @@ public class VisitData {
     public boolean wasLastEditChanged() {
         return lastEditHadChanges;
     }
+    
+    public boolean wasLastEditMedicineDeducted() {
+        return lastEditMedicineDeducted;
+    }
+    
      private static final DateTimeFormatter TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a");
  
@@ -250,17 +256,11 @@ private static String buildCheckInLogDetails(
         }
     }
  
-    public boolean markSentHome(String lrn) throws SQLException {
-       String sql = "UPDATE VISITS SET status = 'Sent Home' "
-            + "WHERE id = (SELECT id FROM VISITS WHERE lrn = ? AND status = 'In Clinic' AND archived = FALSE "
-            + "ORDER BY id ASC LIMIT 1)";
- 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, lrn);
-            return ps.executeUpdate() > 0;
-        }
+        public boolean markSentHome(String lrn) throws SQLException {
+        return markSentHome(lrn, "Unknown");
     }
+    
+    
  
     public int[] getTodayCounts() throws SQLException {
         String today = LocalDate.now().toString();
@@ -579,6 +579,7 @@ private static String buildCheckInLogDetails(
      * matching data change (or vice versa).
      */
     public boolean editVisitWithMedicineAdjustment(
+           
             String lrn, String newName, String newGradeSection, String newReason,
             String oldMedUsed, int oldMedsQty,
             String newMedUsed, int newMedsQty,
@@ -678,6 +679,8 @@ private static String buildCheckInLogDetails(
                 }
 
                 // Only reconcile inventory when medicine actually changed.
+             // Only reconcile inventory when medicine actually changed.
+                boolean newMedicineDeducted = true;
                 if (!medicineUnchanged) {
                     if (actualOldMedUsed != null
                             && !actualOldMedUsed.equalsIgnoreCase("None")
@@ -689,10 +692,17 @@ private static String buildCheckInLogDetails(
                     if (newMedUsed != null
                             && !newMedUsed.equalsIgnoreCase("None")
                             && newMedsQty > 0) {
-                        medicineData.useMedicine(
+                        newMedicineDeducted = medicineData.useMedicine(
                                 conn, newMedUsed, newName, newMedsQty, performedBy);
+
+                        if (!newMedicineDeducted) {
+                            editDetails += " WARNING: stock for \"" + newMedUsed
+                                    + "\" was insufficient — not deducted.";
+                        }
                     }
                 }
+
+                lastEditMedicineDeducted = newMedicineDeducted;
 
                 // Persist all edited fields, including the NEW LRN.
                 boolean updated = editVisit(
@@ -855,16 +865,8 @@ private static String buildCheckInLogDetails(
         }
     }
     
-    public boolean markSentBack(String lrn) throws SQLException {
-        String sql = "UPDATE VISITS SET status = 'Sent Back' "
-            + "WHERE id = (SELECT id FROM VISITS WHERE lrn = ? AND status = 'In Clinic' AND archived = FALSE "
-            + "ORDER BY id ASC LIMIT 1)";
- 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, lrn);
-            return ps.executeUpdate() > 0;
-        }
+      public boolean markSentBack(String lrn) throws SQLException {
+        return markSentBack(lrn, "Unknown");
     }
     
         private static String getActiveVisitStatus(Connection conn, String lrn)
