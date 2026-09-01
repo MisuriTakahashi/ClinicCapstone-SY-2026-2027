@@ -39,6 +39,8 @@ public class Dashboard extends javax.swing.JFrame {
     private long lastActivityTime;
     private Timer inactivityTimer;
     private AWTEventListener activityListener;
+    private long tableRefreshGeneration = 0L;
+
     /**
      * Creates new form Dashboard
      */
@@ -795,18 +797,32 @@ private int applySearchFilter() {
     
     //pinapakita yun table and counters and inaupdate
     private void refreshTableAndCounters(){
-          DatabaseExecutor.run(
-            () -> new DashboardCounts(visitService.loadActive(), visitService.getTodayCounts()),
-            result -> {
-                currentVisits = result.visits();
-                applySearchFilter(); // rebuilds the table, honoring the current search text
-                int[] counts = result.counts();
-                VisitCounter.setText(String.valueOf(counts[0]));
-                SentHomeCount.setText(String.valueOf(counts[1]));
-            },
-            ex -> JOptionPane.showMessageDialog(this, ex.getMessage())
-        );
-     }
+    final long requestGeneration = ++tableRefreshGeneration;
+
+    DatabaseExecutor.run(
+        () -> new DashboardCounts(
+            visitService.loadActive(),
+            visitService.getTodayCounts()
+        ),
+        result -> {
+            if (requestGeneration != tableRefreshGeneration) {
+                return;
+            }
+
+            currentVisits = result.visits();
+            applySearchFilter();
+
+            int[] counts = result.counts();
+            VisitCounter.setText(String.valueOf(counts[0]));
+            SentHomeCount.setText(String.valueOf(counts[1]));
+        },
+        ex -> {
+            if (requestGeneration == tableRefreshGeneration) {
+                JOptionPane.showMessageDialog(this, ex.getMessage());
+            }
+        }
+    );
+}
     
  private void showToast(javax.swing.JPanel parentContainer, String message, boolean isSuccess) {
     // 1. Create and style the toast label
@@ -2203,7 +2219,30 @@ NOT modify this code. The content of this method is always
             showToast(MainPanel, "Reason is needed to proceed on the check in", false);
             return;
         }
-
+        
+        
+            // CHECK IF STUDENT IS ALREADY CHECKED IN
+           try {
+            String activeStatus = visitService.getActiveVisitStatus(lrn);
+            if (activeStatus != null) {
+                String phrase = switch (activeStatus) {
+                    case "In Clinic" -> "checked in";
+                    case "Sent Home" -> "sent home";
+                    case "Sent Back" -> "sent back to class";
+                    default -> "in an active visit";
+                };
+                showToast(MainPanel, "This student is already " + phrase + ".", false);
+                return;
+            }
+        } catch (Exception ex) {
+            showToast(
+                MainPanel,
+                "Unable to verify the student's current check-in status.",
+                false
+            );
+            return;
+        }
+        
         // MEDICINE CHECK
         if (jComboBox1.getItemCount() == 0) {
 
@@ -2294,23 +2333,7 @@ NOT modify this code. The content of this method is always
 
         // CHECK EXISTING STUDENT / LRN
         try {
-            String existingName = visitService.findNameForLrn(lrn);
-
-            // CHECK IF LRN BELONGS TO ANOTHER STUDENT
-            if (existingName != null && !existingName.equalsIgnoreCase(name)) {
-                JOptionPane.showMessageDialog(this,
-                    "This LRN is already registered under the name \"" + existingName
-                    + "\". Please verify the LRN or name.",
-                    "LRN Already Registered", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-
-            // CHECK IF STUDENT IS ALREADY CHECKED IN
-            if (visitService.isCurrentlyCheckedIn(lrn)) {
-                JOptionPane.showMessageDialog(this,
-                    "This student is already checked in.", "Already Checked In", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
+          
 
             // REFRESH INFORMATION
             refreshTableAndCounters();
@@ -2375,24 +2398,63 @@ NOT modify this code. The content of this method is always
     
     private void ReasonTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_ReasonTableMouseClicked
        
-        int row = ReasonTable.getSelectedRow();
-      
-        if (row == -1) return;
+          int viewRow = ReasonTable.getSelectedRow();
 
-        CheckinSystem selected = currentVisits.get(row);
+    if (viewRow == -1) {
+        return;
+    }
 
-        selectedVisitLrn = selected.getLrn();
-        selectedOldMedUsed = selected.getMedUsed();
-        selectedOldMedsQty = selected.getmedsQty();
-        selectedGuardianName = selected.getGuardianName();
-        selectedGuardianPhone = selected.getGuardianPhoneNums();
+    // Convert the visible table row to the model row.
+    // This is important when the table is sorted.
+    int modelRow = ReasonTable.convertRowIndexToModel(viewRow);
 
-        NameCheckIn.setText(selected.getName());
-        GSCheckIn.setText(selected.getGradeSection());
-        LRNField.setText(selected.getLrn());
-        LRNField.setEditable(true);
-        ReasonArea.setText(selected.getReason());
-        jComboBox1.setSelectedItem(selected.getMedUsed());
+    DefaultTableModel model =
+            (DefaultTableModel) ReasonTable.getModel();
+
+    // Get the LRN directly from the row the user actually clicked.
+    Object lrnValue = model.getValueAt(modelRow, 3);
+
+    if (lrnValue == null) {
+        return;
+    }
+
+    String clickedLrn = lrnValue.toString().trim();
+
+    // Find the matching visit in the ORIGINAL currentVisits list.
+    CheckinSystem selected = null;
+
+    for (CheckinSystem visit : currentVisits) {
+        if (visit.getLrn() != null
+                && visit.getLrn().trim().equals(clickedLrn)) {
+
+            selected = visit;
+            break;
+        }
+    }
+
+    if (selected == null) {
+        JOptionPane.showMessageDialog(
+                this,
+                "Unable to find the selected student's visit.",
+                "Selection Error",
+                JOptionPane.WARNING_MESSAGE
+        );
+        return;
+    }
+
+    selectedVisitLrn = selected.getLrn();
+    selectedOldMedUsed = selected.getMedUsed();
+    selectedOldMedsQty = selected.getmedsQty();
+    selectedGuardianName = selected.getGuardianName();
+    selectedGuardianPhone = selected.getGuardianPhoneNums();
+
+    NameCheckIn.setText(selected.getName());
+    GSCheckIn.setText(selected.getGradeSection());
+    LRNField.setText(selected.getLrn());
+    LRNField.setEditable(true);
+    ReasonArea.setText(selected.getReason());
+
+    jComboBox1.setSelectedItem(selected.getMedUsed());
          
     
     }//GEN-LAST:event_ReasonTableMouseClicked

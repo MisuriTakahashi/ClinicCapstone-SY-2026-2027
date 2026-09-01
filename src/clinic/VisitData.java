@@ -81,7 +81,7 @@ public class VisitData {
      * still succeeds (medicineDeducted = false) so the front desk can warn
      * the user without blocking the check-in itself.
      */
-    public CheckInResult checkInWithMedicine(
+   public synchronized CheckInResult checkInWithMedicine(
         String name, String gradeSection, String lrn, String reason,
         String medUsed, int medsQty, String guardianName, String guardianPhone,
         MedicineData medicineData, String performedBy) throws SQLException {
@@ -91,22 +91,58 @@ public class VisitData {
         conn.setAutoCommit(false);
 
         try {
-            checkIn(conn, name, gradeSection, lrn, reason, medUsed, medsQty, guardianName, guardianPhone);
+
+            // IMPORTANT:
+            // Check for an existing active visit BEFORE inserting a new one.
+            String activeStatus = getActiveVisitStatus(conn, lrn);
+            if (activeStatus != null) {
+                throw new SQLException("This student is already " + describeStatus(activeStatus) + ".");
+            }
+
+            checkIn(
+                    conn,
+                    name,
+                    gradeSection,
+                    lrn,
+                    reason,
+                    medUsed,
+                    medsQty,
+                    guardianName,
+                    guardianPhone
+            );
 
             boolean deducted = true;
 
-            if (medUsed != null && !medUsed.equalsIgnoreCase("None") && medsQty > 0) {
-                deducted = medicineData.useMedicine(conn, medUsed, name, medsQty, performedBy);
+            if (medUsed != null
+                    && !medUsed.equalsIgnoreCase("None")
+                    && medsQty > 0) {
+
+                deducted = medicineData.useMedicine(
+                        conn,
+                        medUsed,
+                        name,
+                        medsQty,
+                        performedBy
+                );
             }
 
-            // Record the check-in itself in the shared activity log, in the SAME
-            // transaction as the VISITS insert / medicine deduction above. If
-            // anything fails, the rollback below undoes this too — so a VISITS
-            // row can never exist without a matching log entry, or vice versa.
+            // Record the check-in in the SAME transaction.
             String logDetails = buildCheckInLogDetails(
-                    name, gradeSection, lrn, reason, medUsed, medsQty, deducted);
+                    name,
+                    gradeSection,
+                    lrn,
+                    reason,
+                    medUsed,
+                    medsQty,
+                    deducted
+            );
 
-            ActivityLogData.log(conn, "CHECK_IN", logDetails, performedBy);
+            ActivityLogData.log(
+                    conn,
+                    "CHECK_IN",
+                    logDetails,
+                    performedBy
+            );
 
             conn.commit();
 
@@ -126,7 +162,29 @@ public class VisitData {
         }
     }
 }
+   
+    private static boolean hasActiveVisit(Connection conn, String lrn)
+        throws SQLException {
+        String sql =
+            "SELECT 1 FROM VISITS " +
+            "WHERE lrn = ? " +
+            "AND status IN ('In Clinic', 'Sent Home', 'Sent Back') " +
+            "AND archived = FALSE " +
+            "LIMIT 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, lrn);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
 
+    public boolean hasActiveVisit(String lrn) throws SQLException {
+        try (Connection conn = DatabaseManager.getConnection()) {
+            return hasActiveVisit(conn, lrn);
+        }
+    }
+    
 /** Builds a human-readable ACTIVITY_LOG details string for a check-in. */
 private static String buildCheckInLogDetails(
         String name, String gradeSection, String lrn, String reason,
@@ -806,4 +864,37 @@ private static String buildCheckInLogDetails(
             return ps.executeUpdate() > 0;
         }
     }
+    
+        private static String getActiveVisitStatus(Connection conn, String lrn)
+            throws SQLException {
+        String sql =
+            "SELECT status FROM VISITS " +
+            "WHERE lrn = ? " +
+            "AND status IN ('In Clinic', 'Sent Home', 'Sent Back') " +
+            "AND archived = FALSE " +
+            "LIMIT 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, lrn);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getString("status") : null;
+            }
+        }
+    }
+
+    public String getActiveVisitStatus(String lrn) throws SQLException {
+        try (Connection conn = DatabaseManager.getConnection()) {
+            return getActiveVisitStatus(conn, lrn);
+        }
+    }
+
+    /** Turns a VISITS.status value into the phrase used in user-facing messages. */
+    private static String describeStatus(String status) {
+        switch (status) {
+            case "In Clinic": return "checked in";
+            case "Sent Home": return "sent home";
+            case "Sent Back": return "sent back to class";
+            default: return "already in an active visit";
+        }
+    }
+
 }

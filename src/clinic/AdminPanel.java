@@ -305,7 +305,7 @@ for (javax.swing.JLabel lbl : dayCountLabels) {
     configureSidebarHover(AccManageBTN);
     AccManageBTN.addActionListener(event -> showAccountManagement());
     
-    stylePrimaryButton(ExportBTN, "Make Report", Color.decode("#7C3AED"));
+    stylePrimaryButton(ExportBTN, "Export Report", Color.decode("#7C3AED"));
     stylePrimaryButton(AddBTN, "Add item", primary);
     styleSecondaryButton(EditBtn, "Edit");
     styleDangerButton(DeleteBTN, "Delete");
