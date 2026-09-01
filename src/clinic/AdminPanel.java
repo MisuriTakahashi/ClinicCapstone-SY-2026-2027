@@ -1948,22 +1948,30 @@ public record WeeklyStats(
     }//GEN-LAST:event_ClearBtnActionPerformed
 
     private void stockTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_stockTableMouseClicked
-       int viewRow = stockTable.getSelectedRow();
-        if (viewRow == -1) return;
-
-        int modelRow = stockTable.convertRowIndexToModel(viewRow);
-        if (modelRow < 0 || modelRow >= currentProducts.size()) {
-            // Table and currentProducts are out of sync - refresh instead of crashing.
-            refreshInventoryScreen();
+        // Edit must only ever act on exactly one medicine. Multi-select stays
+        // enabled for Delete, so don't restrict the table's selection mode -
+        // just refuse to populate the edit form for anything but a single row.
+        if (stockTable.getSelectedRowCount() != 1) {
+            selectedProductName = null;
             return;
         }
 
-        Medicine selected = currentProducts.get(modelRow); // real object, correct types guaranteed - DJJ - ps I DON'T KNOW WHAT THIS DO BUT DO NOT REMOVE IT
+        int viewRow = stockTable.getSelectedRow();
+         if (viewRow == -1) return;
 
-        selectedProductName = selected.getname();
-        ProductName.setText(selected.getname());
-        ExpDate.setText(selected.getExpDate());
-        Qty.setText(String.valueOf(selected.getquantity()));
+         int modelRow = stockTable.convertRowIndexToModel(viewRow);
+         if (modelRow < 0 || modelRow >= currentProducts.size()) {
+             // Table and currentProducts are out of sync - refresh instead of crashing.
+             refreshInventoryScreen();
+             return;
+         }
+
+         Medicine selected = currentProducts.get(modelRow); // real object, correct types guaranteed - DJJ - ps I DON'T KNOW WHAT THIS DO BUT DO NOT REMOVE IT
+
+         selectedProductName = selected.getname();
+         ProductName.setText(selected.getname());
+         ExpDate.setText(selected.getExpDate());
+         Qty.setText(String.valueOf(selected.getquantity()));
         
     }//GEN-LAST:event_stockTableMouseClicked
 

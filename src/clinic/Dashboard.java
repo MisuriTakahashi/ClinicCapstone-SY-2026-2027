@@ -89,7 +89,7 @@ public class Dashboard extends javax.swing.JFrame {
             
             
             
-            
+            ReasonTable.getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
             ((AbstractDocument) NameCheckIn.getDocument()).setDocumentFilter(new NameInputFilter()); //this is an input filter for NameCheckin which dont allows numbers
             ((AbstractDocument) ParentGurdianName.getDocument()).setDocumentFilter(new NameInputFilter()); //this also and input filter for the parentName which do not allows numbers too
             ((AbstractDocument) PhoneField.getDocument()).setDocumentFilter(new PhoneNumberFilter()); // this only allows 09 number and also 11 digits only 
@@ -1541,7 +1541,51 @@ NOT modify this code. The content of this method is always
     
     //edit btn
     private void EditBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditBTNActionPerformed
-            
+            // ---------------------------------------------------------
+            // SELECTION / STATUS GUARD
+            // Do not rely only on JTable's selection mode - re-verify here,
+            // right before the edit actually runs.
+            // ---------------------------------------------------------
+            int selectedRowCount = ReasonTable.getSelectedRowCount();
+
+            if (selectedRowCount == 0 || selectedVisitLrn == null) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Please select a student to edit.",
+                        "No Selection",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+
+            if (selectedRowCount > 1) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Please select only one student to edit.",
+                        "Multiple Selection",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+
+            int editViewRow = ReasonTable.getSelectedRow();
+            int editModelRow = ReasonTable.convertRowIndexToModel(editViewRow);
+            DefaultTableModel reasonModel = (DefaultTableModel) ReasonTable.getModel();
+            Object statusValue = reasonModel.getValueAt(editModelRow, 0);
+            String currentStatus = (statusValue == null) ? "" : statusValue.toString();
+
+            if (!"In Clinic".equals(currentStatus)) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "This record can no longer be edited because its "
+                        + "status is \"" + currentStatus + "\".",
+                        "Cannot Edit",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                clearCheckInForm();
+                return;
+            }
+
       
          String newName = NameCheckIn.getText().trim();
          String newGradeSection = GSCheckIn.getText().trim();
@@ -2398,7 +2442,11 @@ NOT modify this code. The content of this method is always
     
     private void ReasonTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_ReasonTableMouseClicked
        
-          int viewRow = ReasonTable.getSelectedRow();
+            if (ReasonTable.getSelectedRowCount() != 1) {
+        return;
+    }
+
+    int viewRow = ReasonTable.getSelectedRow();
 
     if (viewRow == -1) {
         return;
@@ -2439,6 +2487,23 @@ NOT modify this code. The content of this method is always
                 "Selection Error",
                 JOptionPane.WARNING_MESSAGE
         );
+        return;
+    }
+
+    // ---------------------------------------------------------
+    // STATUS GATE: only an "In Clinic" record may be edited.
+    // ---------------------------------------------------------
+    String currentStatus = selected.getStatus();
+
+    if (!"In Clinic".equals(currentStatus)) {
+        JOptionPane.showMessageDialog(
+                this,
+                "This record can no longer be edited because its "
+                + "status is \"" + currentStatus + "\".",
+                "Cannot Edit",
+                JOptionPane.WARNING_MESSAGE
+        );
+        clearCheckInForm();
         return;
     }
 

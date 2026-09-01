@@ -543,9 +543,9 @@ private static String buildCheckInLogDetails(
             String newGuardianName, String newGuardianPhone) throws SQLException {
 
         String sql = "UPDATE VISITS SET name = ?, grade_section = ?, lrn = ?, reason = ?, "
-                + "med_used = ?, meds_qty = ?, guardian_name = ?, guardian_phone = ? "
-                + "WHERE id = (SELECT id FROM VISITS WHERE lrn = ? AND archived = FALSE "
-                + "ORDER BY id DESC LIMIT 1)";
+                    + "med_used = ?, meds_qty = ?, guardian_name = ?, guardian_phone = ? "
+                    + "WHERE id = (SELECT id FROM VISITS WHERE lrn = ? AND status = 'In Clinic' "
+                    + "AND archived = FALSE ORDER BY id DESC LIMIT 1)";
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, newName);
@@ -732,9 +732,11 @@ private static String buildCheckInLogDetails(
      * possibly-stale UI selection.
      */
     private CheckinSystem findVisitForEdit(Connection conn, String lrn) throws SQLException {
-        String sql = "SELECT name, grade_section, lrn, reason, med_used, meds_qty, "
-                + "check_in_time, status, guardian_name, guardian_phone FROM VISITS "
-                + "WHERE lrn = ? AND archived = FALSE ORDER BY id DESC LIMIT 1";
+        
+       String sql = "SELECT name, grade_section, lrn, reason, med_used, meds_qty, "
+                    + "check_in_time, status, guardian_name, guardian_phone FROM VISITS "
+                    + "WHERE lrn = ? AND status = 'In Clinic' AND archived = FALSE "
+                    + "ORDER BY id DESC LIMIT 1";
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, lrn);
