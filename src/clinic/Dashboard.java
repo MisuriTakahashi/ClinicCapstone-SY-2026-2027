@@ -20,7 +20,10 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.text.AbstractDocument;
 import java.sql.SQLException;
 import java.io.IOException;
-
+import java.awt.AWTEvent;
+import java.awt.Toolkit;
+import java.awt.event.AWTEventListener;
+import javax.swing.Timer;
 
 /**
  *
@@ -33,6 +36,9 @@ public class Dashboard extends javax.swing.JFrame {
     private static boolean darkMode = false;
     private GlassOverlayPanel glassOverlay = new GlassOverlayPanel();
     private AccountSystem loggedInAccount;
+    private long lastActivityTime;
+    private Timer inactivityTimer;
+    private AWTEventListener activityListener;
     /**
      * Creates new form Dashboard
      */
@@ -63,13 +69,15 @@ public class Dashboard extends javax.swing.JFrame {
 
             
             // Window X (not Logout): remember this session so the user is
-            // auto-logged-in next launch, instead of being forced to log in again.
+            // auto-logged-in next launch, instead of being forced to log in again
             addWindowListener(new java.awt.event.WindowAdapter() {
                 @Override
                 public void windowClosing(java.awt.event.WindowEvent e) {
-                    SessionManager.saveSession(loggedInAccount);
+                    SessionManager.saveSession(loggedInAccount, lastActivityTime);
                 }
             });
+            
+            setupSessionTimeoutMonitoring();
             
             applyMigLayouts();
             
@@ -254,6 +262,46 @@ public class Dashboard extends javax.swing.JFrame {
             refreshInventoryStatusDisplay();
 
         }
+        
+        private void setupSessionTimeoutMonitoring() {
+            lastActivityTime = System.currentTimeMillis();
+
+            activityListener = e -> lastActivityTime = System.currentTimeMillis();
+            Toolkit.getDefaultToolkit().addAWTEventListener(activityListener,
+                    AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK | AWTEvent.KEY_EVENT_MASK);
+
+            // Checks every 15 seconds - fine-grained enough even for the 5-minute test setting
+            inactivityTimer = new Timer(15_000, e -> checkInactivity());
+            inactivityTimer.start();
+        }
+
+        private void checkInactivity() {
+            long elapsed = System.currentTimeMillis() - lastActivityTime;
+            if (elapsed >= SessionManager.SESSION_TIMEOUT) {
+                handleSessionExpired();
+            }
+        }
+
+        private void handleSessionExpired() {
+            stopSessionTimeoutMonitoring();
+            SessionManager.clearSession();
+            JOptionPane.showMessageDialog(this,
+                    "Your session has expired due to inactivity. Please log in again.");
+            new LoginUi().setVisible(true);
+            this.dispose();
+        }
+
+        private void stopSessionTimeoutMonitoring() {
+            if (inactivityTimer != null) {
+                inactivityTimer.stop();
+                inactivityTimer = null;
+            }
+            if (activityListener != null) {
+                Toolkit.getDefaultToolkit().removeAWTEventListener(activityListener);
+                activityListener = null;
+            }
+        }
+
      private void applyMigLayouts() {
     // ================= HEADER =================
         HeaderPanel.removeAll();
@@ -2006,10 +2054,10 @@ NOT modify this code. The content of this method is always
         }
 
         // Reaches here for: choice == 1 (plain Logout), or choice == 0 after a successful export
+        stopSessionTimeoutMonitoring();
         SessionManager.clearSession();
         new LoginUi().setVisible(true);
         this.dispose();
-
     }                                        
 
      /** Turns "1-1-2026" / "2026-1-1" style input into a strict "yyyy-MM-dd" string. */

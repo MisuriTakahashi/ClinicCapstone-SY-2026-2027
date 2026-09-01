@@ -31,6 +31,10 @@ import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.text.AbstractDocument;
+import java.awt.AWTEvent;
+import java.awt.Toolkit;
+import java.awt.event.AWTEventListener;
+import javax.swing.Timer;
 
 /**
  *
@@ -50,6 +54,9 @@ public class AdminPanel extends javax.swing.JFrame {
     private final FadePanel responsiveContent = new FadePanel(new CardLayout());
     private JPanel inventoryView;
     private CardLayout contentCards;
+    private long lastActivityTime;
+    private Timer inactivityTimer;
+    private AWTEventListener activityListener;
     
 
     /**
@@ -77,9 +84,11 @@ public class AdminPanel extends javax.swing.JFrame {
     addWindowListener(new java.awt.event.WindowAdapter() {
         @Override
         public void windowClosing(java.awt.event.WindowEvent e) {
-            SessionManager.saveSession(account);
+            SessionManager.saveSession(account, lastActivityTime);
         }
     });
+    
+    setupSessionTimeoutMonitoring();
 
     configureFlatLafUi();
     this.loggedInAccount = account;
@@ -101,6 +110,45 @@ public class AdminPanel extends javax.swing.JFrame {
     loadStatistics();
     refreshAccountTable();
 }
+   
+   private void setupSessionTimeoutMonitoring() {
+    lastActivityTime = System.currentTimeMillis();
+
+    activityListener = e -> lastActivityTime = System.currentTimeMillis();
+    Toolkit.getDefaultToolkit().addAWTEventListener(activityListener,
+            AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK | AWTEvent.KEY_EVENT_MASK);
+
+    inactivityTimer = new Timer(15_000, e -> checkInactivity());
+    inactivityTimer.start();
+}
+
+private void checkInactivity() {
+    long elapsed = System.currentTimeMillis() - lastActivityTime;
+    if (elapsed >= SessionManager.SESSION_TIMEOUT) {
+        handleSessionExpired();
+    }
+}
+
+private void handleSessionExpired() {
+    stopSessionTimeoutMonitoring();
+    SessionManager.clearSession();
+    JOptionPane.showMessageDialog(this,
+            "Your session has expired due to inactivity. Please log in again.");
+    new LoginUi().setVisible(true);
+    this.dispose();
+}
+
+private void stopSessionTimeoutMonitoring() {
+    if (inactivityTimer != null) {
+        inactivityTimer.stop();
+        inactivityTimer = null;
+    }
+    if (activityListener != null) {
+        Toolkit.getDefaultToolkit().removeAWTEventListener(activityListener);
+        activityListener = null;
+    }
+}
+
    // Custom panel that supports alpha transparency for fade animations
 private class FadePanel extends JPanel {
     private float alpha = 1.0f;
@@ -1819,6 +1867,7 @@ public record WeeklyStats(
     }// </editor-fold>//GEN-END:initComponents
     
     private void jButton7ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton7ActionPerformed
+        stopSessionTimeoutMonitoring();
         Dashboard dashboard = new Dashboard(loggedInAccount);
         dashboard.setLocationRelativeTo(this);
         dashboard.setVisible(true);

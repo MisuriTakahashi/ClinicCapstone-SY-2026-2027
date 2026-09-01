@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package clinic;
 
 import java.io.File;
@@ -11,20 +7,31 @@ import java.io.IOException;
 import java.util.Properties;
 import java.sql.SQLException;
 
-/**
- *
- * @author PC
- */
 public class SessionManager {
-     private static final File SESSION_FILE = new File("./data/session.properties");
+    private static final File SESSION_FILE = new File("./data/session.properties");
 
-    /** Called when the window X is clicked - remembers who is currently logged in. */
-    public static void saveSession(AccountSystem account) {
+    // ==================================================
+    // SESSION TIMEOUT OPTIONS
+    // ONLY ONE OPTION SHOULD BE UNCOMMENTED
+    // ==================================================
+
+    // 5 MINUTES
+    // public static final long SESSION_TIMEOUT = 5L * 60L * 1000L;
+
+    // 30 MINUTES - CURRENT ACTIVE SETTING
+    public static final long SESSION_TIMEOUT = 30L * 60L * 1000L;
+
+    // 1 HOUR
+    // public static final long SESSION_TIMEOUT = 60L * 60L * 1000L;
+
+    /** Called on window X close - remembers who is logged in AND when they were last active. */
+    public static void saveSession(AccountSystem account, long lastActivityTime) {
         if (account == null) return;
 
         Properties props = new Properties();
         props.setProperty("username", account.GetName());
         props.setProperty("role", account.getRole());
+        props.setProperty("lastActivity", String.valueOf(lastActivityTime));
 
         try {
             File parent = SESSION_FILE.getParentFile();
@@ -34,14 +41,13 @@ public class SessionManager {
                 props.store(out, "Clinic app remembered session - no password is stored here");
             }
         } catch (IOException ex) {
-            // If this fails, the user will just be asked to log in again next launch.
             System.err.println("Could not save session: " + ex.getMessage());
         }
     }
 
     /**
-     * Called on app startup. Returns the previously logged-in account if a
-     * session was remembered AND that account still exists in the database,
+     * Called on app startup. Returns the previously logged-in account if the
+     * remembered session is still valid (account exists AND not timed out),
      * or null if there is nothing to restore.
      */
     public static AccountSystem loadSession() {
@@ -56,6 +62,26 @@ public class SessionManager {
 
         String username = props.getProperty("username");
         if (username == null || username.isEmpty()) return null;
+
+        String lastActivityRaw = props.getProperty("lastActivity");
+        if (lastActivityRaw == null || lastActivityRaw.isEmpty()) {
+            clearSession(); // old session file with no timestamp - can't trust it
+            return null;
+        }
+
+        long lastActivity;
+        try {
+            lastActivity = Long.parseLong(lastActivityRaw);
+        } catch (NumberFormatException ex) {
+            clearSession(); // corrupted timestamp
+            return null;
+        }
+
+        long elapsed = System.currentTimeMillis() - lastActivity;
+        if (elapsed >= SESSION_TIMEOUT) {
+            clearSession();
+            return null;
+        }
 
         try {
             AccountSystem account = new AccountData().findByName(username);
