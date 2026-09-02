@@ -189,12 +189,12 @@ public class Dashboard extends javax.swing.JFrame {
 
             VisitPanel.putClientProperty("JComponent.arc", 25);
             SentHomePanel.putClientProperty("JComponent.arc", 25);
-            CheckInPanel.putClientProperty("JComponent.arc", 25);
+            CheckInPopup.putClientProperty("JComponent.arc", 25);
             
             InventoryPanel.putClientProperty("JComponent.arc", 25);
 
             java.awt.Color softSlate = new java.awt.Color(245, 247, 250); 
-            CheckInPanel.setBackground(softSlate);
+            CheckInPopup.setBackground(softSlate);
             
             InventoryPanel.setBackground(softSlate);
             MainPanel.setBackground(java.awt.Color.WHITE); // Bright, clean backdrop
@@ -319,26 +319,26 @@ public class Dashboard extends javax.swing.JFrame {
         HeaderPanel.add(Logout, "gapleft 10");
 
     // ================= LEFT SIDEBAR (FORM) =================
-    CheckInPanel.removeAll();
-    CheckInPanel.setLayout(new MigLayout(
+    CheckInPopup.removeAll();
+    CheckInPopup.setLayout(new MigLayout(
         "wrap 1, fillx, insets 20", 
         "[fill, grow]", ""));
-    CheckInPanel.add(StudentCheckinLabel, "alignx center, gapbottom 15");
-    CheckInPanel.add(jLabel7);
-    CheckInPanel.add(NameCheckIn);
-    CheckInPanel.add(jLabel8, "gaptop 8");
-    CheckInPanel.add(GSCheckIn);
-    CheckInPanel.add(LRNLabel, "gaptop 8");
-    CheckInPanel.add(LRNField);
-    CheckInPanel.add(jLabel9, "gaptop 8");
-    CheckInPanel.add(jScrollPane1, "h 170!"); 
-    CheckInPanel.add(jLabel11, "split 2, gaptop 10");
-    CheckInPanel.add(jComboBox1, "w 140!");
+    CheckInPopup.add(StudentCheckinLabel, "alignx center, gapbottom 15");
+    CheckInPopup.add(jLabel7);
+    CheckInPopup.add(NameCheckIn);
+    CheckInPopup.add(jLabel8, "gaptop 8");
+    CheckInPopup.add(GSCheckIn);
+    CheckInPopup.add(LRNLabel, "gaptop 8");
+    CheckInPopup.add(LRNField);
+    CheckInPopup.add(jLabel9, "gaptop 8");
+    CheckInPopup.add(jScrollPane1, "h 170!"); 
+    CheckInPopup.add(jLabel11, "split 2, gaptop 10");
+    CheckInPopup.add(jComboBox1, "w 140!");
     // Push buttons to the bottom
-    CheckInPanel.add(CheckInBTN,  "growx, pushy, aligny bottom, gaptop 20 ");
-    CheckInPanel.add(SentHomeBTN, "growx, gaptop 8 ");
-    CheckInPanel.add(EditBTN,     "split 2, growx, gaptop 8 ");  // Edit + Clear share this row
-    CheckInPanel.add(ClearBTN,    "growx ");                     // sits inline with Edit
+    CheckInPopup.add(CheckInBTN,  "growx, pushy, aligny bottom, gaptop 20 ");
+    CheckInPopup.add(SentHomeBTN, "growx, gaptop 8 ");
+    CheckInPopup.add(EditBTN,     "split 2, growx, gaptop 8 ");  // Edit + Clear share this row
+    CheckInPopup.add(ClearBTN,    "growx ");                     // sits inline with Edit
     
 
     // ================= STAT CARDS (VISITS & SENT HOME) =================
@@ -380,7 +380,7 @@ public class Dashboard extends javax.swing.JFrame {
     MainPanel.add(HeaderPanel, "spanx 3, growx, wrap");
 
     // Row 2-5: Left Sidebar (Spans all rows below header)
-    MainPanel.add(CheckInPanel, "spany 4, grow");
+    MainPanel.add(CheckInPopup, "spany 4, grow");
 
     // Row 2: Section Labels
     MainPanel.add(OverviewLabel, "alignx center");          
@@ -513,7 +513,7 @@ private void applyTheme() {
         
         HeaderPanel.setBackground(headerColor);
         MainPanel.setBackground(pageBackground);
-        CheckInPanel.setBackground(panelBackground);
+        CheckInPopup.setBackground(panelBackground);
         CheckInPanel1.setBackground(panelBackground);
         InventoryPanel.setBackground(panelBackground);
         VisitPanel.setBackground(cardBackground);
@@ -525,7 +525,7 @@ private void applyTheme() {
         javax.swing.border.Border paddedBorder = javax.swing.BorderFactory.createCompoundBorder(
             softBorder, javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        CheckInPanel.setBorder(paddedBorder);
+        CheckInPopup.setBorder(paddedBorder);
         InventoryPanel.setBorder(paddedBorder);
         CheckInPanel1.setBorder(javax.swing.BorderFactory.createCompoundBorder(softBorder, javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10)));
         VisitPanel.setBorder(softBorder);
@@ -899,143 +899,75 @@ NOT modify this code. The content of this method is always
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        SentHomeInformationPanel = new javax.swing.JPanel();
-        ParentGurdianName = new javax.swing.JTextField();
-        PGNameLabel = new javax.swing.JLabel();
-        PNField = new javax.swing.JLabel();
-        PhoneField = new javax.swing.JTextField();
-        FinishBTN = new javax.swing.JButton();
-        InformationBackBTN = new javax.swing.JButton();
-        MainPanel = new javax.swing.JPanel();
         HeaderPanel = new javax.swing.JPanel();
         jLabel3 = new javax.swing.JLabel();
-        jButton1 = new javax.swing.JButton();
         DateTimeLabel = new javax.swing.JLabel();
         Logout = new javax.swing.JButton();
         ThemeToggle = new javax.swing.JToggleButton();
-        CheckInPanel = new javax.swing.JPanel();
-        NameCheckIn = new javax.swing.JTextField();
-        GSCheckIn = new javax.swing.JTextField();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        ReasonArea = new javax.swing.JTextArea();
+        SidePanel = new javax.swing.JPanel();
+        HomeBTN = new javax.swing.JButton();
+        CheckinBTN = new javax.swing.JButton();
+        StatisticBTN = new javax.swing.JButton();
+        InventoryBTN = new javax.swing.JButton();
+        InventoryBTN1 = new javax.swing.JButton();
+        MainPanel = new javax.swing.JPanel();
+        jPanel2 = new javax.swing.JPanel();
+        jScrollPane3 = new javax.swing.JScrollPane();
+        jTable1 = new javax.swing.JTable();
+        jPanel3 = new javax.swing.JPanel();
+        jLabel13 = new javax.swing.JLabel();
+        jPanel8 = new javax.swing.JPanel();
+        jTextField2 = new javax.swing.JTextField();
+        jButton2 = new javax.swing.JButton();
+        jLabel14 = new javax.swing.JLabel();
+        jLabel15 = new javax.swing.JLabel();
+        jLabel16 = new javax.swing.JLabel();
+        jTextField3 = new javax.swing.JTextField();
+        ECheckin = new javax.swing.JButton();
+        jLabel17 = new javax.swing.JLabel();
+        jTextField4 = new javax.swing.JTextField();
+        jLabel18 = new javax.swing.JLabel();
+        jTextField5 = new javax.swing.JTextField();
+        jLabel19 = new javax.swing.JLabel();
+        jLabel20 = new javax.swing.JLabel();
+        jPanel9 = new javax.swing.JPanel();
+        jLabel2 = new javax.swing.JLabel();
+        jPanel11 = new javax.swing.JPanel();
+        jLabel5 = new javax.swing.JLabel();
+        jPanel10 = new javax.swing.JPanel();
+        jLabel1 = new javax.swing.JLabel();
+        jPanel12 = new javax.swing.JPanel();
+        jLabel4 = new javax.swing.JLabel();
+        CheckInPopup = new javax.swing.JPanel();
+        StudentCheckinLabel = new javax.swing.JLabel();
         jLabel7 = new javax.swing.JLabel();
         jLabel8 = new javax.swing.JLabel();
-        jLabel9 = new javax.swing.JLabel();
-        CheckInBTN = new javax.swing.JButton();
-        EditBTN = new javax.swing.JButton();
-        jLabel11 = new javax.swing.JLabel();
-        jComboBox1 = new javax.swing.JComboBox<>();
-        SentHomeBTN = new javax.swing.JButton();
         LRNLabel = new javax.swing.JLabel();
-        LRNField = new javax.swing.JTextField();
-        StudentCheckinLabel = new javax.swing.JLabel();
-        ClearBTN = new javax.swing.JButton();
-        InventoryPanel = new javax.swing.JPanel();
-        jScrollPane3 = new javax.swing.JScrollPane();
-        InventoryStatusArea = new javax.swing.JTextArea();
-        InventoryLabel = new javax.swing.JLabel();
+        jLabel9 = new javax.swing.JLabel();
+        jLabel10 = new javax.swing.JLabel();
+        jLabel12 = new javax.swing.JLabel();
+        jComboBox1 = new javax.swing.JComboBox<>();
+        jButton1 = new javax.swing.JButton();
+        jLabel11 = new javax.swing.JLabel();
+        jTextField1 = new javax.swing.JTextField();
         CheckInPanel1 = new javax.swing.JPanel();
-        jScrollPane2 = new javax.swing.JScrollPane();
-        ReasonTable = new javax.swing.JTable();
-        OverviewLabel = new javax.swing.JLabel();
-        LogsLabel = new javax.swing.JLabel();
-        SentHomePanel = new javax.swing.JPanel();
-        SentHomeFooterLabel = new javax.swing.JLabel();
-        SentHomeCount = new javax.swing.JLabel();
-        VisitPanel = new javax.swing.JPanel();
-        jLabel1 = new javax.swing.JLabel();
-        VisitCounter = new javax.swing.JLabel();
+        CheckInBTN = new javax.swing.JButton();
+        SentHomeBTN = new javax.swing.JButton();
         SearchField = new javax.swing.JTextField();
         SearchLabel = new javax.swing.JLabel();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        ReasonTable = new javax.swing.JTable();
+        jPanel1 = new javax.swing.JPanel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setFocusable(false);
-
-        SentHomeInformationPanel.setBackground(new java.awt.Color(255, 255, 255));
-        SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED), javax.swing.BorderFactory.createTitledBorder(null, "Parent/Guardian Information", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Yu Gothic UI", 1, 18), new java.awt.Color(0, 0, 0)))); // NOI18N
-        SentHomeInformationPanel.setForeground(new java.awt.Color(0, 0, 0));
-
-        ParentGurdianName.setBackground(new java.awt.Color(227, 226, 226));
-        ParentGurdianName.setForeground(new java.awt.Color(0, 0, 0));
-
-        PGNameLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
-        PGNameLabel.setForeground(new java.awt.Color(0, 0, 0));
-        PGNameLabel.setText("Name :");
-
-        PNField.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
-        PNField.setForeground(new java.awt.Color(0, 0, 0));
-        PNField.setText("Phone Number :");
-
-        PhoneField.setBackground(new java.awt.Color(227, 226, 226));
-        PhoneField.setForeground(new java.awt.Color(0, 0, 0));
-
-        FinishBTN.setBackground(new java.awt.Color(0, 102, 204));
-        FinishBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
-        FinishBTN.setForeground(new java.awt.Color(255, 255, 255));
-        FinishBTN.setText("Finish");
-        FinishBTN.addActionListener(this::FinishBTNActionPerformed);
-
-        InformationBackBTN.setBackground(new java.awt.Color(153, 0, 0));
-        InformationBackBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
-        InformationBackBTN.setForeground(new java.awt.Color(255, 255, 255));
-        InformationBackBTN.setText("Back");
-        InformationBackBTN.addActionListener(this::InformationBackBTNActionPerformed);
-
-        javax.swing.GroupLayout SentHomeInformationPanelLayout = new javax.swing.GroupLayout(SentHomeInformationPanel);
-        SentHomeInformationPanel.setLayout(SentHomeInformationPanelLayout);
-        SentHomeInformationPanelLayout.setHorizontalGroup(
-            SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
-                .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
-                        .addGap(99, 99, 99)
-                        .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
-                                .addComponent(PNField)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(PhoneField, javax.swing.GroupLayout.PREFERRED_SIZE, 323, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
-                                .addComponent(PGNameLabel)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(ParentGurdianName, javax.swing.GroupLayout.PREFERRED_SIZE, 323, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                    .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
-                        .addGap(266, 266, 266)
-                        .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addComponent(InformationBackBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 124, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(FinishBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 124, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                .addContainerGap(112, Short.MAX_VALUE))
-        );
-        SentHomeInformationPanelLayout.setVerticalGroup(
-            SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(SentHomeInformationPanelLayout.createSequentialGroup()
-                .addGap(67, 67, 67)
-                .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(ParentGurdianName, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(PGNameLabel))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(SentHomeInformationPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(PhoneField, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(PNField))
-                .addGap(18, 18, 18)
-                .addComponent(FinishBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 43, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(InformationBackBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 43, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(54, Short.MAX_VALUE))
-        );
-
-        MainPanel.setBackground(new java.awt.Color(255, 255, 255));
+        getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         HeaderPanel.setBackground(new java.awt.Color(51, 153, 255));
 
         jLabel3.setFont(new java.awt.Font("Yu Gothic UI", 1, 24)); // NOI18N
         jLabel3.setForeground(new java.awt.Color(255, 255, 255));
         jLabel3.setText("Clinic Dashboard");
-
-        jButton1.setBackground(new java.awt.Color(255, 255, 255));
-        jButton1.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
-        jButton1.setForeground(new java.awt.Color(0, 0, 0));
-        jButton1.setText("Admin Panel");
-        jButton1.addActionListener(this::jButton1ActionPerformed);
 
         DateTimeLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 24)); // NOI18N
 
@@ -1056,63 +988,452 @@ NOT modify this code. The content of this method is always
         HeaderPanelLayout.setHorizontalGroup(
             HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(HeaderPanelLayout.createSequentialGroup()
-                .addContainerGap()
                 .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 564, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGap(162, 162, 162)
                 .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 405, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(155, 155, 155)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 404, Short.MAX_VALUE)
                 .addComponent(ThemeToggle, javax.swing.GroupLayout.PREFERRED_SIZE, 131, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
-                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 141, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(Logout)
-                .addGap(30, 30, 30))
+                .addContainerGap())
         );
         HeaderPanelLayout.setVerticalGroup(
             HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(HeaderPanelLayout.createSequentialGroup()
-                .addGap(23, 23, 23)
+                .addGap(21, 21, 21)
                 .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(HeaderPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                        .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addComponent(Logout, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addComponent(ThemeToggle, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addComponent(jLabel3)))
-                .addGap(0, 23, Short.MAX_VALUE))
+                        .addComponent(jLabel3))
+                    .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(0, 25, Short.MAX_VALUE))
         );
 
-        CheckInPanel.setBackground(new java.awt.Color(226, 226, 226));
-        CheckInPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
+        getContentPane().add(HeaderPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1760, -1));
 
-        NameCheckIn.setBackground(new java.awt.Color(255, 255, 255));
-        NameCheckIn.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        NameCheckIn.setForeground(new java.awt.Color(0, 0, 0));
-        NameCheckIn.setText("Name");
+        SidePanel.setBackground(new java.awt.Color(51, 153, 255));
 
-        GSCheckIn.setBackground(new java.awt.Color(255, 255, 255));
-        GSCheckIn.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        GSCheckIn.setForeground(new java.awt.Color(0, 0, 0));
-        GSCheckIn.setText("Grade/Section");
+        HomeBTN.setText("Home");
 
-        ReasonArea.setBackground(new java.awt.Color(255, 255, 255));
-        ReasonArea.setColumns(20);
-        ReasonArea.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        ReasonArea.setForeground(new java.awt.Color(0, 0, 0));
-        ReasonArea.setRows(5);
-        jScrollPane1.setViewportView(ReasonArea);
+        CheckinBTN.setText("Check in");
+
+        StatisticBTN.setText("Statistic");
+        StatisticBTN.addActionListener(this::StatisticBTNActionPerformed);
+
+        InventoryBTN.setText("Inventory");
+
+        InventoryBTN1.setText("Management");
+
+        javax.swing.GroupLayout SidePanelLayout = new javax.swing.GroupLayout(SidePanel);
+        SidePanel.setLayout(SidePanelLayout);
+        SidePanelLayout.setHorizontalGroup(
+            SidePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(SidePanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(SidePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(HomeBTN, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(CheckinBTN, javax.swing.GroupLayout.DEFAULT_SIZE, 247, Short.MAX_VALUE)
+                    .addComponent(StatisticBTN, javax.swing.GroupLayout.DEFAULT_SIZE, 247, Short.MAX_VALUE)
+                    .addComponent(InventoryBTN, javax.swing.GroupLayout.DEFAULT_SIZE, 247, Short.MAX_VALUE)
+                    .addComponent(InventoryBTN1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 247, Short.MAX_VALUE))
+                .addContainerGap())
+        );
+        SidePanelLayout.setVerticalGroup(
+            SidePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(SidePanelLayout.createSequentialGroup()
+                .addGap(233, 233, 233)
+                .addComponent(HomeBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 63, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(13, 13, 13)
+                .addComponent(CheckinBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 63, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(StatisticBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 63, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(InventoryBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 63, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(InventoryBTN1, javax.swing.GroupLayout.PREFERRED_SIZE, 63, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(166, Short.MAX_VALUE))
+        );
+
+        getContentPane().add(SidePanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 77, 270, 760));
+
+        MainPanel.setBackground(new java.awt.Color(255, 255, 255));
+
+        jTable1.setBackground(new java.awt.Color(255, 255, 255));
+        jTable1.setForeground(new java.awt.Color(0, 0, 0));
+        jTable1.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null}
+            },
+            new String [] {
+                "Time", "Name", "Section", "Temp", "Symptoms", "Medicine", "Status"
+            }
+        ));
+        jScrollPane3.setViewportView(jTable1);
+
+        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
+        jPanel2.setLayout(jPanel2Layout);
+        jPanel2Layout.setHorizontalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jScrollPane3)
+        );
+        jPanel2Layout.setVerticalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 323, Short.MAX_VALUE)
+        );
+
+        jLabel13.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel13.setText("SYMPTOM DISTRIBUTION (THIS WEEK)");
+
+        javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
+        jPanel3.setLayout(jPanel3Layout);
+        jPanel3Layout.setHorizontalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addGap(111, 111, 111)
+                .addComponent(jLabel13)
+                .addContainerGap(104, Short.MAX_VALUE))
+        );
+        jPanel3Layout.setVerticalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jLabel13)
+                .addGap(151, 151, 151))
+        );
+
+        jPanel8.setBackground(new java.awt.Color(248, 247, 247));
+
+        jButton2.setText("Search");
+
+        jLabel14.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
+        jLabel14.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel14.setText("Student LRN:");
+
+        jLabel15.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
+        jLabel15.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel15.setText("Name:");
+
+        jLabel16.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
+        jLabel16.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel16.setText("Reason:");
+
+        ECheckin.setText("Check in");
+
+        jLabel17.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
+        jLabel17.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel17.setText("Medicine:");
+
+        jLabel18.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
+        jLabel18.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel18.setText("Temperature:");
+
+        javax.swing.GroupLayout jPanel8Layout = new javax.swing.GroupLayout(jPanel8);
+        jPanel8.setLayout(jPanel8Layout);
+        jPanel8Layout.setHorizontalGroup(
+            jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel8Layout.createSequentialGroup()
+                .addGap(30, 30, 30)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel18)
+                    .addComponent(jLabel15)
+                    .addGroup(jPanel8Layout.createSequentialGroup()
+                        .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel14)
+                            .addComponent(jLabel16)
+                            .addComponent(jLabel17))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel8Layout.createSequentialGroup()
+                                .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, 148, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jButton2))
+                            .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                .addComponent(ECheckin, javax.swing.GroupLayout.PREFERRED_SIZE, 133, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                    .addComponent(jTextField2, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 151, Short.MAX_VALUE)
+                                    .addComponent(jTextField4, javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(jTextField5, javax.swing.GroupLayout.Alignment.LEADING))))))
+                .addContainerGap(116, Short.MAX_VALUE))
+        );
+        jPanel8Layout.setVerticalGroup(
+            jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel8Layout.createSequentialGroup()
+                .addGap(50, 50, 50)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel14)
+                    .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jButton2))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jLabel15)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel16)
+                    .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(7, 7, 7)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel18)
+                    .addComponent(jTextField5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel17)
+                    .addComponent(jTextField4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 56, Short.MAX_VALUE)
+                .addComponent(ECheckin)
+                .addContainerGap())
+        );
+
+        jLabel19.setFont(new java.awt.Font("Dialog", 1, 12)); // NOI18N
+        jLabel19.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel19.setText("Express Check in");
+
+        jLabel20.setFont(new java.awt.Font("Dialog", 1, 12)); // NOI18N
+        jLabel20.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel20.setText("Recent Clinic Visit and Action");
+
+        jLabel2.setText("High Temps");
+
+        javax.swing.GroupLayout jPanel9Layout = new javax.swing.GroupLayout(jPanel9);
+        jPanel9.setLayout(jPanel9Layout);
+        jPanel9Layout.setHorizontalGroup(
+            jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel9Layout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jLabel2)
+                .addGap(74, 74, 74))
+        );
+        jPanel9Layout.setVerticalGroup(
+            jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel9Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel2)
+                .addContainerGap(152, Short.MAX_VALUE))
+        );
+
+        jLabel5.setText("Low Stock");
+
+        javax.swing.GroupLayout jPanel11Layout = new javax.swing.GroupLayout(jPanel11);
+        jPanel11.setLayout(jPanel11Layout);
+        jPanel11Layout.setHorizontalGroup(
+            jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel11Layout.createSequentialGroup()
+                .addGap(71, 71, 71)
+                .addComponent(jLabel5)
+                .addContainerGap(84, Short.MAX_VALUE))
+        );
+        jPanel11Layout.setVerticalGroup(
+            jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel11Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel5)
+                .addContainerGap(145, Short.MAX_VALUE))
+        );
+
+        jLabel1.setText("Active Visits");
+
+        javax.swing.GroupLayout jPanel10Layout = new javax.swing.GroupLayout(jPanel10);
+        jPanel10.setLayout(jPanel10Layout);
+        jPanel10Layout.setHorizontalGroup(
+            jPanel10Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel10Layout.createSequentialGroup()
+                .addGap(62, 62, 62)
+                .addComponent(jLabel1)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+        jPanel10Layout.setVerticalGroup(
+            jPanel10Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel10Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel1)
+                .addContainerGap(152, Short.MAX_VALUE))
+        );
+
+        jLabel4.setText("Total Today");
+
+        javax.swing.GroupLayout jPanel12Layout = new javax.swing.GroupLayout(jPanel12);
+        jPanel12.setLayout(jPanel12Layout);
+        jPanel12Layout.setHorizontalGroup(
+            jPanel12Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel12Layout.createSequentialGroup()
+                .addGap(65, 65, 65)
+                .addComponent(jLabel4)
+                .addContainerGap(65, Short.MAX_VALUE))
+        );
+        jPanel12Layout.setVerticalGroup(
+            jPanel12Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel12Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel4)
+                .addContainerGap(145, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout MainPanelLayout = new javax.swing.GroupLayout(MainPanel);
+        MainPanel.setLayout(MainPanelLayout);
+        MainPanelLayout.setHorizontalGroup(
+            MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(MainPanelLayout.createSequentialGroup()
+                .addGap(25, 25, 25)
+                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(MainPanelLayout.createSequentialGroup()
+                        .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addContainerGap())
+                    .addGroup(MainPanelLayout.createSequentialGroup()
+                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(MainPanelLayout.createSequentialGroup()
+                                .addGap(9, 9, 9)
+                                .addComponent(jLabel20))
+                            .addComponent(jLabel19)
+                            .addGroup(MainPanelLayout.createSequentialGroup()
+                                .addComponent(jPanel8, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(18, 18, 18)
+                                .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 97, Short.MAX_VALUE)
+                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(jPanel10, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jPanel12, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(jPanel9, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jPanel11, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(53, 53, 53))))
+        );
+        MainPanelLayout.setVerticalGroup(
+            MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MainPanelLayout.createSequentialGroup()
+                .addContainerGap(25, Short.MAX_VALUE)
+                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MainPanelLayout.createSequentialGroup()
+                        .addComponent(jLabel19)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jPanel8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addGap(22, 22, 22)
+                        .addComponent(jLabel20))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                        .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainPanelLayout.createSequentialGroup()
+                            .addComponent(jPanel9, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(jPanel11, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainPanelLayout.createSequentialGroup()
+                            .addComponent(jPanel10, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(jPanel12, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                .addGap(18, 18, 18)
+                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(25, 25, 25))
+        );
+
+        getContentPane().add(MainPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(269, 86, 1490, 750));
+
+        CheckInPopup.setBackground(new java.awt.Color(226, 226, 226));
+        CheckInPopup.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
+
+        StudentCheckinLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
+        StudentCheckinLabel.setForeground(new java.awt.Color(0, 0, 0));
+        StudentCheckinLabel.setText("Student Check-in");
 
         jLabel7.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
         jLabel7.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel7.setText("Name");
+        jLabel7.setText("Name:");
 
         jLabel8.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
         jLabel8.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel8.setText("Grade/Section");
+        jLabel8.setText("Grade/Section:");
+
+        LRNLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
+        LRNLabel.setForeground(new java.awt.Color(0, 0, 0));
+        LRNLabel.setText("LRN:");
 
         jLabel9.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
         jLabel9.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel9.setText("Reason for Visit");
+        jLabel9.setText("Allergy:");
+
+        jLabel10.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
+        jLabel10.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel10.setText("Reason");
+
+        jLabel12.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
+        jLabel12.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel12.setText("Medicine");
+
+        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+
+        jButton1.setBackground(new java.awt.Color(0, 153, 204));
+        jButton1.setForeground(new java.awt.Color(255, 255, 255));
+        jButton1.setText("Proceed");
+
+        jLabel11.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
+        jLabel11.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel11.setText("Status:");
+
+        jTextField1.setText("jTextField1");
+
+        javax.swing.GroupLayout CheckInPopupLayout = new javax.swing.GroupLayout(CheckInPopup);
+        CheckInPopup.setLayout(CheckInPopupLayout);
+        CheckInPopupLayout.setHorizontalGroup(
+            CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(CheckInPopupLayout.createSequentialGroup()
+                .addGroup(CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(CheckInPopupLayout.createSequentialGroup()
+                        .addGap(142, 142, 142)
+                        .addComponent(StudentCheckinLabel))
+                    .addGroup(CheckInPopupLayout.createSequentialGroup()
+                        .addGap(35, 35, 35)
+                        .addGroup(CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(CheckInPopupLayout.createSequentialGroup()
+                                .addGap(127, 127, 127)
+                                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 117, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(jLabel7)
+                            .addGroup(CheckInPopupLayout.createSequentialGroup()
+                                .addGroup(CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(jLabel12)
+                                    .addComponent(jLabel10)
+                                    .addComponent(jLabel11)
+                                    .addComponent(jLabel9)
+                                    .addComponent(LRNLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                    .addComponent(jComboBox1, 0, 274, Short.MAX_VALUE)
+                                    .addComponent(jTextField1)))
+                            .addComponent(jLabel8))))
+                .addContainerGap(38, Short.MAX_VALUE))
+        );
+        CheckInPopupLayout.setVerticalGroup(
+            CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(CheckInPopupLayout.createSequentialGroup()
+                .addGap(17, 17, 17)
+                .addComponent(StudentCheckinLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(12, 12, 12)
+                .addComponent(jLabel7)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jLabel8)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
+                .addComponent(LRNLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jLabel9)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jLabel11)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel10)
+                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel12))
+                .addGap(27, 27, 27)
+                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 38, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(28, 28, 28))
+        );
+
+        getContentPane().add(CheckInPopup, new org.netbeans.lib.awtextra.AbsoluteConstraints(520, 290, 420, 360));
+
+        CheckInPanel1.setBackground(new java.awt.Color(226, 226, 226));
+        CheckInPanel1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
 
         CheckInBTN.setBackground(new java.awt.Color(0, 102, 204));
         CheckInBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
@@ -1120,174 +1441,32 @@ NOT modify this code. The content of this method is always
         CheckInBTN.setText("Check In");
         CheckInBTN.addActionListener(this::CheckInBTNActionPerformed);
 
-        EditBTN.setBackground(new java.awt.Color(0, 102, 204));
-        EditBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
-        EditBTN.setForeground(new java.awt.Color(255, 255, 255));
-        EditBTN.setText("Edit");
-        EditBTN.addActionListener(this::EditBTNActionPerformed);
-
-        jLabel11.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        jLabel11.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel11.setText("Medicine used");
-
-        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
-
         SentHomeBTN.setBackground(new java.awt.Color(0, 102, 204));
         SentHomeBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
         SentHomeBTN.setForeground(new java.awt.Color(255, 255, 255));
         SentHomeBTN.setText("Sent Home/Back");
         SentHomeBTN.addActionListener(this::SentHomeBTNActionPerformed);
 
-        LRNLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        LRNLabel.setForeground(new java.awt.Color(0, 0, 0));
-        LRNLabel.setText("LRN");
-
-        LRNField.setBackground(new java.awt.Color(255, 255, 255));
-        LRNField.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        LRNField.setForeground(new java.awt.Color(0, 0, 0));
-        LRNField.setText("LRN");
-        LRNField.addActionListener(this::LRNFieldActionPerformed);
-        LRNField.addKeyListener(new java.awt.event.KeyAdapter() {
-            public void keyTyped(java.awt.event.KeyEvent evt) {
-                LRNFieldKeyTyped(evt);
-            }
-        });
-
-        StudentCheckinLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
-        StudentCheckinLabel.setForeground(new java.awt.Color(0, 0, 0));
-        StudentCheckinLabel.setText("Student Check-in");
-
-        ClearBTN.setBackground(new java.awt.Color(0, 102, 204));
-        ClearBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
-        ClearBTN.setForeground(new java.awt.Color(255, 255, 255));
-        ClearBTN.setText("Clear");
-        ClearBTN.addActionListener(this::ClearBTNActionPerformed);
-
-        javax.swing.GroupLayout CheckInPanelLayout = new javax.swing.GroupLayout(CheckInPanel);
-        CheckInPanel.setLayout(CheckInPanelLayout);
-        CheckInPanelLayout.setHorizontalGroup(
-            CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(CheckInPanelLayout.createSequentialGroup()
-                .addGap(142, 142, 142)
-                .addComponent(StudentCheckinLabel)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .addGroup(CheckInPanelLayout.createSequentialGroup()
-                .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(CheckInPanelLayout.createSequentialGroup()
-                        .addGap(6, 6, 6)
-                        .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(CheckInBTN, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(EditBTN, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(SentHomeBTN, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                    .addGroup(CheckInPanelLayout.createSequentialGroup()
-                        .addGap(35, 35, 35)
-                        .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel9)
-                            .addComponent(LRNLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jLabel8)
-                            .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                .addComponent(NameCheckIn)
-                                .addGroup(CheckInPanelLayout.createSequentialGroup()
-                                    .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                        .addComponent(jLabel11)
-                                        .addComponent(jLabel7))
-                                    .addGap(288, 288, 288)))
-                            .addComponent(GSCheckIn, javax.swing.GroupLayout.PREFERRED_SIZE, 367, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(LRNField, javax.swing.GroupLayout.PREFERRED_SIZE, 367, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 274, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 367, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                        .addGap(0, 37, Short.MAX_VALUE))
-                    .addGroup(CheckInPanelLayout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(ClearBTN, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                .addContainerGap())
-        );
-        CheckInPanelLayout.setVerticalGroup(
-            CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(CheckInPanelLayout.createSequentialGroup()
-                .addGap(17, 17, 17)
-                .addComponent(StudentCheckinLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(26, 26, 26)
-                .addComponent(jLabel7)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(NameCheckIn, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jLabel8)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(GSCheckIn, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(LRNLabel)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(LRNField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jLabel9)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 161, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(CheckInPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jComboBox1)
-                    .addComponent(jLabel11, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(32, 32, 32)
-                .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(EditBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(SentHomeBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(ClearBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap())
-        );
-
-        InventoryPanel.setBackground(new java.awt.Color(226, 226, 226));
-        InventoryPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
-        InventoryPanel.setForeground(new java.awt.Color(0, 0, 0));
-
-        InventoryStatusArea.setBackground(new java.awt.Color(255, 255, 255));
-        InventoryStatusArea.setColumns(20);
-        InventoryStatusArea.setForeground(new java.awt.Color(0, 0, 0));
-        InventoryStatusArea.setRows(5);
-        jScrollPane3.setViewportView(InventoryStatusArea);
-
-        javax.swing.GroupLayout InventoryPanelLayout = new javax.swing.GroupLayout(InventoryPanel);
-        InventoryPanel.setLayout(InventoryPanelLayout);
-        InventoryPanelLayout.setHorizontalGroup(
-            InventoryPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, InventoryPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 493, Short.MAX_VALUE)
-                .addContainerGap())
-        );
-        InventoryPanelLayout.setVerticalGroup(
-            InventoryPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, InventoryPanelLayout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 190, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap())
-        );
-
-        InventoryLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
-        InventoryLabel.setForeground(new java.awt.Color(0, 0, 0));
-        InventoryLabel.setText("Inventory Status");
-
-        CheckInPanel1.setBackground(new java.awt.Color(226, 226, 226));
-        CheckInPanel1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
+        SearchLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
+        SearchLabel.setForeground(new java.awt.Color(0, 0, 0));
+        SearchLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        SearchLabel.setText("Search:");
 
         ReasonTable.setBackground(new java.awt.Color(255, 255, 255));
         ReasonTable.setForeground(new java.awt.Color(0, 0, 0));
         ReasonTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null}
+                {null, null, null, null, null},
+                {null, null, null, null, null},
+                {null, null, null, null, null},
+                {null, null, null, null, null}
             },
             new String [] {
-                "Status", "Name", "Grade/Section", "LRN", "Medecine/Pills Used", "Reason", "Parent/Guardian Name", "Phone number"
+                "Name", "Grade & Section", "LRN", "Parent/Guardian Name", "Phone number"
             }
         ) {
             boolean[] canEdit = new boolean [] {
-                false, false, false, false, false, false, false, false
+                false, false, false, false, false
             };
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
@@ -1306,9 +1485,6 @@ NOT modify this code. The content of this method is always
             ReasonTable.getColumnModel().getColumn(2).setResizable(false);
             ReasonTable.getColumnModel().getColumn(3).setResizable(false);
             ReasonTable.getColumnModel().getColumn(4).setResizable(false);
-            ReasonTable.getColumnModel().getColumn(5).setResizable(false);
-            ReasonTable.getColumnModel().getColumn(6).setResizable(false);
-            ReasonTable.getColumnModel().getColumn(7).setResizable(false);
         }
 
         javax.swing.GroupLayout CheckInPanel1Layout = new javax.swing.GroupLayout(CheckInPanel1);
@@ -1317,716 +1493,56 @@ NOT modify this code. The content of this method is always
             CheckInPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(CheckInPanel1Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 1216, Short.MAX_VALUE)
+                .addGroup(CheckInPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CheckInPanel1Layout.createSequentialGroup()
+                        .addGap(0, 0, Short.MAX_VALUE)
+                        .addComponent(SearchLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(SearchField, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jScrollPane2))
                 .addContainerGap())
+            .addGroup(CheckInPanel1Layout.createSequentialGroup()
+                .addGap(456, 456, 456)
+                .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 194, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(SentHomeBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 174, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(653, Short.MAX_VALUE))
         );
         CheckInPanel1Layout.setVerticalGroup(
             CheckInPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, CheckInPanel1Layout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 368, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap())
-        );
-
-        OverviewLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
-        OverviewLabel.setForeground(new java.awt.Color(0, 0, 0));
-        OverviewLabel.setText("Overview");
-
-        LogsLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
-        LogsLabel.setForeground(new java.awt.Color(0, 0, 0));
-        LogsLabel.setText("Check-in Logs");
-
-        SentHomePanel.setBackground(new java.awt.Color(255, 255, 255));
-
-        SentHomeFooterLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        SentHomeFooterLabel.setForeground(new java.awt.Color(0, 0, 0));
-        SentHomeFooterLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        SentHomeFooterLabel.setText("Sent Home");
-
-        SentHomeCount.setFont(new java.awt.Font("Yu Gothic UI", 1, 36)); // NOI18N
-        SentHomeCount.setForeground(new java.awt.Color(0, 0, 0));
-        SentHomeCount.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        SentHomeCount.setText("0");
-
-        javax.swing.GroupLayout SentHomePanelLayout = new javax.swing.GroupLayout(SentHomePanel);
-        SentHomePanel.setLayout(SentHomePanelLayout);
-        SentHomePanelLayout.setHorizontalGroup(
-            SentHomePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, SentHomePanelLayout.createSequentialGroup()
-                .addContainerGap(24, Short.MAX_VALUE)
-                .addGroup(SentHomePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(SentHomeFooterLabel, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 113, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, SentHomePanelLayout.createSequentialGroup()
-                        .addComponent(SentHomeCount, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(18, 18, 18)))
-                .addGap(44, 44, 44))
-        );
-        SentHomePanelLayout.setVerticalGroup(
-            SentHomePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(SentHomePanelLayout.createSequentialGroup()
-                .addGap(21, 21, 21)
-                .addComponent(SentHomeFooterLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addGroup(CheckInPanel1Layout.createSequentialGroup()
+                .addGap(8, 8, 8)
+                .addGroup(CheckInPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(SearchField, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(SearchLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(SentHomeCount, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 615, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
+                .addGroup(CheckInPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(CheckInBTN, javax.swing.GroupLayout.DEFAULT_SIZE, 42, Short.MAX_VALUE)
+                    .addComponent(SentHomeBTN, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
-        VisitPanel.setBackground(new java.awt.Color(255, 255, 255));
+        getContentPane().add(CheckInPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(270, 80, 1490, 730));
 
-        jLabel1.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        jLabel1.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel1.setText("Today's Visits");
-
-        VisitCounter.setFont(new java.awt.Font("Yu Gothic UI", 1, 36)); // NOI18N
-        VisitCounter.setForeground(new java.awt.Color(0, 0, 0));
-        VisitCounter.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        VisitCounter.setText("0");
-
-        javax.swing.GroupLayout VisitPanelLayout = new javax.swing.GroupLayout(VisitPanel);
-        VisitPanel.setLayout(VisitPanelLayout);
-        VisitPanelLayout.setHorizontalGroup(
-            VisitPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(VisitPanelLayout.createSequentialGroup()
-                .addGap(49, 49, 49)
-                .addGroup(VisitPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 113, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGroup(VisitPanelLayout.createSequentialGroup()
-                        .addGap(14, 14, 14)
-                        .addComponent(VisitCounter, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(29, Short.MAX_VALUE))
+        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
+        jPanel1.setLayout(jPanel1Layout);
+        jPanel1Layout.setHorizontalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 1490, Short.MAX_VALUE)
         );
-        VisitPanelLayout.setVerticalGroup(
-            VisitPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(VisitPanelLayout.createSequentialGroup()
-                .addGap(31, 31, 31)
-                .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(VisitCounter, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(36, Short.MAX_VALUE))
+        jPanel1Layout.setVerticalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 750, Short.MAX_VALUE)
         );
 
-        SearchLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        SearchLabel.setForeground(new java.awt.Color(0, 0, 0));
-        SearchLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        SearchLabel.setText("Search:");
-
-        javax.swing.GroupLayout MainPanelLayout = new javax.swing.GroupLayout(MainPanel);
-        MainPanel.setLayout(MainPanelLayout);
-        MainPanelLayout.setHorizontalGroup(
-            MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(HeaderPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addGroup(MainPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(CheckInPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(MainPanelLayout.createSequentialGroup()
-                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(MainPanelLayout.createSequentialGroup()
-                                .addGap(285, 285, 285)
-                                .addComponent(OverviewLabel))
-                            .addGroup(MainPanelLayout.createSequentialGroup()
-                                .addGap(125, 125, 125)
-                                .addComponent(VisitPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(18, 18, 18)
-                                .addComponent(SentHomePanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MainPanelLayout.createSequentialGroup()
-                                .addComponent(InventoryPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(28, 28, 28))
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MainPanelLayout.createSequentialGroup()
-                                .addComponent(InventoryLabel)
-                                .addGap(210, 210, 210))))
-                    .addGroup(MainPanelLayout.createSequentialGroup()
-                        .addGap(23, 23, 23)
-                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addGroup(MainPanelLayout.createSequentialGroup()
-                                .addComponent(LogsLabel)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                .addComponent(SearchLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(2, 2, 2)
-                                .addComponent(SearchField, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(81, 81, 81))
-                            .addComponent(CheckInPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addContainerGap(28, Short.MAX_VALUE))))
-        );
-        MainPanelLayout.setVerticalGroup(
-            MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(MainPanelLayout.createSequentialGroup()
-                .addComponent(HeaderPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(MainPanelLayout.createSequentialGroup()
-                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(OverviewLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(InventoryLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(MainPanelLayout.createSequentialGroup()
-                                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(SentHomePanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                    .addComponent(VisitPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                                .addGap(54, 54, 54)
-                                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                    .addComponent(LogsLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(SearchField, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(SearchLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED))
-                            .addGroup(MainPanelLayout.createSequentialGroup()
-                                .addComponent(InventoryPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(0, 67, Short.MAX_VALUE)))
-                        .addComponent(CheckInPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(MainPanelLayout.createSequentialGroup()
-                        .addGap(0, 0, Short.MAX_VALUE)
-                        .addComponent(CheckInPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(15, Short.MAX_VALUE))
-        );
-
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
-        getContentPane().setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(MainPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(layout.createSequentialGroup()
-                    .addGap(438, 438, 438)
-                    .addComponent(SentHomeInformationPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addContainerGap(649, Short.MAX_VALUE)))
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(MainPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(layout.createSequentialGroup()
-                    .addGap(251, 251, 251)
-                    .addComponent(SentHomeInformationPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addContainerGap(211, Short.MAX_VALUE)))
-        );
+        getContentPane().add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(270, 90, 1490, 750));
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-           if (loggedInAccount == null || !loggedInAccount.canAccessAdminPanel()) {
-
-        showToast(
-                MainPanel,
-                "Access denied. Admin role required.",
-                false
-        );
-
-        return;
-    }
-
-        new AdminPanel(loggedInAccount).setVisible(true);
-        this.dispose(); 
-    }//GEN-LAST:event_jButton1ActionPerformed
-
     
-    //edit btn
-    private void EditBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditBTNActionPerformed
-            
-      
-         String newName = NameCheckIn.getText().trim();
-         String newGradeSection = GSCheckIn.getText().trim();
-         String newLrn = LRNField.getText().trim();
-         String newReason = ReasonArea.getText().trim();
-
-         // ---------------------------------------------------------
-         // BASIC VALIDATION
-         // ---------------------------------------------------------
-
-         if (newName.isEmpty() || newGradeSection.isEmpty()) {
-             JOptionPane.showMessageDialog(
-                     this,
-                     "Name and Grade/Section cannot be empty.",
-                     "Invalid Information",
-                     JOptionPane.WARNING_MESSAGE
-             );
-             return;
-         }
-
-         if (!newLrn.matches("\\d{12}")) {
-             JOptionPane.showMessageDialog(
-                     this,
-                     "The LRN must contain exactly 12 digits.",
-                     "Invalid LRN",
-                     JOptionPane.WARNING_MESSAGE
-             );
-             LRNField.requestFocus();
-             return;
-         }
-
-         // ---------------------------------------------------------
-         // ASK WHETHER MEDICINE SHOULD BE CHANGED
-         // ---------------------------------------------------------
-
-         int wantsMedicineChange = JOptionPane.showConfirmDialog(
-                 this,
-                 "Does this student want to change their medicine?",
-                 "Change Medicine?",
-                 JOptionPane.YES_NO_OPTION,
-                 JOptionPane.QUESTION_MESSAGE
-         );
-
-         if (wantsMedicineChange == JOptionPane.CLOSED_OPTION) {
-             return;
-         }
-
-         String newMedUsed;
-         int newMedsQty;
-
-         // ---------------------------------------------------------
-         // NO MEDICINE CHANGE
-         // ---------------------------------------------------------
-
-         if (wantsMedicineChange == JOptionPane.NO_OPTION) {
-
-             // Keep the existing medicine exactly as it is.
-             newMedUsed = selectedOldMedUsed;
-             newMedsQty = selectedOldMedsQty;
-
-         } else {
-
-             // -----------------------------------------------------
-             // LOAD CURRENT MEDICINE INVENTORY
-             // -----------------------------------------------------
-
-             ArrayList<Medicine> allMedicine;
-
-             try {
-                 allMedicine = productService.loadAll();
-
-             } catch (SQLException ex) {
-
-                 JOptionPane.showMessageDialog(
-                         this,
-                         "Unable to load the medicine inventory.\n\n"
-                         + ex.getMessage(),
-                         "Medicine Inventory Error",
-                         JOptionPane.ERROR_MESSAGE
-                 );
-
-                 return;
-             }
-
-             ArrayList<Medicine> selectable = new ArrayList<>();
-
-             for (Medicine m : allMedicine) {
-
-                 // Don't allow expired medicine.
-                 if (m.isExpired()) {
-                     continue;
-                 }
-
-                 // Don't allow medicine with zero stock.
-                 if (m.getquantity() <= 0) {
-                     continue;
-                 }
-
-                 selectable.add(m);
-             }
-
-             final String NONE_LABEL = "None (no medicine)";
-
-             // -----------------------------------------------------
-             // NO MEDICINE AVAILABLE
-             // -----------------------------------------------------
-
-             if (selectable.isEmpty()) {
-
-                 int proceedNoMed = JOptionPane.showConfirmDialog(
-                         this,
-                         "There is no medicine currently available in inventory.\n"
-                         + "Do you want to remove this student's medicine?",
-                         "No Medicine Available",
-                         JOptionPane.YES_NO_OPTION,
-                         JOptionPane.WARNING_MESSAGE
-                 );
-
-                 if (proceedNoMed != JOptionPane.YES_OPTION) {
-                     return;
-                 }
-
-                 newMedUsed = "None";
-                 newMedsQty = 0;
-
-             } else {
-
-                 // -------------------------------------------------
-                 // BUILD MEDICINE CHOICES
-                 // -------------------------------------------------
-
-                 String[] choices = new String[selectable.size() + 1];
-
-                 choices[0] = NONE_LABEL;
-
-                 for (int i = 0; i < selectable.size(); i++) {
-
-                     Medicine m = selectable.get(i);
-
-                     choices[i + 1] =
-                             m.getname()
-                             + " — "
-                             + m.getquantity()
-                             + " available";
-                 }
-
-                 Object picked = JOptionPane.showInputDialog(
-                         this,
-                         "Select the new medicine:",
-                         "Change Medicine",
-                         JOptionPane.PLAIN_MESSAGE,
-                         null,
-                         choices,
-                         choices[0]
-                 );
-
-                 // User cancelled.
-                 if (picked == null) {
-                     return;
-                 }
-
-                 String pickedLabel = picked.toString();
-
-                 // -------------------------------------------------
-                 // REMOVE MEDICINE
-                 // -------------------------------------------------
-
-                 if (pickedLabel.equals(NONE_LABEL)) {
-
-                     newMedUsed = "None";
-                     newMedsQty = 0;
-
-                 } else {
-
-                     Medicine pickedMed = null;
-
-                     for (int i = 0; i < selectable.size(); i++) {
-
-                         if (choices[i + 1].equals(pickedLabel)) {
-
-                             pickedMed = selectable.get(i);
-                             break;
-                         }
-                     }
-
-                     if (pickedMed == null) {
-
-                         JOptionPane.showMessageDialog(
-                                 this,
-                                 "That medicine is no longer available.\n"
-                                 + "Please try again.",
-                                 "Medicine Unavailable",
-                                 JOptionPane.WARNING_MESSAGE
-                         );
-
-                         return;
-                     }
-
-                     int available = pickedMed.getquantity();
-                     int qty;
-
-                     // -------------------------------------------------
-                     // ASK FOR QUANTITY
-                     // -------------------------------------------------
-
-                     while (true) {
-
-                         String qtyInput = JOptionPane.showInputDialog(
-                                 this,
-                                 "How many pills of "
-                                 + pickedMed.getname()
-                                 + "?\n"
-                                 + available
-                                 + " available.",
-                                 "1"
-                         );
-
-                         if (qtyInput == null) {
-                             return;
-                         }
-
-                         try {
-
-                             qty = Integer.parseInt(qtyInput.trim());
-
-                         } catch (NumberFormatException ex) {
-
-                             JOptionPane.showMessageDialog(
-                                     this,
-                                     "Please enter a valid whole number.",
-                                     "Invalid Quantity",
-                                     JOptionPane.WARNING_MESSAGE
-                             );
-
-                             continue;
-                         }
-
-                         if (qty <= 0) {
-
-                             JOptionPane.showMessageDialog(
-                                     this,
-                                     "Quantity must be at least 1.",
-                                     "Invalid Quantity",
-                                     JOptionPane.WARNING_MESSAGE
-                             );
-
-                             continue;
-                         }
-
-                         if (qty > available) {
-
-                             JOptionPane.showMessageDialog(
-                                     this,
-                                     "Only "
-                                     + available
-                                     + " pill(s) are available.",
-                                     "Insufficient Stock",
-                                     JOptionPane.WARNING_MESSAGE
-                             );
-
-                             continue;
-                         }
-
-                         break;
-                     }
-
-                     newMedUsed = pickedMed.getname();
-                     newMedsQty = qty;
-                 }
-             }
-         }
-
-         // ---------------------------------------------------------
-         // GUARDIAN INFORMATION
-         // ---------------------------------------------------------
-
-         String[] guardianResult =
-                 promptGuardianUpdate(
-                         selectedGuardianName,
-                         selectedGuardianPhone
-                 );
-
-         if (guardianResult == null) {
-             return;
-         }
-
-         String newGuardianName = guardianResult[0];
-         String newGuardianPhone = guardianResult[1];
-
-         // ---------------------------------------------------------
-         // PERFORM EDIT
-         // ---------------------------------------------------------
-
-         try {
-
-             String actor =
-                     (loggedInAccount != null)
-                     ? loggedInAccount.GetName()
-                     : "Unknown";
-
-             /*
-              * IMPORTANT:
-              *
-              * selectedVisitLrn = OLD LRN
-              * newLrn          = NEW LRN
-              *
-              * The old LRN identifies the existing student.
-              * The new LRN is the value that gets saved.
-              */
-             boolean success =
-                     visitService.editVisitWithMedicineAdjustment(
-                             selectedVisitLrn,
-                             newName,
-                             newGradeSection,
-                             newLrn,
-                             newReason,
-                             selectedOldMedUsed,
-                             selectedOldMedsQty,
-                             newMedUsed,
-                             newMedsQty,
-                             newGuardianName,
-                             newGuardianPhone,
-                             productService,
-                             actor,
-                             wantsMedicineChange == JOptionPane.YES_OPTION
-                     );
-
-             // -----------------------------------------------------
-             // EDIT FAILED
-             // -----------------------------------------------------
-
-             if (!success) {
-
-                 JOptionPane.showMessageDialog(
-                         this,
-                         "The student record could not be found or updated.",
-                         "Update Failed",
-                         JOptionPane.ERROR_MESSAGE
-                 );
-
-                 return;
-             }
-
-             // -----------------------------------------------------
-             // REFRESH ONLY AFTER SUCCESSFUL DATABASE OPERATION
-             // -----------------------------------------------------
-
-             refreshTableAndCounters();
-             refreshInventoryStatusDisplay();
-
-             /*
-              * Check whether the database actually detected a change.
-              */
-             if (visitService.wasLastEditChanged()) {
-
-                 clearCheckInForm();
-
-                 JOptionPane.showMessageDialog(
-                         this,
-                         "Student record updated successfully.",
-                         "Update Successful",
-                         JOptionPane.INFORMATION_MESSAGE
-                 );
-
-             } else {
-
-                 /*
-                  * TRUE NO-OP:
-                  *
-                  * Nothing changed, therefore:
-                  * - No database UPDATE
-                  * - No EDIT audit log
-                  * - No medicine adjustment
-                  */
-                 JOptionPane.showMessageDialog(
-                         this,
-                         "No changes were made to the student record.",
-                         "No Changes Made",
-                         JOptionPane.INFORMATION_MESSAGE
-                 );
-             }
-
-         } catch (SQLException ex) {
-
-             JOptionPane.showMessageDialog(
-                     this,
-                     "The student record could not be updated.\n\n"
-                     + ex.getMessage(),
-                     "Update Failed",
-                     JOptionPane.ERROR_MESSAGE
-             );
-
-         } catch (Exception ex) {
-
-             JOptionPane.showMessageDialog(
-                     this,
-                     "An unexpected error occurred while editing the student record.\n\n"
-                     + ex.getMessage(),
-                     "Edit Error",
-                     JOptionPane.ERROR_MESSAGE
-             );
-         }
-    }
-       
-    
-            /**
-     * Guardian name/phone update flow as a controlled loop.
-     * Returns {name, phone} on success (or the original values if the
-     * nurse said "No" to updating). Returns null only if the nurse
-     * cancels outright — the whole edit should then be aborted.
-     */
-    private String[] promptGuardianUpdate(String defaultName, String defaultPhone) {
-
-        final int STEP_CONFIRM = 0, STEP_NAME = 1, STEP_PHONE = 2;
-        int step = STEP_CONFIRM;
-        String nameValue = defaultName;
-        String phoneValue = defaultPhone;
-
-        while (true) {
-            switch (step) {
-
-                case STEP_CONFIRM: {
-                    int changeGuardian = JOptionPane.showConfirmDialog(this,
-                            "Do you also want to update the guardian's name and phone number?",
-                            "Update Guardian Info",
-                            JOptionPane.YES_NO_OPTION);
-
-                    if (changeGuardian != JOptionPane.YES_OPTION) {
-                        return new String[]{ defaultName, defaultPhone }; // keep as-is
-                    }
-                    step = STEP_NAME;
-                    break;
-                }
-
-                case STEP_NAME: {
-                    String input = JOptionPane.showInputDialog(this, "Guardian's Name:", nameValue);
-                    if (input == null) return null; // dialog closed -> cancel whole edit
-
-                    input = input.trim();
-                    if (!input.isEmpty() && input.matches("[\\p{L} .'-]+")) {
-                        nameValue = input;
-                        step = STEP_PHONE;
-                        break;
-                    }
-
-                    int choice = JOptionPane.showOptionDialog(this,
-                            "Please enter a valid guardian name.",
-                            "Invalid Guardian Name",
-                            JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
-                            null, new String[]{"Retry", "Back", "Cancel"}, "Retry");
-
-                    if (choice == 0) {
-                        nameValue = input; // Retry, keep what they typed
-                    } else if (choice == 1) {
-                        step = STEP_CONFIRM; // Back to the yes/no question
-                    } else {
-                        return null; // Cancel or closed
-                    }
-                    break;
-                }
-
-                case STEP_PHONE: {
-                    String input = JOptionPane.showInputDialog(this, "Guardian's Phone Number:", phoneValue);
-                    if (input == null) return null;
-
-                    input = input.trim();
-                    if (input.matches("^09\\d{9}$")) {
-                        return new String[]{ nameValue, input };
-                    }
-
-                    int choice = JOptionPane.showOptionDialog(this,
-                            "Invalid phone number. Please enter exactly 11 digits starting with 09.",
-                            "Invalid Phone Number",
-                            JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
-                            null, new String[]{"Retry", "Back", "Cancel"}, "Retry");
-
-                    if (choice == 0) {
-                        phoneValue = input; // Retry
-                    } else if (choice == 1) {
-                        step = STEP_NAME; // Back to name step
-                    } else {
-                        return null;
-                    }
-                    break;
-                }
-            }
-        }
-    }
-    
-
-        private void clearCheckInForm() {
-            NameCheckIn.setText("");
-            GSCheckIn.setText("");
-            LRNField.setText("");
-            LRNField.setEditable(true); // re-enable for the next new check-in
-            ReasonArea.setText("");
-            selectedVisitLrn = null;
-            ReasonTable.clearSelection();
-            
-    }//GEN-LAST:event_EditBTNActionPerformed
-
     private void LogoutActionPerformed(java.awt.event.ActionEvent evt) {                                       
        
          Object[] options = {"Export & Logout", "Logout", "Cancel"};
@@ -2342,32 +1858,11 @@ NOT modify this code. The content of this method is always
             this.repaint();
 
         } catch (Exception ex) {
-            showToast(CheckInPanel, "Error saving check-in: " + ex.getMessage(), false);
+            showToast(CheckInPopup, "Error saving check-in: " + ex.getMessage(), false);
         }
     }//GEN-LAST:event_CheckInBTNActionPerformed
  
-    
-    private void LRNFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_LRNFieldActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_LRNFieldActionPerformed
-
-    private void LRNFieldKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_LRNFieldKeyTyped
-        
-             char c = evt.getKeyChar();
-
-            // Allow only numbers
-                if (!Character.isDigit(c)) {
-                  evt.consume();
-                  return;
-                }
-
-             // Limit to 12 digits
-             if (LRNField.getText().length() >= 12) {
-              evt.consume();
-            }
-             
-    }//GEN-LAST:event_LRNFieldKeyTyped
-   
+       
     private String selectedOldMedUsed = "None";
     private int selectedOldMedsQty = 0;
     private String selectedGuardianName = "";
@@ -2400,84 +1895,16 @@ NOT modify this code. The content of this method is always
     private void ThemeToggleActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ThemeToggleActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_ThemeToggleActionPerformed
+
+    private void StatisticBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StatisticBTNActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_StatisticBTNActionPerformed
     
     private String pendingmedUsed = "None";
     private int pendingmedsQty = 0;
     
     
-    
-    private void FinishBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_FinishBTNActionPerformed
-             String guardianName = ParentGurdianName.getText().trim();
-            String guardianPhone = PhoneField.getText().trim();
-           
-            if (guardianName.isEmpty()) {
-                showToast(SentHomeInformationPanel, "Guardian name is required.", false);
-                return;
-            }
-            if (guardianPhone.isEmpty()) {
-                showToast(SentHomeInformationPanel, "Guardian phone number is required.", false);
-                return;
-            }
-            if (!guardianPhone.matches("^09\\d{9}$")) {
-                showToast(SentHomeInformationPanel, "Phone number must start with 09 and contain exactly 11 digits.", false);
-                PhoneField.requestFocus();
-                return;
-            }
-            if (!guardianName.matches("[\\p{L} .'-]+")) {
-                showToast(SentHomeInformationPanel, "Please enter a valid guardian name.", false);
-                ParentGurdianName.requestFocus();
-                return;
-            }
-
-         String name = NameCheckIn.getText().trim();
-         String gradeSection = GSCheckIn.getText().trim();
-         String lrn = LRNField.getText().trim();
-         String reason = ReasonArea.getText().trim();
-         String medUsed = pendingmedUsed;
-
-         String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
-
-         DatabaseExecutor.run(
-             () -> visitService.checkInWithMedicine(
-                     name, gradeSection, lrn, reason, medUsed, pendingmedsQty,
-                     guardianName, guardianPhone, productService, actor),
-             result -> {
-                 if (!medUsed.equals("None") && !result.medicineDeducted()) {
-                     showToast(CheckInPanel, "Warning: " + medUsed + " is out of stock. Stock was not deducted.", false);
-                 }
-
-                 refreshTableAndCounters();
-                 refreshInventoryStatusDisplay();
-
-                 NameCheckIn.setText("");
-                 GSCheckIn.setText("");
-                 LRNField.setText("");
-                 ReasonArea.setText("");
-                 SentHomeInformationPanel.setVisible(false);
-                 glassOverlay.setVisible(false);
-                 this.revalidate();
-                 this.repaint();
-
-                 showToast(CheckInPanel, name + " checked in successfully. Guardian info recorded.", true);
-             },
-             ex -> showToast(CheckInPanel, "Error saving check-in: " + ex.getMessage(), false)
-         );
-    }//GEN-LAST:event_FinishBTNActionPerformed
-
-    private void InformationBackBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_InformationBackBTNActionPerformed
-        
-        SentHomeInformationPanel.setVisible(false);
-        glassOverlay.setVisible(false);
-
-            this.revalidate();
-            this.repaint();
-    }//GEN-LAST:event_InformationBackBTNActionPerformed
-
-    private void ClearBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ClearBTNActionPerformed
-       clearCheckInForm();
-       showToast(CheckInPanel, "Form cleared.", true);
-    }//GEN-LAST:event_ClearBTNActionPerformed
-   
+       
     private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {                                         
             
 
@@ -2910,52 +2337,64 @@ private String safeText(String value) {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton CheckInBTN;
-    private javax.swing.JPanel CheckInPanel;
     private javax.swing.JPanel CheckInPanel1;
-    private javax.swing.JButton ClearBTN;
+    private javax.swing.JPanel CheckInPopup;
+    private javax.swing.JButton CheckinBTN;
     private javax.swing.JLabel DateTimeLabel;
-    private javax.swing.JButton EditBTN;
-    private javax.swing.JButton FinishBTN;
-    private javax.swing.JTextField GSCheckIn;
+    private javax.swing.JButton ECheckin;
     private javax.swing.JPanel HeaderPanel;
-    private javax.swing.JButton InformationBackBTN;
-    private javax.swing.JLabel InventoryLabel;
-    private javax.swing.JPanel InventoryPanel;
-    private javax.swing.JTextArea InventoryStatusArea;
-    private javax.swing.JTextField LRNField;
+    private javax.swing.JButton HomeBTN;
+    private javax.swing.JButton InventoryBTN;
+    private javax.swing.JButton InventoryBTN1;
     private javax.swing.JLabel LRNLabel;
     private javax.swing.JButton Logout;
-    private javax.swing.JLabel LogsLabel;
     private javax.swing.JPanel MainPanel;
-    private javax.swing.JTextField NameCheckIn;
-    private javax.swing.JLabel OverviewLabel;
-    private javax.swing.JLabel PGNameLabel;
-    private javax.swing.JLabel PNField;
-    private javax.swing.JTextField ParentGurdianName;
-    private javax.swing.JTextField PhoneField;
-    private javax.swing.JTextArea ReasonArea;
     private javax.swing.JTable ReasonTable;
     private javax.swing.JTextField SearchField;
     private javax.swing.JLabel SearchLabel;
     private javax.swing.JButton SentHomeBTN;
-    private javax.swing.JLabel SentHomeCount;
-    private javax.swing.JLabel SentHomeFooterLabel;
-    private javax.swing.JPanel SentHomeInformationPanel;
-    private javax.swing.JPanel SentHomePanel;
+    private javax.swing.JPanel SidePanel;
+    private javax.swing.JButton StatisticBTN;
     private javax.swing.JLabel StudentCheckinLabel;
     private javax.swing.JToggleButton ThemeToggle;
-    private javax.swing.JLabel VisitCounter;
-    private javax.swing.JPanel VisitPanel;
     private javax.swing.JButton jButton1;
+    private javax.swing.JButton jButton2;
     private javax.swing.JComboBox<String> jComboBox1;
     private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel11;
+    private javax.swing.JLabel jLabel12;
+    private javax.swing.JLabel jLabel13;
+    private javax.swing.JLabel jLabel14;
+    private javax.swing.JLabel jLabel15;
+    private javax.swing.JLabel jLabel16;
+    private javax.swing.JLabel jLabel17;
+    private javax.swing.JLabel jLabel18;
+    private javax.swing.JLabel jLabel19;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel20;
     private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
+    private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel7;
     private javax.swing.JLabel jLabel8;
     private javax.swing.JLabel jLabel9;
-    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JPanel jPanel1;
+    private javax.swing.JPanel jPanel10;
+    private javax.swing.JPanel jPanel11;
+    private javax.swing.JPanel jPanel12;
+    private javax.swing.JPanel jPanel2;
+    private javax.swing.JPanel jPanel3;
+    private javax.swing.JPanel jPanel4;
+    private javax.swing.JPanel jPanel8;
+    private javax.swing.JPanel jPanel9;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
+    private javax.swing.JTable jTable1;
+    private javax.swing.JTextField jTextField1;
+    private javax.swing.JTextField jTextField2;
+    private javax.swing.JTextField jTextField3;
+    private javax.swing.JTextField jTextField4;
+    private javax.swing.JTextField jTextField5;
     // End of variables declaration//GEN-END:variables
 }
