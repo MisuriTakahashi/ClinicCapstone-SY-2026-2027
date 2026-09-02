@@ -276,6 +276,15 @@ private void fadeOutAndOpenDashboard(AccountSystem account) {
                   return;
               }
 
+              UserSession.start(account);
+              SessionManager.saveSession(account);
+              try {
+                  ActivityLogData.log("LOGIN", "User signed in.", account.GetName());
+              } catch (java.sql.SQLException ignored) {
+                  // Authentication succeeded; do not prevent access if audit
+                  // storage is temporarily unavailable.
+              }
+
               fadeOutAndOpenDashboard(account);
               
 

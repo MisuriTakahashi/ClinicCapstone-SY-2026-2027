@@ -65,6 +65,18 @@ public final class ActivityLogData {
         }
     }
 
+    /**
+     * Readable application-facing audit API. Parameter order follows the UI:
+     * username, action, then details. The existing log() overload remains for
+     * backward compatibility with the DAO layer.
+     */
+    public static void logAction(
+            String username,
+            String action,
+            String details) throws SQLException {
+        log(action, details, username);
+    }
+
     static void log(
             Connection conn,
             String action,
@@ -306,6 +318,9 @@ public final class ActivityLogData {
         switch (code) {
 
             case "ADD_MEDICINE": {
+                if (safeDetails.startsWith("Added new medicine:")) {
+                    return safeDetails;
+                }
                 Matcher m = ADD_MEDICINE_PATTERN.matcher(safeDetails);
                 if (m.matches()) {
                     int qty = parseIntSafe(m.group(1));

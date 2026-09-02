@@ -32,6 +32,11 @@ public class Medicine {
         public String getExpDate(){
             return ExpDate;
         }
+
+        /** Preferred descriptive name for the persisted expiration date. */
+        public String getExpirationDate() {
+            return ExpDate;
+        }
         public int getquantity(){
             return quantity;
         }
@@ -56,7 +61,9 @@ public class Medicine {
         //eto yun nagchecheck kung expired na ba yun item na yon 
         public boolean isExpired(){
             try{
-                return LocalDate.parse(ExpDate).isBefore(LocalDate.now());
+                // A medicine is unavailable on its stated expiration date
+                // and every day thereafter.
+                return !LocalDate.parse(ExpDate).isAfter(LocalDate.now());
             }catch(Exception e){
                 return false; 
             }
@@ -67,6 +74,14 @@ public class Medicine {
         
          public boolean isLowStock() {
         return quantity < LOW_STOCK_THRESHOLD;
+        }
+
+        /** Status used by active inventory views and reports. */
+        public String getInventoryStatus() {
+            if (isExpired() && isLowStock()) return "Expired / Low Stock";
+            if (isExpired()) return "Expired";
+            if (isLowStock()) return "Low Stock";
+            return "In Stock";
         }
     
         //eto yun nag papalit kung expired na 

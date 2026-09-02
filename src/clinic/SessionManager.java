@@ -18,8 +18,9 @@ public class SessionManager {
     // 5 MINUTES
     // public static final long SESSION_TIMEOUT = 5L * 60L * 1000L;
 
-    // 30 MINUTES - CURRENT ACTIVE SETTING
-    public static final long SESSION_TIMEOUT = 30L * 60L * 1000L;
+    // Remembered sessions are renewed while the application is in use. They
+    // still expire after a week, or immediately when the user presses Logout.
+    public static final long SESSION_TIMEOUT = 7L * 24L * 60L * 60L * 1000L;
 
     // 1 HOUR
     // public static final long SESSION_TIMEOUT = 60L * 60L * 1000L;
@@ -43,6 +44,11 @@ public class SessionManager {
         } catch (IOException ex) {
             System.err.println("Could not save session: " + ex.getMessage());
         }
+    }
+
+    /** Saves a remembered session using the current time as last activity. */
+    public static void saveSession(AccountSystem account) {
+        saveSession(account, System.currentTimeMillis());
     }
 
     /**

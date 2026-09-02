@@ -1,894 +1,486 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
- */
 package clinic;
 
-
+import com.formdev.flatlaf.FlatLightLaf;
 import java.awt.Component;
-import java.awt.Graphics2D;
-import java.io.File;
-import net.miginfocom.swing.MigLayout;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import javax.swing.DefaultComboBoxModel;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.Locale;
 import javax.swing.JOptionPane;
-import javax.swing.JTextArea;
+import javax.swing.UIManager;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.text.AbstractDocument;
-import java.sql.SQLException;
-import java.io.IOException;
-import java.awt.AWTEvent;
-import java.awt.Toolkit;
-import java.awt.event.AWTEventListener;
-import javax.swing.Timer;
 
 /**
- *
- * @author PC
+ * Main dashboard shell. Legacy controller code that referenced controls removed
+ * from the NetBeans form has been removed; the generated form remains intact.
  */
 public class Dashboard extends javax.swing.JFrame {
-    
-    
-    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Dashboard.class.getName());
-    private static boolean darkMode = false;
-    private GlassOverlayPanel glassOverlay = new GlassOverlayPanel();
-    private AccountSystem loggedInAccount;
-    private long lastActivityTime;
-    private Timer inactivityTimer;
-    private AWTEventListener activityListener;
-    /**
-     * Creates new form Dashboard
-     */
-  
-            // Used when you just want to preview/open Dashboard
-            // has no design whatsoever 
-            /*public Dashboard() {
-            initComponents();
+    private final AccountSystem loggedInAccount;
+    private javax.swing.JPanel currentPanel;
+    private StudentDetails selectedStudent;
+    private int studentSearchGeneration;
+    private final javax.swing.JButton CancelCheckinBTN = new javax.swing.JButton("Cancel");
 
-            this.loggedInAccount = null;
+    public Dashboard(AccountSystem account) {
+        loggedInAccount = account;
+        FlatLightLaf.setup();
+        initComponents();
+        UserSession.start(account);
+        configureNavigation();
+        configureClinicWorkflow();
+        installSessionPersistence();
+        setIconImage(AppIcon.getIcon());
+        setLocationRelativeTo(null);
+    }
 
-            setLocationRelativeTo(null);
-            startDateTimeClock();
-            refreshTableAndCounters();
-            refreshInventoryStatusDisplay();
-            medicineBox();
+    public Dashboard() {
+        this(null);
+    }
 
-            jButton1.setVisible(false);
-            
-        }*/
-            
-            // Used when opening Dashboard normally after login
-        public Dashboard(AccountSystem account) {
-            this.loggedInAccount = account;
-            
-            initComponents();                
-            setIconImage(AppIcon.getIcon());
+    /** Refreshes the remembered session without storing a password. */
+    private void installSessionPersistence() {
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent event) {
+                SessionManager.saveSession(loggedInAccount);
+            }
+        });
+        addWindowFocusListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowGainedFocus(java.awt.event.WindowEvent event) {
+                SessionManager.saveSession(loggedInAccount);
+            }
+        });
+    }
 
-            
-            // Window X (not Logout): remember this session so the user is
-            // auto-logged-in next launch, instead of being forced to log in again
-            addWindowListener(new java.awt.event.WindowAdapter() {
-                @Override
-                public void windowClosing(java.awt.event.WindowEvent e) {
-                    SessionManager.saveSession(loggedInAccount, lastActivityTime);
+    /** Keeps the generated AbsoluteLayout untouched while ensuring that only
+     * one of its overlapping content panels can ever be painted. */
+    private void configureNavigation() {
+        HomeBTN.addActionListener(e -> showPanel(MainPanel));
+        CheckinBTN.addActionListener(e -> showPanel(CheckInPanel1));
+        StatisticBTN.addActionListener(e -> showPanel(StatisticPanel));
+
+        for (Component panel : new Component[]{MainPanel, CheckInPanel1,
+                CheckInPopup, StatisticPanel}) {
+            panel.setVisible(false);
+        }
+        showPanel(MainPanel);
+    }
+
+    private void showPanel(javax.swing.JPanel target) {
+        if (target == null || currentPanel == target) {
+            return;
+        }
+
+        // Swing actions run on the EDT. Hiding every peer first makes rapid
+        // clicks idempotent and prevents absolute-layout panels from stacking.
+        for (javax.swing.JPanel panel : new javax.swing.JPanel[]{MainPanel,
+                CheckInPanel1, CheckInPopup, StatisticPanel}) {
+            panel.setVisible(panel == target);
+        }
+        currentPanel = target;
+        getContentPane().revalidate();
+        getContentPane().repaint();
+    }
+
+    private boolean requireAdminPanelAccess() {
+        if (loggedInAccount != null && loggedInAccount.canAccessAdminPanel()) {
+            return true;
+        }
+        JOptionPane.showMessageDialog(this,
+                "Inventory and management are available to Admin accounts only.",
+                "Access Denied", JOptionPane.WARNING_MESSAGE);
+        return false;
+    }
+
+    /** Wires the existing Dashboard controls to the existing visit/student DAOs. */
+    private void configureClinicWorkflow() {
+        jButton2.addActionListener(e -> findExpressStudent());
+        LrnField.addActionListener(e -> findExpressStudent());
+        ECheckin.addActionListener(e -> submitExpressCheckin());
+        jButton1.addActionListener(e -> submitPopupCheckin());
+        ReasonTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        ReasonTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) selectStudentFromChooser();
+        });
+        SearchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override public void insertUpdate(DocumentEvent e) { loadStudentChooser(SearchField.getText()); }
+            @Override public void removeUpdate(DocumentEvent e) { loadStudentChooser(SearchField.getText()); }
+            @Override public void changedUpdate(DocumentEvent e) { loadStudentChooser(SearchField.getText()); }
+        });
+        ReasonField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override public void insertUpdate(DocumentEvent e) { recommendMedicineFromReason(); }
+            @Override public void removeUpdate(DocumentEvent e) { recommendMedicineFromReason(); }
+            @Override public void changedUpdate(DocumentEvent e) { recommendMedicineFromReason(); }
+        });
+        configureCheckinPopupCard();
+        loadStudentChooser("");
+        loadMedicineChoices();
+        refreshRecentVisits();
+    }
+
+    /** Replaces the generated fixed-width popup content with a readable card. */
+    private void configureCheckinPopupCard() {
+        CheckInPopup.removeAll();
+        CheckInPopup.setBackground(new java.awt.Color(255, 255, 255));
+        CheckInPopup.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(203, 213, 225)),
+                javax.swing.BorderFactory.createEmptyBorder(18, 22, 18, 22)));
+        CheckInPopup.setLayout(new java.awt.GridBagLayout());
+
+        StudentCheckinLabel.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 19));
+        StudentCheckinLabel.setForeground(new java.awt.Color(15, 23, 42));
+        StudentCheckinLabel.setText("Student Check-in");
+        for (javax.swing.JLabel label : new javax.swing.JLabel[]{jLabel7, jLabel8,
+                LRNLabel, jLabel9, jLabel29, jLabel11}) {
+            label.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 13));
+            label.setForeground(new java.awt.Color(51, 65, 85));
+        }
+        jLabel10.setText("Reason");
+        jLabel12.setText("Medicine");
+        jLabel10.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 12));
+        jLabel12.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 12));
+        jButton1.setText("Complete Check-in");
+        CancelCheckinBTN.setText("Cancel");
+        CancelCheckinBTN.addActionListener(e -> closeCheckinPopup());
+
+        java.awt.GridBagConstraints c = new java.awt.GridBagConstraints();
+        c.gridx = 0; c.gridy = 0; c.gridwidth = 2; c.anchor = java.awt.GridBagConstraints.WEST;
+        c.fill = java.awt.GridBagConstraints.HORIZONTAL; c.weightx = 1; c.insets = new java.awt.Insets(0, 0, 12, 0);
+        CheckInPopup.add(StudentCheckinLabel, c);
+        int row = 1;
+        for (javax.swing.JLabel label : new javax.swing.JLabel[]{jLabel7, jLabel8,
+                LRNLabel, jLabel9, jLabel29, jLabel11}) {
+            c.gridy = row++; c.insets = new java.awt.Insets(2, 0, 2, 0);
+            CheckInPopup.add(label, c);
+        }
+        c.gridwidth = 1; c.weightx = 0; c.gridy = row; c.gridx = 0;
+        c.insets = new java.awt.Insets(12, 0, 4, 10); CheckInPopup.add(jLabel10, c);
+        c.gridx = 1; c.weightx = 1; c.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        c.insets = new java.awt.Insets(12, 0, 4, 0); CheckInPopup.add(jTextField1, c);
+        c.gridy = ++row; c.gridx = 0; c.weightx = 0; c.insets = new java.awt.Insets(4, 0, 10, 10);
+        CheckInPopup.add(jLabel12, c);
+        c.gridx = 1; c.weightx = 1; c.insets = new java.awt.Insets(4, 0, 10, 0);
+        CheckInPopup.add(jComboBox1, c);
+        c.gridy = ++row; c.gridx = 0; c.gridwidth = 1; c.weightx = 0.5;
+        c.insets = new java.awt.Insets(4, 0, 0, 5); CheckInPopup.add(CancelCheckinBTN, c);
+        c.gridx = 1; c.weightx = 0.5; c.insets = new java.awt.Insets(4, 5, 0, 0);
+        CheckInPopup.add(jButton1, c);
+
+        // The generated AbsoluteLayout constraint gives this dialog too
+        // little space for full student details; replace it at runtime only.
+        getContentPane().add(CheckInPopup,
+                new org.netbeans.lib.awtextra.AbsoluteConstraints(500, 190, 520, 445));
+    }
+
+    /** Positions the panel in the center of the check-in workspace. */
+    private void centerCheckinPopup() {
+        int width = 520, height = 445;
+        int panelWidth = CheckInPanel1.getWidth() > 0 ? CheckInPanel1.getWidth()
+                : getContentPane().getWidth();
+        int panelHeight = CheckInPanel1.getHeight() > 0 ? CheckInPanel1.getHeight()
+                : getContentPane().getHeight();
+        int panelX = CheckInPanel1.getWidth() > 0 ? CheckInPanel1.getX() : 0;
+        int panelY = CheckInPanel1.getHeight() > 0 ? CheckInPanel1.getY() : 0;
+        int x = panelX + Math.max(0, (panelWidth - width) / 2);
+        int y = panelY + Math.max(0, (panelHeight - height) / 2);
+        getContentPane().add(CheckInPopup,
+                new org.netbeans.lib.awtextra.AbsoluteConstraints(x, y, width, height));
+    }
+
+    private void closeCheckinPopup() {
+        CheckInPopup.setVisible(false);
+        jTextField1.setText("");
+        if (jComboBox1.getItemCount() > 0) jComboBox1.setSelectedIndex(0);
+        selectedStudent = null;
+        ReasonTable.clearSelection();
+        CheckInPopup.revalidate();
+        CheckInPopup.repaint();
+    }
+
+    /** Suggests an in-stock medicine for a recognized express-check-in symptom. */
+    private void recommendMedicineFromReason() {
+        if (!MedicineField.getText().trim().isEmpty()) return;
+        final String reason = ReasonField.getText();
+        final String recommendation = recommendationFor(reason);
+        if (recommendation == null) return;
+
+        DatabaseExecutor.run(() -> new MedicineData().loadAll(), medicines -> {
+            // Do not overwrite a nurse's manual entry or a newer reason.
+            if (!MedicineField.getText().trim().isEmpty()
+                    || !reason.equals(ReasonField.getText())) return;
+            String suggested = inStockRecommendation(recommendation, medicines);
+            MedicineField.setText(suggested);
+        }, ex -> {
+            // A failed stock lookup must not interrupt check-in or erase a
+            // manual value. The generic recommendation remains optional.
+        });
+    }
+
+    private static String recommendationFor(String reason) {
+        String symptom = reason == null ? "" : reason.toLowerCase(Locale.ROOT);
+        if (containsAny(symptom, "fever", "headache", "body pain", "temp"))
+            return "Paracetamol / Biogesic";
+        if (containsAny(symptom, "cough", "colds", "flu", "runny nose"))
+            return "Solmux / Neozep / Decolgen";
+        if (containsAny(symptom, "stomach ache", "hyperacidity", "hyperacid", "indigestion"))
+            return "Kremil-S / Antacid";
+        if (containsAny(symptom, "allergy", "itch", "rashes")) return "Cetirizine";
+        if (containsAny(symptom, "wound", "cut", "scratch")) return "Betadine / Bandage";
+        if (containsAny(symptom, "dizziness", "fatigue"))
+            return "Rest / Oral Rehydration Solution";
+        return null;
+    }
+
+    private static boolean containsAny(String text, String... keywords) {
+        for (String keyword : keywords) if (text.contains(keyword)) return true;
+        return false;
+    }
+
+    private static String inStockRecommendation(String recommendation,
+            java.util.List<Medicine> medicines) {
+        String[] options = recommendation.split(" / ");
+        for (String option : options) {
+            for (Medicine medicine : medicines) {
+                if (medicine.getname().equalsIgnoreCase(option)
+                        && medicine.getquantity() > 0 && !medicine.isExpired()) {
+                    return medicine.getname();
                 }
-            });
-            
-            setupSessionTimeoutMonitoring();
-            
-            applyMigLayouts();
-            
-            this.setSize(1366, 800);             // Sets a standard HD laptop size
-            this.setMinimumSize(new java.awt.Dimension(1024, 600)); // Prevents it from getting too small
-            this.setLocationRelativeTo(null);
-            
-            
-            
-            
-            ((AbstractDocument) NameCheckIn.getDocument()).setDocumentFilter(new NameInputFilter()); //this is an input filter for NameCheckin which dont allows numbers
-            ((AbstractDocument) ParentGurdianName.getDocument()).setDocumentFilter(new NameInputFilter()); //this also and input filter for the parentName which do not allows numbers too
-            ((AbstractDocument) PhoneField.getDocument()).setDocumentFilter(new PhoneNumberFilter()); // this only allows 09 number and also 11 digits only 
-             
-                setLocationRelativeTo(null);
-            
-            //this already shows the time and Table and Counters and display the inventoryStatus and medicinebox which is the comboBox
-            startDateTimeClock();
-            refreshTableAndCounters();
-            addComponentListener(new java.awt.event.ComponentAdapter() {
-                @Override
-                public void componentShown(java.awt.event.ComponentEvent e) {
-                    refreshInventoryStatusDisplay(); // now safe — frame is showing
-                }
-            });
-            medicineBox();
-            
-            InventoryStatusArea.setEditable(false);
-            SentHomeInformationPanel.setVisible(false);
-
-            SentHomeInformationPanel.setOpaque(true);
-            SentHomeInformationPanel.setBackground(java.awt.Color.WHITE);
-
-            // Add a visible border so the popup panel pops out clearly
-            SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200), 1));
-
-            // Ensure child components are brought to the front layer
-            SentHomeInformationPanel.revalidate();
-            SentHomeInformationPanel.repaint();
-
-            javax.swing.JLayeredPane layeredPane = this.getLayeredPane();
-
-    // 2. Add the panel to a higher layer
-            layeredPane.add(SentHomeInformationPanel, javax.swing.JLayeredPane.MODAL_LAYER);
-
-            // 3. Position it over the center of the frame
-
-            SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(180, 180, 180), 2));
-            SentHomeInformationPanel.setBackground(java.awt.Color.WHITE);
-            SentHomeInformationPanel.setOpaque(true);
-            SentHomeInformationPanel.putClientProperty("JComponent.outline", "gray");
-            SentHomeInformationPanel.putClientProperty("JComponent.arc", 15);
-            SentHomeInformationPanel.setOpaque(true);
-            SentHomeInformationPanel.setBackground(java.awt.Color.WHITE);
-
-            // FlatLaf native arc rounding and subtle outline border
-            SentHomeInformationPanel.putClientProperty("JComponent.arc", 20);
-            SentHomeInformationPanel.putClientProperty("JComponent.outline", new java.awt.Color(210, 215, 220));
-
-            // --- 2. Text Fields Styling (Pill/Rounded Style with Placeholders) ---
-            ParentGurdianName.putClientProperty("JComponent.roundRect", true);
-            ParentGurdianName.putClientProperty("JTextField.placeholderText", "Enter parent/guardian full name...");
-            ParentGurdianName.putClientProperty("JTextField.showClearButton", true);
-
-            PhoneField.putClientProperty("JComponent.roundRect", true);
-            PhoneField.putClientProperty("JTextField.placeholderText", "e.g., 09123456789");
-            PhoneField.putClientProperty("JTextField.showClearButton", true);
-
-            // --- 3. Custom Button Styles (Blue Finish / Red Back) ---
-            FinishBTN.putClientProperty("JButton.buttonType", "roundRect");
-            FinishBTN.setBackground(new java.awt.Color(0, 102, 204));
-            FinishBTN.setForeground(java.awt.Color.WHITE);
-
-            InformationBackBTN.putClientProperty("JButton.buttonType", "roundRect");
-            InformationBackBTN.setBackground(new java.awt.Color(153, 0, 0)); // Dark red tone
-            InformationBackBTN.setForeground(java.awt.Color.WHITE);
-            SentHomeInformationPanel.putClientProperty("JComponent.arc", 16);
-            SentHomeInformationPanel.setBackground(java.awt.Color.WHITE);
-            SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(220, 225, 230), 1, true),
-                javax.swing.BorderFactory.createEmptyBorder(20, 20, 20, 20)
-            ));
-
-            // 2. Style the text input fields with round borders and placeholders
-            ParentGurdianName.setText("");
-            ParentGurdianName.putClientProperty("JComponent.roundRect", true);
-            ParentGurdianName.putClientProperty("JTextField.placeholderText", "Enter parent/guardian full name...");
-            ParentGurdianName.putClientProperty("JTextField.showClearButton", true);
-
-            PhoneField.setText("");
-            PhoneField.putClientProperty("JComponent.roundRect", true);
-            PhoneField.putClientProperty("JTextField.placeholderText", "e.g., 09123456789");
-            PhoneField.putClientProperty("JTextField.showClearButton", true);
-
-            // 3. Style the Action Button to match your primary theme buttons
-            FinishBTN.putClientProperty("JButton.buttonType", "roundRect");
-            FinishBTN.setBackground(new java.awt.Color(37, 99, 235)); // Modern Blue (#2563EB)
-            FinishBTN.setForeground(java.awt.Color.WHITE);
-
-
-            getLayeredPane().add(glassOverlay, javax.swing.JLayeredPane.MODAL_LAYER);
-            getLayeredPane().add(SentHomeInformationPanel, javax.swing.JLayeredPane.POPUP_LAYER);
-
-            // Block mouse clicks from hitting the table underneath
-            glassOverlay.addMouseListener(new java.awt.event.MouseAdapter() {});
-
-
-
-
-            VisitPanel.putClientProperty("JComponent.arc", 25);
-            SentHomePanel.putClientProperty("JComponent.arc", 25);
-            CheckInPopup.putClientProperty("JComponent.arc", 25);
-            
-            InventoryPanel.putClientProperty("JComponent.arc", 25);
-
-            java.awt.Color softSlate = new java.awt.Color(245, 247, 250); 
-            CheckInPopup.setBackground(softSlate);
-            
-            InventoryPanel.setBackground(softSlate);
-            MainPanel.setBackground(java.awt.Color.WHITE); // Bright, clean backdrop
-
-            // --- 2. Flat UI Unified Table & ScrollPane Fixes ---
-            ReasonTable.setFillsViewportHeight(true); // Keeps entire viewport area uniform white
-            ReasonTable.setBackground(java.awt.Color.WHITE);
-            jScrollPane2.getViewport().setBackground(java.awt.Color.WHITE); 
-            jScrollPane2.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(220, 225, 230)));
-
-            // Clean up text areas and inventory panels
-            InventoryStatusArea.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
-            jScrollPane3.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(220, 225, 230)));
-            ReasonArea.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 8, 6, 8));
-            jScrollPane1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(220, 225, 230)));
-
-            // --- 3. Sleek Inputs & Smart Placeholders ---
-            // Clear default text values ("Name" / "Grade/Section") so placeholders take over
-            NameCheckIn.setText("");
-            NameCheckIn.putClientProperty("JComponent.roundRect", true);
-            NameCheckIn.putClientProperty("JTextField.placeholderText", "Enter student's full name...");
-            NameCheckIn.putClientProperty("JTextField.showClearButton", true); // Quick clear 'X' icon
-
-            GSCheckIn.setText("");
-            GSCheckIn.putClientProperty("JComponent.roundRect", true);
-            GSCheckIn.putClientProperty("JTextField.placeholderText", "e.g., Grade 12 - ICT");
-
-            LRNField.setText("");
-            LRNField.putClientProperty("JComponent.roundRect", true);
-            LRNField.putClientProperty("JTextField.placeholderText", "e.g., 10940900001");
-            
-            // --- Search Bar Styling ---
-            SearchField.putClientProperty("JComponent.roundRect", true);
-            SearchField.putClientProperty("JTextField.placeholderText", "Search name, LRN, reason...");
-            SearchField.putClientProperty("JTextField.showClearButton", true);
-            
-
-            // Live search: filter as the user types
-            SearchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-                public void insertUpdate(javax.swing.event.DocumentEvent e)  { applySearchFilter(); }
-                public void removeUpdate(javax.swing.event.DocumentEvent e) { applySearchFilter(); }
-                public void changedUpdate(javax.swing.event.DocumentEvent e){ applySearchFilter(); }
-});
-            
-            
-
-            // --- 4. Round Modern Component Elements ---
-            CheckInBTN.putClientProperty("JButton.buttonType", "roundRect");
-            EditBTN.putClientProperty("JButton.buttonType", "roundRect");
-            ClearBTN.putClientProperty("JButton.buttonType", "roundRect");
-            jButton1.putClientProperty("JButton.buttonType", "roundRect"); // Admin button
-            jComboBox1.putClientProperty("JComponent.roundRect", true);
-            SentHomeBTN.putClientProperty("JButton.buttonType", "roundRect");
-
-            ThemeToggle.setText(null);
-            ThemeToggle.setIcon(createMoonIcon());
-            ThemeToggle.setToolTipText("Switch to Dark Mode");
-            ThemeToggle.addActionListener(e -> {
-                darkMode = ThemeToggle.isSelected();
-                applyTheme();
-            });
-
-            // Apply the starting light theme
-            applyTheme();
-            refreshInventoryStatusDisplay();
-
-        }
-        
-        private void setupSessionTimeoutMonitoring() {
-            lastActivityTime = System.currentTimeMillis();
-
-            activityListener = e -> lastActivityTime = System.currentTimeMillis();
-            Toolkit.getDefaultToolkit().addAWTEventListener(activityListener,
-                    AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK | AWTEvent.KEY_EVENT_MASK);
-
-            // Checks every 15 seconds - fine-grained enough even for the 5-minute test setting
-            inactivityTimer = new Timer(15_000, e -> checkInactivity());
-            inactivityTimer.start();
-        }
-
-        private void checkInactivity() {
-            long elapsed = System.currentTimeMillis() - lastActivityTime;
-            if (elapsed >= SessionManager.SESSION_TIMEOUT) {
-                handleSessionExpired();
             }
         }
-
-        private void handleSessionExpired() {
-            stopSessionTimeoutMonitoring();
-            SessionManager.clearSession();
-            JOptionPane.showMessageDialog(this,
-                    "Your session has expired due to inactivity. Please log in again.");
-            new LoginUi().setVisible(true);
-            this.dispose();
-        }
-
-        private void stopSessionTimeoutMonitoring() {
-            if (inactivityTimer != null) {
-                inactivityTimer.stop();
-                inactivityTimer = null;
-            }
-            if (activityListener != null) {
-                Toolkit.getDefaultToolkit().removeAWTEventListener(activityListener);
-                activityListener = null;
-            }
-        }
-
-     private void applyMigLayouts() {
-    // ================= HEADER =================
-        HeaderPanel.removeAll();
-        HeaderPanel.setLayout(new MigLayout(
-            "fillx, aligny center, insets 12 18", 
-            "[][grow, center][]", ""));
-        HeaderPanel.add(DateTimeLabel, "aligny center");            
-        HeaderPanel.add(jLabel3, "alignx center");                  
-
-        // CHANGE THIS LINE: Added "w 50!" to force width to 50px and prevent shrinking
-        // Also added "gapleft 20" to separate it from the title
-        HeaderPanel.add(ThemeToggle, "split 3, aligny center, gapleft 20, w 50!"); 
-
-        HeaderPanel.add(jButton1, "gapleft 10");
-        HeaderPanel.add(Logout, "gapleft 10");
-
-    // ================= LEFT SIDEBAR (FORM) =================
-    CheckInPopup.removeAll();
-    CheckInPopup.setLayout(new MigLayout(
-        "wrap 1, fillx, insets 20", 
-        "[fill, grow]", ""));
-    CheckInPopup.add(StudentCheckinLabel, "alignx center, gapbottom 15");
-    CheckInPopup.add(jLabel7);
-    CheckInPopup.add(NameCheckIn);
-    CheckInPopup.add(jLabel8, "gaptop 8");
-    CheckInPopup.add(GSCheckIn);
-    CheckInPopup.add(LRNLabel, "gaptop 8");
-    CheckInPopup.add(LRNField);
-    CheckInPopup.add(jLabel9, "gaptop 8");
-    CheckInPopup.add(jScrollPane1, "h 170!"); 
-    CheckInPopup.add(jLabel11, "split 2, gaptop 10");
-    CheckInPopup.add(jComboBox1, "w 140!");
-    // Push buttons to the bottom
-    CheckInPopup.add(CheckInBTN,  "growx, pushy, aligny bottom, gaptop 20 ");
-    CheckInPopup.add(SentHomeBTN, "growx, gaptop 8 ");
-    CheckInPopup.add(EditBTN,     "split 2, growx, gaptop 8 ");  // Edit + Clear share this row
-    CheckInPopup.add(ClearBTN,    "growx ");                     // sits inline with Edit
-    
-
-    // ================= STAT CARDS (VISITS & SENT HOME) =================
-    // Configure them directly (No CounterPanel wrapper)
-   jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-    VisitCounter.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-    SentHomeFooterLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-    SentHomeCount.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-
-    VisitPanel.removeAll();
-    VisitPanel.setLayout(new MigLayout("wrap 1, fillx, insets 10", "[grow, fill]"));
-    VisitPanel.add(jLabel1,      "growx, pushy, aligny bottom");   // space goes ABOVE the label
-    VisitPanel.add(VisitCounter, "growx, pushy, aligny top, gaptop 4"); // number sticks right below it
-
-    SentHomePanel.removeAll();
-    SentHomePanel.setLayout(new MigLayout("wrap 1, fillx, insets 10", "[grow, fill]"));
-    SentHomePanel.add(SentHomeFooterLabel, "growx, pushy, aligny bottom");
-    SentHomePanel.add(SentHomeCount,       "growx, pushy, aligny top, gaptop 4");
-
-    // ================= INVENTORY (TOP RIGHT) =================
-    InventoryPanel.removeAll();
-    InventoryPanel.setLayout(new MigLayout("fill, insets 5", "[grow, fill]", "[grow, fill]"));
-    InventoryPanel.add(jScrollPane3, "grow");
-
-    // ================= LOGS TABLE (BOTTOM) =================
-    CheckInPanel1.removeAll();
-    CheckInPanel1.setLayout(new MigLayout("fill, insets 10", "[grow, fill]", "[grow, fill]"));
-    CheckInPanel1.add(jScrollPane2, "grow");
-
-    // ================= MAIN LAYOUT ASSEMBLY =================
-    MainPanel.removeAll();
-    
-    MainPanel.setLayout(new MigLayout(
-        "fill, insets 10, gapx 12, gapy 6",
-        "[400, fill][grow, fill][450, fill]", 
-        "[][][220!][][grow, fill]")); 
-
-    // Row 1: Header (Full Width)
-    MainPanel.add(HeaderPanel, "spanx 3, growx, wrap");
-
-    // Row 2-5: Left Sidebar (Spans all rows below header)
-    MainPanel.add(CheckInPopup, "spany 4, grow");
-
-    // Row 2: Section Labels
-    MainPanel.add(OverviewLabel, "alignx center");          
-    MainPanel.add(InventoryLabel, "alignx center, wrap");   
-
-    // Row 3: The Panels (VisitPanel + SentHomePanel | InventoryPanel)
-    // We add VisitPanel and SentHomePanel directly here using split 2
-    MainPanel.add(VisitPanel, "split 2, grow");             
-    MainPanel.add(SentHomePanel, "grow");                   
-    MainPanel.add(InventoryPanel, "grow, wrap");
-
-    // Row 4: Logs Label (Spans Cols 2 & 3)
-    MainPanel.add(LogsLabel,   "alignx center");
-    MainPanel.add(SearchField, "alignx right, gapleft push, w 220!, h 34!, wrap");
-
-    // Row 5: The Table (Spans Cols 2 & 3, Grows to fill height)
-    MainPanel.add(CheckInPanel1, "spanx 2, grow, wrap");
-
-    MainPanel.revalidate();
-    MainPanel.repaint();
-    
-    
-}
-     // ===== SVG ICONS (FlatLaf Extras) =====
-// ===== SVG ICONS (FlatLaf Extras) =====
-private javax.swing.Icon createSunIcon() {
-    return new javax.swing.Icon() {
-        public int getIconWidth() { return 22; }
-        public int getIconHeight() { return 22; }
-        public void paintIcon(java.awt.Component c, java.awt.Graphics g, int x, int y) {
-            java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
-            g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(java.awt.Color.BLACK);
-            // Center circle
-            g2.fillOval(x + 7, y + 7, 8, 8);
-            // Rays
-            g2.setStroke(new java.awt.BasicStroke(2f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
-            for (int i = 0; i < 8; i++) {
-                double a = Math.PI / 4 * i;
-                g2.drawLine(x + 11 + (int) Math.round(7 * Math.cos(a)),
-                            y + 11 + (int) Math.round(7 * Math.sin(a)),
-                            x + 11 + (int) Math.round(10 * Math.cos(a)),
-                            y + 11 + (int) Math.round(10 * Math.sin(a)));
-            }
-            g2.dispose();
-        }
-    };
-}
-
-private javax.swing.Icon createMoonIcon() {
-    return new javax.swing.Icon() {
-        public int getIconWidth() { return 22; }
-        public int getIconHeight() { return 22; }
-        public void paintIcon(java.awt.Component c, java.awt.Graphics g, int x, int y) {
-            java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
-            g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
-            // Draw a crescent moon by subtracting one circle from another
-            java.awt.geom.Area moon = new java.awt.geom.Area(new java.awt.geom.Ellipse2D.Double(x + 4, y + 3, 14, 16));
-            moon.subtract(new java.awt.geom.Area(new java.awt.geom.Ellipse2D.Double(x + 9, y + 5, 12, 12)));
-            g2.setColor(java.awt.Color.BLACK);
-            g2.fill(moon);
-            g2.dispose();
-        }
-    };
-}
-private void applyTheme() {
-    try {
-        if (darkMode) {
-            com.formdev.flatlaf.FlatDarkLaf.setup();
-        } else {
-            com.formdev.flatlaf.FlatLightLaf.setup();
-        }
-
-        // --- COLOR PALETTE ---
-        java.awt.Color pageBackground = darkMode ? new java.awt.Color(43, 43, 43) : java.awt.Color.WHITE;
-        java.awt.Color panelBackground = darkMode ? new java.awt.Color(60, 63, 65) : new java.awt.Color(245, 247, 250);
-        java.awt.Color cardBackground = darkMode ? new java.awt.Color(70, 73, 75) : java.awt.Color.WHITE;
-        java.awt.Color inputBackground = darkMode ? new java.awt.Color(48, 50, 52) : java.awt.Color.WHITE;
-        java.awt.Color textColor = darkMode ? new java.awt.Color(235, 235, 235) : new java.awt.Color(25, 25, 25);
-        java.awt.Color headerColor = darkMode ? new java.awt.Color(30, 76, 120) : new java.awt.Color(51, 153, 255);
-        java.awt.Color borderColor = darkMode ? new java.awt.Color(100, 104, 108) : new java.awt.Color(220, 225, 230);
-
-        // --- HEADER BUTTONS (Reliable Styling) ---
-        // We use standard methods for colors to ensure they stick and are readable
-        javax.swing.JButton[] headerButtons = {jButton1, Logout};
-        for (javax.swing.JButton btn : headerButtons) {
-            btn.putClientProperty("JButton.buttonType", "roundRect");
-            btn.putClientProperty("JComponent.arc", 15);
-            btn.setBackground(java.awt.Color.WHITE);       // Always White
-            btn.setForeground(java.awt.Color.BLACK);       // Always Black Text
-            btn.setFont(btn.getFont().deriveFont(java.awt.Font.BOLD));
-        }
-
-        // Theme Toggle Button -> SVG icons
-        ThemeToggle.setText(null);
-        ThemeToggle.setIcon(darkMode ? createSunIcon() : createMoonIcon());
-        ThemeToggle.setToolTipText(darkMode ? "Switch to Light Mode" : "Switch to Dark Mode");
-
-        
-
-        // 3. Styling (White Pill) - Keep this part as is
-        ThemeToggle.putClientProperty("JButton.buttonType", "roundRect");
-        ThemeToggle.putClientProperty("JComponent.arc", 15);
-        ThemeToggle.setBackground(java.awt.Color.WHITE);
-        ThemeToggle.setForeground(java.awt.Color.BLACK);
-        // --- ACTION BUTTONS (Blue) ---
-        javax.swing.JButton[] actionButtons = {CheckInBTN, EditBTN, SentHomeBTN, ClearBTN, };
-        SearchField.setBackground(inputBackground); SearchField.setForeground(textColor);
-        for (javax.swing.JButton btn : actionButtons) {
-            btn.putClientProperty("JButton.buttonType", "roundRect");
-            btn.putClientProperty("JComponent.arc", 10);
-            btn.setBackground(new java.awt.Color(37, 99, 235)); // Modern Blue
-            btn.setForeground(java.awt.Color.WHITE);
-        }
-        
-        // Popup Buttons
-        FinishBTN.putClientProperty("JButton.buttonType", "roundRect");
-        FinishBTN.putClientProperty("JComponent.arc", 10);
-        FinishBTN.setBackground(new java.awt.Color(37, 99, 235));
-        FinishBTN.setForeground(java.awt.Color.WHITE);
-        
-        InformationBackBTN.putClientProperty("JButton.buttonType", "roundRect");
-        InformationBackBTN.putClientProperty("JComponent.arc", 10);
-        InformationBackBTN.setBackground(new java.awt.Color(153, 0, 0));
-        InformationBackBTN.setForeground(java.awt.Color.WHITE);
-
-        // --- APPLY COLORS TO COMPONENTS ---
-        
-        ThemeToggle.setSelected(darkMode);
-        
-        HeaderPanel.setBackground(headerColor);
-        MainPanel.setBackground(pageBackground);
-        CheckInPopup.setBackground(panelBackground);
-        CheckInPanel1.setBackground(panelBackground);
-        InventoryPanel.setBackground(panelBackground);
-        VisitPanel.setBackground(cardBackground);
-        SentHomePanel.setBackground(cardBackground);
-        SentHomeInformationPanel.setBackground(cardBackground);
-
-        // Borders
-        javax.swing.border.Border softBorder = javax.swing.BorderFactory.createLineBorder(borderColor, 1, true);
-        javax.swing.border.Border paddedBorder = javax.swing.BorderFactory.createCompoundBorder(
-            softBorder, javax.swing.BorderFactory.createEmptyBorder(15, 15, 15, 15));
-
-        CheckInPopup.setBorder(paddedBorder);
-        InventoryPanel.setBorder(paddedBorder);
-        CheckInPanel1.setBorder(javax.swing.BorderFactory.createCompoundBorder(softBorder, javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10)));
-        VisitPanel.setBorder(softBorder);
-        SentHomePanel.setBorder(softBorder);
-
-        // Popup Panel Border
-        javax.swing.border.TitledBorder titledBorder = javax.swing.BorderFactory.createTitledBorder(
-            softBorder, "Parent/Guardian Information", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP,
-            new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 14), textColor);
-        SentHomeInformationPanel.setBorder(javax.swing.BorderFactory.createCompoundBorder(titledBorder, javax.swing.BorderFactory.createEmptyBorder(10, 15, 15, 15)));
-
-        // Text Colors
-        jLabel3.setForeground(java.awt.Color.WHITE);
-        DateTimeLabel.setForeground(java.awt.Color.WHITE);
-        InventoryLabel.setForeground(textColor);
-        OverviewLabel.setForeground(textColor);
-        LogsLabel.setForeground(textColor);
-        StudentCheckinLabel.setForeground(textColor);
-        jLabel1.setForeground(textColor);
-        SentHomeFooterLabel.setForeground(textColor);
-        VisitCounter.setForeground(textColor);
-        SentHomeCount.setForeground(textColor);
-        jLabel7.setForeground(textColor);
-        jLabel8.setForeground(textColor);
-        LRNLabel.setForeground(textColor);
-        jLabel9.setForeground(textColor);
-        jLabel11.setForeground(textColor);
-        PGNameLabel.setForeground(textColor);
-        PNField.setForeground(textColor);
-
-        // Inputs
-        ParentGurdianName.setBackground(inputBackground); ParentGurdianName.setForeground(textColor);
-        PhoneField.setBackground(inputBackground); PhoneField.setForeground(textColor);
-        NameCheckIn.setBackground(inputBackground); NameCheckIn.setForeground(textColor);
-        LRNField.setBackground(inputBackground); LRNField.setForeground(textColor);
-        GSCheckIn.setBackground(inputBackground); GSCheckIn.setForeground(textColor);
-        ReasonArea.setBackground(inputBackground); ReasonArea.setForeground(textColor);
-        InventoryStatusArea.setBackground(inputBackground); InventoryStatusArea.setForeground(textColor);
-        jComboBox1.setBackground(inputBackground); jComboBox1.setForeground(textColor);
-
-        // Table
-        ReasonTable.setBackground(inputBackground);
-        ReasonTable.setForeground(textColor);
-        ReasonTable.getTableHeader().setBackground(cardBackground);
-        ReasonTable.getTableHeader().setForeground(textColor);
-        
-        jScrollPane1.getViewport().setBackground(inputBackground);
-        jScrollPane2.getViewport().setBackground(inputBackground);
-        jScrollPane3.getViewport().setBackground(inputBackground);
-        
-        jScrollPane1.setBorder(softBorder);
-        jScrollPane2.setBorder(softBorder);
-        jScrollPane3.setBorder(softBorder);
-
-        // --- FIX WINDOW RESIZING ---
-        java.awt.Dimension currentSize = this.getSize();
-        java.awt.Point currentLocation = this.getLocation();
-        int currentState = this.getExtendedState();
-
-        for (java.awt.Window window : java.awt.Window.getWindows()) {
-            javax.swing.SwingUtilities.updateComponentTreeUI(window);
-            // Removed window.pack() to prevent resizing
-        }
-
-        if (currentState == this.MAXIMIZED_BOTH) {
-            this.setExtendedState(this.MAXIMIZED_BOTH);
-        } else {
-            this.setSize(currentSize);
-            this.setLocation(currentLocation);
-        }
-
-    } catch (Exception ex) {
-        logger.log(java.util.logging.Level.SEVERE, "Failed to apply theme", ex);
-    }
-}
-
-    
-    
-    private void startDateTimeClock() {
-    updateDateTimeLabel();
-
-    new javax.swing.Timer(1000, e -> updateDateTimeLabel()).start();
-}
-
-private void updateDateTimeLabel() {
-    java.time.format.DateTimeFormatter format =
-        java.time.format.DateTimeFormatter.ofPattern(
-            "EEEE, MMMM d, yyyy  |  hh:mm:ss a"
-        );
-
-    DateTimeLabel.setText(
-        java.time.LocalDateTime.now().format(format)
-    );
-}
-public class GlassOverlayPanel extends javax.swing.JPanel {
-    public GlassOverlayPanel() {
-        setOpaque(false); // Allows underlying content to render
+        return recommendation + " (Out of Stock)";
     }
 
-    @Override
-    protected void paintComponent(java.awt.Graphics g) {
-        java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
-        g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
-        
-        // Dark semi-transparent color (Adjust 120 alpha for darker/lighter effect)
-        g2.setColor(new java.awt.Color(0, 0, 0, 120)); 
-        g2.fillRect(0, 0, getWidth(), getHeight());
-        
-        g2.dispose();
-        super.paintComponent(g);
-    }
-}
-/** Filters the Check-in Logs table by whatever is in SearchField. Returns the number of matching rows.
- *  Only Name, LRN, and Reason are searchable - by design, not by omission. */
-private int applySearchFilter() {
-    String query = SearchField.getText().trim().toLowerCase();
-    DefaultTableModel model = (DefaultTableModel) ReasonTable.getModel();
-    model.setRowCount(0);
-    int matchCount = 0;
-    for (CheckinSystem v : currentVisits) {
-        if (query.isEmpty()
-                || v.getName().toLowerCase().contains(query)
-                || v.getLrn().toLowerCase().contains(query)
-                || v.getReason().toLowerCase().contains(query)) {
-            model.addRow(new Object[]{
-                v.getStatus(), v.getName(), v.getGradeSection(), v.getLrn(),
-                v.getMedicineDisplay(), v.getReason(),
-                v.getGuardianName(), v.getGuardianPhoneNums()
-            });
-            matchCount++;
-        }
-    }
-    return matchCount;
-}
- 
-   //ComboBox problem 
-    private void medicineBox(){
-       DatabaseExecutor.run(
-        () -> productService.loadAll(),
-        medicine -> {
-            DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
-            for (Medicine p : medicine) {
-                model.addElement(p.getname());
-            }
+    private void loadMedicineChoices() {
+        DatabaseExecutor.run(() -> new MedicineData().loadAll(), medicines -> {
+            javax.swing.DefaultComboBoxModel<String> model =
+                    new javax.swing.DefaultComboBoxModel<>();
+            model.addElement("None");
+            for (Medicine medicine : medicines) model.addElement(medicine.getname());
             jComboBox1.setModel(model);
-        },
-        ex -> JOptionPane.showMessageDialog(this, "Error loading medicine list: " + ex.getMessage())
-    );
- }
-
-
-    //ps this will help display the inventory on the "inventory status"
-    private VisitData visitService = new VisitData();
-    private MedicineData productService = new MedicineData("inventory_activity.log");
-    
-    // Tracks the last alert content we've already shown, so refreshing the
-    // dashboard doesn't keep re-popping the same banner on every call.
-     private String lastAlertSignature = "";
-
-    /**
-     * Single entry point for the inventory panel: reloads medicines, redraws
-     * InventoryStatusArea, and checks low stock + expiration in one pass
-     * using the real exp_date column. Safe to call after any inventory
-     * change (add/edit/delete/restock/use) or a plain UI refresh — a banner
-     * only pops when the alert contents actually changed since last time.
-     */
-    private void refreshInventoryStatusDisplay(){
-        DatabaseExecutor.run(
-            () -> productService.loadAll(),
-            medicine -> {
-                StringBuilder sb = new StringBuilder();
-                StringBuilder lowStockNames = new StringBuilder();
-                StringBuilder expiredNames = new StringBuilder();
-                StringBuilder expiringTodayNames = new StringBuilder();
-                int lowStockCount = 0;
-
-                LocalDate today = LocalDate.now();
-                java.time.format.DateTimeFormatter fmt =
-                        java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-                if (medicine.isEmpty()) {
-                    sb.append("No items in inventory yet.");
-                } else {
-                    for (Medicine p : medicine) {
-                        sb.append(p.getname())
-                          .append(" — ")
-                          .append(p.getquantity())
-                          .append(" pcs — ")
-                          .append(p.getStatus());
-
-                        if (p.isLowStock()) {
-                            sb.append(" --LOW STOCK-- ");
-                            lowStockCount++;
-                            if (lowStockNames.length() > 0) lowStockNames.append(", ");
-                            lowStockNames.append(p.getname());
-                        }
-
-                        // Use the real exp_date column, not the getStatus() string.
-                        LocalDate expDate = null;
-                        try {
-                            if (p.getExpDate() != null && !p.getExpDate().isBlank()) {
-                                expDate = LocalDate.parse(p.getExpDate().trim(), fmt);
-                            }
-                        } catch (Exception ignored) {
-                            // exp_date isn't in yyyy-MM-dd format — skip expiry check for this item
-                        }
-
-                        if (expDate != null) {
-                            if (expDate.isBefore(today)) {
-                                sb.append(" --EXPIRED-- ");
-                                if (expiredNames.length() > 0) expiredNames.append(", ");
-                                expiredNames.append(p.getname()).append(" (Exp: ").append(p.getExpDate()).append(")");
-                            } else if (expDate.isEqual(today)) {
-                                sb.append(" --EXPIRES TODAY-- ");
-                                if (expiringTodayNames.length() > 0) expiringTodayNames.append(", ");
-                                expiringTodayNames.append(p.getname());
-                            }
-                        }
-
-                        sb.append("\n");
-                    }
-                }
-
-                InventoryStatusArea.setText(sb.toString());
-
-                // Build ONE combined banner covering low stock + expired + expiring
-                // today, and only pop it when the content actually changed. Calling
-                // showTopAlertBanner() more than once per refresh stacks banners on
-                // top of each other at the same spot, hiding all but the last one —
-                // so everything gets folded into a single message instead.
-                String lowStockSignature = lowStockNames.toString();
-                String expirySignature = expiredNames + "|" + expiringTodayNames;
-                String combinedSignature = lowStockSignature + "||" + expirySignature;
-
-                boolean hasAlerts = !lowStockSignature.isEmpty()
-                        || expiredNames.length() > 0
-                        || expiringTodayNames.length() > 0;
-
-                if (hasAlerts && !combinedSignature.equals(lastAlertSignature)) {
-                    StringBuilder banner = new StringBuilder();
-
-                    if (!lowStockSignature.isEmpty()) {
-                        banner.append("Low on stock (").append(lowStockCount)
-                              .append("): ").append(lowStockSignature);
-                    }
-                    if (expiredNames.length() > 0) {
-                        if (banner.length() > 0) banner.append("   |   ");
-                        banner.append("⚠️ EXPIRED: ").append(expiredNames);
-                    }
-                    if (expiringTodayNames.length() > 0) {
-                        if (banner.length() > 0) banner.append("   |   ");
-                        banner.append("⚠️ Expiring today: ").append(expiringTodayNames);
-                    }
-
-                    showTopAlertBanner(banner.toString());
-                }
-                lastAlertSignature = combinedSignature;
-            },
-            ex -> JOptionPane.showMessageDialog(this, "Error loading inventory: " + ex.getMessage())
-        );
+        }, ex -> JOptionPane.showMessageDialog(this,
+                "Unable to load medicines: " + ex.getMessage(), "Medicine Load Error",
+                JOptionPane.ERROR_MESSAGE));
     }
-    
-        
-    private ArrayList<CheckinSystem> currentVisits = new ArrayList<>();
-    private String selectedVisitLrn = null;
-    private record DashboardCounts(ArrayList<CheckinSystem> visits, int[] counts) {}
-    
-    //pinapakita yun table and counters and inaupdate
-    private void refreshTableAndCounters(){
-          DatabaseExecutor.run(
-            () -> new DashboardCounts(visitService.loadActive(), visitService.getTodayCounts()),
-            result -> {
-                currentVisits = result.visits();
-                applySearchFilter(); // rebuilds the table, honoring the current search text
-                int[] counts = result.counts();
-                VisitCounter.setText(String.valueOf(counts[0]));
-                SentHomeCount.setText(String.valueOf(counts[1]));
-            },
-            ex -> JOptionPane.showMessageDialog(this, ex.getMessage())
-        );
-     }
-    
- private void showToast(javax.swing.JPanel parentContainer, String message, boolean isSuccess) {
-    // 1. Create and style the toast label
-    javax.swing.JLabel toast = new javax.swing.JLabel(message, javax.swing.SwingConstants.CENTER);
-    toast.setOpaque(true);
-    
-    if (isSuccess) {
-        toast.setBackground(new java.awt.Color(16, 185, 129)); // Success Emerald Green
-        toast.setForeground(java.awt.Color.WHITE);
-    } else {
-        toast.setBackground(new java.awt.Color(239, 68, 68));  // Error Coral Red
-        toast.setForeground(java.awt.Color.WHITE);
+
+    private void selectStudentFromChooser() {
+        int selectedRow = ReasonTable.getSelectedRow();
+        if (selectedRow < 0) return;
+        int modelRow = ReasonTable.convertRowIndexToModel(selectedRow);
+        String lrn = String.valueOf(ReasonTable.getModel().getValueAt(modelRow, 2));
+        findStudent(lrn, student -> {
+            if (!lrn.equals(currentSelectedChooserLrn())) return;
+            selectedStudent = student;
+            if (student != null) populatePopupStudent(student);
+        });
     }
-    
-    toast.setFont(toast.getFont().deriveFont(java.awt.Font.BOLD, 13f));
-    toast.putClientProperty(com.formdev.flatlaf.FlatClientProperties.STYLE, "arc: 12;");
 
-    // 2. Position calculations relative to parent container
-    int toastHeight = 36;
-    int margin = 15;
-    int toastWidth = parentContainer.getWidth() - (margin * 2);
+    private String currentSelectedChooserLrn() {
+        int selectedRow = ReasonTable.getSelectedRow();
+        if (selectedRow < 0) return null;
+        int modelRow = ReasonTable.convertRowIndexToModel(selectedRow);
+        return String.valueOf(ReasonTable.getModel().getValueAt(modelRow, 2));
+    }
 
-    // Convert coordinates to window root pane layer
-    java.awt.Point locationOnScreen = parentContainer.getLocationOnScreen();
-    java.awt.Point frameLocation = this.getLocationOnScreen();
-    
-    int relativeX = locationOnScreen.x - frameLocation.x + margin;
-    int startY = (locationOnScreen.y - frameLocation.y) + parentContainer.getHeight();
-    int targetY = startY - toastHeight - margin;
+    private void openCheckinForSelection() {
+        int selectedRow = ReasonTable.getSelectedRow();
+        if (selectedRow < 0) {
+            JOptionPane.showMessageDialog(this, "Select a student from the table first.",
+                    "Student Required", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        int modelRow = ReasonTable.convertRowIndexToModel(selectedRow);
+        String lrn = String.valueOf(ReasonTable.getModel().getValueAt(modelRow, 2));
+        findStudent(lrn, student -> {
+            if (!lrn.equals(currentSelectedChooserLrn())) return;
+            if (student == null) {
+                JOptionPane.showMessageDialog(this, "The selected student is no longer active.",
+                        "Student Not Found", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            selectedStudent = student;
+            populatePopupStudent(student);
+            centerCheckinPopup();
+            CheckInPopup.setVisible(true);
+            CheckInPopup.revalidate();
+            CheckInPopup.repaint();
+        });
+    }
 
-    toast.setBounds(relativeX, startY, toastWidth, toastHeight);
+    private void populatePopupStudent(StudentDetails student) {
+        jLabel7.setText(detail("Name", student.name()));
+        jLabel8.setText(detail("Grade & Section", student.gradeSection()));
+        LRNLabel.setText(detail("LRN", student.lrn()));
+        jLabel9.setText(detail("Allergies", blankAsNone(student.allergy())));
+        jLabel29.setText(detail("Health Conditions", blankAsNone(student.healthConditions())));
+        jLabel11.setText(detail("Guardian / Contact", blankAsNone(student.parentName())
+                + " · " + blankAsNone(student.phoneNumber())));
+    }
 
-    // 3. Add to JFrame's LayeredPane (DRAG_LAYER sits on top of all UI panels)
-    javax.swing.JLayeredPane layeredPane = this.getLayeredPane();
-    layeredPane.add(toast, javax.swing.JLayeredPane.DRAG_LAYER);
-    layeredPane.revalidate();
-    layeredPane.repaint();
+    private static String detail(String label, String value) {
+        return "<html><b>" + escapeHtml(label) + ":</b> " + escapeHtml(value) + "</html>";
+    }
 
-    // 4. Slide UP Animation Timer
-    javax.swing.Timer slideUpTimer = new javax.swing.Timer(10, null);
-    slideUpTimer.addActionListener(new java.awt.event.ActionListener() {
-        int currentY = startY;
+    private static String escapeHtml(String value) {
+        return value == null ? "" : value.replace("&", "&amp;")
+                .replace("<", "&lt;").replace(">", "&gt;");
+    }
 
-        @Override
-        public void actionPerformed(java.awt.event.ActionEvent e) {
-            if (currentY > targetY) {
-                currentY = Math.max(targetY, currentY - 4);
-                toast.setLocation(relativeX, currentY);
-                layeredPane.repaint(); // Force refresh every step
-            } else {
-                slideUpTimer.stop();
+    private static String blankAsNone(String value) {
+        return value == null || value.isBlank() ? "None" : value;
+    }
 
-                // 5. Hold and Slide DOWN
-                javax.swing.Timer delayTimer = new javax.swing.Timer(2500, evt -> {
-                    javax.swing.Timer slideDownTimer = new javax.swing.Timer(10, null);
-                    slideDownTimer.addActionListener(new java.awt.event.ActionListener() {
-                        int returnY = targetY;
+    private void findExpressStudent() {
+        String lrn = LrnField.getText().trim();
+        if (lrn.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Enter a student LRN first.",
+                    "LRN Required", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        findStudent(lrn, student -> {
+            if (student == null) {
+                selectedStudent = null;
+                jLabel15.setText("Name:");
+                JOptionPane.showMessageDialog(this, "No active student was found for that LRN.",
+                        "Student Not Found", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            selectedStudent = student;
+            jLabel15.setText("Name: " + student.name());
+        });
+    }
 
-                        @Override
-                        public void actionPerformed(java.awt.event.ActionEvent e) {
-                            if (returnY < startY) {
-                                returnY += 4;
-                                toast.setLocation(relativeX, returnY);
-                                layeredPane.repaint();
-                            } else {
-                                slideDownTimer.stop();
-                                layeredPane.remove(toast);
-                                layeredPane.repaint();
-                            }
-                        }
-                    });
-                    slideDownTimer.start();
-                });
-                delayTimer.setRepeats(false);
-                delayTimer.start();
+    private void submitExpressCheckin() {
+        if (selectedStudent == null || !selectedStudent.lrn().equals(LrnField.getText().trim())) {
+            JOptionPane.showMessageDialog(this, "Search and select a valid student before checking in.",
+                    "Student Required", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        submitCheckin(selectedStudent, ReasonField.getText().trim(), MedicineField.getText().trim());
+    }
+
+    private void submitPopupCheckin() {
+        if (selectedStudent == null) {
+            JOptionPane.showMessageDialog(this, "Select a student before proceeding.",
+                    "Student Required", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        Object item = jComboBox1.getSelectedItem();
+        String medicine = item == null ? "None" : item.toString();
+        submitCheckin(selectedStudent, jTextField1.getText().trim(), medicine);
+    }
+
+    private void submitCheckin(StudentDetails student, String reason, String medicine) {
+        if (reason == null || reason.isBlank()) {
+            JOptionPane.showMessageDialog(this, "Enter a reason for the clinic visit.",
+                    "Reason Required", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        String medicineName = medicine == null || medicine.isBlank() ? "None" : medicine;
+        String actor = loggedInAccount == null ? "Unknown" : loggedInAccount.GetName();
+        ECheckin.setEnabled(false);
+        jButton1.setEnabled(false);
+        DatabaseExecutor.run(() -> new VisitData().checkInWithMedicine(
+                student.name(), student.gradeSection(), student.lrn(), reason, medicineName,
+                "None".equalsIgnoreCase(medicineName) ? 0 : 1,
+                student.parentName(), student.phoneNumber(), new MedicineData(), actor), result -> {
+            ECheckin.setEnabled(true);
+            jButton1.setEnabled(true);
+            refreshRecentVisits();
+            closeCheckinPopup();
+            ReasonField.setText("");
+            MedicineField.setText("");
+            JOptionPane.showMessageDialog(this,
+                    result.medicineDeducted() || "None".equalsIgnoreCase(medicineName)
+                            ? "Student checked in successfully."
+                            : "Student checked in, but the selected medicine was unavailable.",
+                    "Check-in Complete", JOptionPane.INFORMATION_MESSAGE);
+        }, ex -> {
+            ECheckin.setEnabled(true);
+            jButton1.setEnabled(true);
+            JOptionPane.showMessageDialog(this, "Unable to save the check-in: " + ex.getMessage(),
+                    "Check-in Error", JOptionPane.ERROR_MESSAGE);
+        });
+    }
+
+    private void loadStudentChooser(String search) {
+        final String requestedSearch = search == null ? "" : search.trim();
+        final int requestId = ++studentSearchGeneration;
+        DatabaseExecutor.run(() -> findStudents(requestedSearch), students -> {
+            if (requestId != studentSearchGeneration
+                    || !requestedSearch.equals(SearchField.getText().trim())) return;
+            DefaultTableModel model = (DefaultTableModel) ReasonTable.getModel();
+            model.setRowCount(0);
+            for (StudentDetails student : students) {
+                model.addRow(new Object[]{student.name(), student.gradeSection(), student.lrn(),
+                        student.parentName(), student.phoneNumber()});
+            }
+        }, ex -> JOptionPane.showMessageDialog(this,
+                "Unable to load students: " + ex.getMessage(), "Student Load Error",
+                JOptionPane.ERROR_MESSAGE));
+    }
+
+    private void refreshRecentVisits() {
+        DatabaseExecutor.run(() -> new VisitData().loadActive(), visits -> {
+            DefaultTableModel model = (DefaultTableModel) jTable1.getModel();
+            model.setRowCount(0);
+            for (CheckinSystem visit : visits) {
+                model.addRow(new Object[]{visit.getCheckInTime(), visit.getName(),
+                        visit.getGradeSection(), "", visit.getReason(), visit.getMedUsed(),
+                        visit.getStatus()});
+            }
+        }, ex -> JOptionPane.showMessageDialog(this,
+                "Unable to load recent clinic visits: " + ex.getMessage(), "Visit Load Error",
+                JOptionPane.ERROR_MESSAGE));
+    }
+
+    private void findStudent(String lrn, java.util.function.Consumer<StudentDetails> onSuccess) {
+        DatabaseExecutor.run(() -> findStudentByLrn(lrn), onSuccess, ex ->
+                JOptionPane.showMessageDialog(this, "Unable to find student: " + ex.getMessage(),
+                        "Student Search Error", JOptionPane.ERROR_MESSAGE));
+    }
+
+    private static StudentDetails findStudentByLrn(String lrn) throws java.sql.SQLException {
+        String sql = "SELECT name, grade_section, lrn, allergy, health_conditions, parent_name, phone_number "
+                + "FROM STUDENTS WHERE lrn = ? AND status = 'ACTIVE'";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, lrn);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? studentFromResult(rs) : null;
             }
         }
-    });
-    
-    slideUpTimer.start();
-}
+    }
 
+    private static java.util.ArrayList<StudentDetails> findStudents(String search) throws java.sql.SQLException {
+        java.util.ArrayList<StudentDetails> students = new java.util.ArrayList<>();
+        String sql = "SELECT name, grade_section, lrn, allergy, health_conditions, parent_name, phone_number "
+                + "FROM STUDENTS WHERE status = 'ACTIVE' AND (UPPER(name) LIKE ? OR UPPER(grade_section) LIKE ? OR UPPER(lrn) LIKE ?) "
+                + "ORDER BY name, lrn";
+        String filter = "%" + (search == null ? "" : search.trim().toUpperCase()) + "%";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, filter);
+            ps.setString(2, filter);
+            ps.setString(3, filter);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) students.add(studentFromResult(rs));
+            }
+        }
+        return students;
+    }
+
+    private static StudentDetails studentFromResult(ResultSet rs) throws java.sql.SQLException {
+        return new StudentDetails(rs.getString("name"), rs.getString("grade_section"),
+                rs.getString("lrn"), rs.getString("allergy"), rs.getString("health_conditions"),
+                rs.getString("parent_name"), rs.getString("phone_number"));
+    }
+
+    private record StudentDetails(String name, String gradeSection, String lrn, String allergy,
+            String healthConditions, String parentName, String phoneNumber) {
+    }
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do 
@@ -914,17 +506,18 @@ NOT modify this code. The content of this method is always
         jPanel3 = new javax.swing.JPanel();
         jLabel13 = new javax.swing.JLabel();
         jPanel8 = new javax.swing.JPanel();
-        jTextField2 = new javax.swing.JTextField();
+        ReasonField = new javax.swing.JTextField();
         jButton2 = new javax.swing.JButton();
         jLabel14 = new javax.swing.JLabel();
         jLabel15 = new javax.swing.JLabel();
         jLabel16 = new javax.swing.JLabel();
-        jTextField3 = new javax.swing.JTextField();
+        LrnField = new javax.swing.JTextField();
         ECheckin = new javax.swing.JButton();
         jLabel17 = new javax.swing.JLabel();
-        jTextField4 = new javax.swing.JTextField();
+        MedicineField = new javax.swing.JTextField();
         jLabel18 = new javax.swing.JLabel();
-        jTextField5 = new javax.swing.JTextField();
+        TempField = new javax.swing.JTextField();
+        NameField = new javax.swing.JTextField();
         jLabel19 = new javax.swing.JLabel();
         jLabel20 = new javax.swing.JLabel();
         jPanel9 = new javax.swing.JPanel();
@@ -990,6 +583,7 @@ NOT modify this code. The content of this method is always
         StatisticBTN.addActionListener(this::StatisticBTNActionPerformed);
 
         InventoryBTN.setText("Inventory and Management");
+        InventoryBTN.addActionListener(this::InventoryBTNActionPerformed);
 
         Logout.setBackground(new java.awt.Color(255, 255, 255));
         Logout.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
@@ -1056,10 +650,7 @@ NOT modify this code. The content of this method is always
         jTable1.setForeground(new java.awt.Color(0, 0, 0));
         jTable1.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null}
+
             },
             new String [] {
                 "Time", "Name", "Section", "Temp", "Symptoms", "Medicine", "Status"
@@ -1131,26 +722,30 @@ NOT modify this code. The content of this method is always
             .addGroup(jPanel8Layout.createSequentialGroup()
                 .addGap(30, 30, 30)
                 .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel18)
                     .addComponent(jLabel15)
                     .addGroup(jPanel8Layout.createSequentialGroup()
                         .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel14)
-                            .addComponent(jLabel16)
-                            .addComponent(jLabel17))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                            .addGroup(jPanel8Layout.createSequentialGroup()
+                                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(jLabel14)
+                                    .addComponent(jLabel16)
+                                    .addComponent(jLabel17))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                    .addComponent(ReasonField, javax.swing.GroupLayout.DEFAULT_SIZE, 151, Short.MAX_VALUE)
+                                    .addComponent(MedicineField)
+                                    .addComponent(TempField)
+                                    .addComponent(NameField, javax.swing.GroupLayout.Alignment.TRAILING)
+                                    .addComponent(LrnField)))
+                            .addComponent(jLabel18))
                         .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(jPanel8Layout.createSequentialGroup()
-                                .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, 148, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jButton2))
-                            .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                .addComponent(ECheckin, javax.swing.GroupLayout.PREFERRED_SIZE, 133, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                                    .addComponent(jTextField2, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 151, Short.MAX_VALUE)
-                                    .addComponent(jTextField4, javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(jTextField5, javax.swing.GroupLayout.Alignment.LEADING))))))
-                .addContainerGap(116, Short.MAX_VALUE))
+                                .addGap(18, 18, 18)
+                                .addComponent(ECheckin, javax.swing.GroupLayout.PREFERRED_SIZE, 133, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(jPanel8Layout.createSequentialGroup()
+                                .addGap(43, 43, 43)
+                                .addComponent(jButton2)))))
+                .addContainerGap(44, Short.MAX_VALUE))
         );
         jPanel8Layout.setVerticalGroup(
             jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1158,25 +753,26 @@ NOT modify this code. The content of this method is always
                 .addGap(50, 50, 50)
                 .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel14)
-                    .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(LrnField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton2))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jLabel15)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel15)
+                    .addComponent(NameField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel16)
-                    .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(ReasonField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(7, 7, 7)
                 .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel18)
-                    .addComponent(jTextField5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(TempField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel17)
-                    .addComponent(jTextField4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 56, Short.MAX_VALUE)
-                .addComponent(ECheckin)
-                .addContainerGap())
+                    .addComponent(MedicineField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(ECheckin))
+                .addContainerGap(89, Short.MAX_VALUE))
         );
 
         jLabel19.setFont(new java.awt.Font("Dialog", 1, 12)); // NOI18N
@@ -1285,7 +881,7 @@ NOT modify this code. The content of this method is always
                         .addComponent(jPanel8, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(44, 44, 44)
                         .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 89, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 65, Short.MAX_VALUE)
                 .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jPanel10, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jPanel12, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -1304,7 +900,7 @@ NOT modify this code. The content of this method is always
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MainPanelLayout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 73, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 80, Short.MAX_VALUE)
                 .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MainPanelLayout.createSequentialGroup()
                         .addComponent(jLabel19)
@@ -1424,8 +1020,8 @@ NOT modify this code. The content of this method is always
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jLabel11)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGroup(CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel10, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel10, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
@@ -1692,7 +1288,7 @@ NOT modify this code. The content of this method is always
         jPanel15.setLayout(jPanel15Layout);
         jPanel15Layout.setHorizontalGroup(
             jPanel15Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 0, Short.MAX_VALUE)
+            .addGap(0, 642, Short.MAX_VALUE)
             .addGroup(jPanel15Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 642, Short.MAX_VALUE))
         );
@@ -1767,799 +1363,52 @@ NOT modify this code. The content of this method is always
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    
-    private void LogoutActionPerformed(java.awt.event.ActionEvent evt) {                                       
-       
-         Object[] options = {"Export & Logout", "Logout", "Cancel"};
-        int choice = JOptionPane.showOptionDialog(
-                this,
-                "Would you like to export your check-in logs before logging out?",
-                "Export Check-in Logs?",
-                JOptionPane.YES_NO_CANCEL_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                options,
-                options[0]
-        );
+    private void InventoryBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_InventoryBTNActionPerformed
+        if (!requireAdminPanelAccess()) return;
+        SessionManager.saveSession(loggedInAccount);
+        new AdminPanel(loggedInAccount).setVisible(true);
+        dispose();
+    }//GEN-LAST:event_InventoryBTNActionPerformed
+    private void CheckInBTNActionPerformed(java.awt.event.ActionEvent evt) {
+        openCheckinForSelection();
+    }
 
-        // Esc key or closing the dialog itself -> treat the same as Cancel
-        if (choice == JOptionPane.CLOSED_OPTION || choice == 2) {
-            return;
-        }
-
-        if (choice == 0) { // Export & Logout
-            boolean exported = exportTodaysCheckinLogs();
-            if (!exported) {
-                return; // exportTodaysCheckinLogs() already explained why - stay logged in
+    private void LogoutActionPerformed(java.awt.event.ActionEvent evt) {
+        if (loggedInAccount != null) {
+            try {
+                ActivityLogData.log("LOGOUT", "User signed out.", loggedInAccount.GetName());
+            } catch (java.sql.SQLException ignored) {
+                // Logging failure must not trap a user in the application.
             }
         }
-
-        // Reaches here for: choice == 1 (plain Logout), or choice == 0 after a successful export
-        stopSessionTimeoutMonitoring();
         SessionManager.clearSession();
+        UserSession.clear();
         new LoginUi().setVisible(true);
-        this.dispose();
-    }                                        
-
-     /** Turns "1-1-2026" / "2026-1-1" style input into a strict "yyyy-MM-dd" string. */
-    private String normalizeDate(String input) throws DateTimeParseException {
-        DateTimeFormatter looseFormat = DateTimeFormatter.ofPattern("yyyy-M-d");
-        LocalDate date = LocalDate.parse(input, looseFormat);
-        return date.format(DateTimeFormatter.ISO_LOCAL_DATE);
+        dispose();
     }
 
-    /** Shows a date field PREFILLED with today's date so the user can confirm or edit it.
-     *  Returns the confirmed date, or null if the user cancelled. */
-    private LocalDate confirmReportDate() {
-        javax.swing.JTextField dateField = new javax.swing.JTextField(LocalDate.now().toString());
-        ((javax.swing.text.AbstractDocument) dateField.getDocument())
-                .setDocumentFilter(new DateInputFilter());
-
-        while (true) {
-            int result = JOptionPane.showConfirmDialog(this, dateField,
-                    "Report date (edit if you need a different day, e.g. 2026-1-1 or 2026-01-01):",
-                    JOptionPane.OK_CANCEL_OPTION);
-            if (result != JOptionPane.OK_OPTION) {
-                return null; // user cancelled
-            }
-            try {
-                return LocalDate.parse(normalizeDate(dateField.getText().trim()));
-            } catch (DateTimeParseException ex) {
-                JOptionPane.showMessageDialog(this, "Please enter a valid date (e.g. 2026-1-1 or 2026-01-01).");
-                // loop back so they can fix it instead of losing their place
-            }
-        }
+    private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {
+        // Legacy action removed: its original controls no longer exist in the generated form.
     }
 
-    /** Exports check-in logs for a confirmed date, then archives & resets the active list.
-     *  Returns true only if the export actually succeeded (and the user did not cancel). */
-     private boolean exportTodaysCheckinLogs() {
-        LocalDate reportDate = confirmReportDate();
-        if (reportDate == null) {
-            return false; // user cancelled the date confirmation - stay logged in
-        }
-
-        String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
-        ReportExporter exporter = new ReportExporter(productService);
-
-        try {
-            if (!exporter.hasCheckinRecordsForDate(reportDate)) {
-                int proceed = JOptionPane.showConfirmDialog(this,
-                        "There are no check-in records for " + reportDate + ". Log out without exporting?",
-                        "Nothing to Export",
-                        JOptionPane.YES_NO_OPTION);
-                return proceed == JOptionPane.YES_OPTION;
-            }
-
-            javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
-            String suggestedName = "CheckIn_Log_" + reportDate + ".xlsx";
-            chooser.setSelectedFile(new java.io.File(suggestedName));
-            int saveChoice = chooser.showSaveDialog(this);
-            if (saveChoice != javax.swing.JFileChooser.APPROVE_OPTION) {
-                return false; // user cancelled the Save dialog - stay logged in
-            }
-
-            java.io.File destination = chooser.getSelectedFile();
-            if (!destination.getName().toLowerCase().endsWith(".xlsx")) {
-                destination = new java.io.File(destination.getParentFile(), destination.getName() + ".xlsx");
-            }
-
-            // Export first. Only if this line completes without throwing do we move on.
-            exporter.writeCheckinReport(reportDate, destination, actor);
-            
-            // Export succeeded -> now archive & reset the active daily check-in list for this date.
-            try {
-                int archivedCount = visitService.archiveDate(reportDate.toString());
-                JOptionPane.showMessageDialog(this,
-                        "Check-in logs exported and archived successfully:\n" + destination.getAbsolutePath()
-                        + "\n\n" + archivedCount + " check-in record(s) for " + reportDate + " were archived.\n"
-                        + "The daily Check-in Logs have been reset for the next day.");
-                return true;
-            } catch (SQLException archiveEx) {
-                JOptionPane.showMessageDialog(this,
-                        "Check-in logs were exported successfully, but they could not be archived/reset:\n"
-                        + archiveEx.getMessage() + "\n\nYou have not been logged out.",
-                        "Archive Failed", JOptionPane.ERROR_MESSAGE);
-                return false;
-            }
-
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "The Check-in Logs could not be exported.\nNo records were archived or reset.\nYou have not been logged out.\n\nDatabase error: " + ex.getMessage(),
-                    "Export Failed", JOptionPane.ERROR_MESSAGE);
-            return false;
-        } catch (IOException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "The Check-in Logs could not be exported.\nNo records were archived or reset.\nYou have not been logged out.\n\nFile error: " + ex.getMessage(),
-                    "Export Failed", JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-
-    }                     
-   
-    private boolean noMedicineWarningShown = false;
-    
-    private void CheckInBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CheckInBTNActionPerformed
-       
-        noMedicineWarningShown = false;
-
-        String name = NameCheckIn.getText().trim();
-        String gradeSection = GSCheckIn.getText().trim();
-        String lrn = LRNField.getText().trim();
-        String reason = ReasonArea.getText().trim();
-
-        // REQUIRED FIELD VALIDATION
-        if (name.isEmpty() && gradeSection.isEmpty() && lrn.isEmpty()) {
-            showToast(MainPanel, "Name, Grade/Section, and LRN are required!", false);
-            return;
-        } else if (name.isEmpty() && gradeSection.isEmpty()) {
-            showToast(MainPanel, "Name and Grade/Section are required!", false);
-            return;
-        } else if (name.isEmpty() && lrn.isEmpty()) {
-            showToast(MainPanel, "Name and LRN are required!", false);
-            return;
-        } else if (gradeSection.isEmpty() && lrn.isEmpty()) {
-            showToast(MainPanel, "Grade/Section and LRN are required!", false);
-            return;
-        } else if (name.isEmpty()) {
-            showToast(MainPanel, "Name is required!", false);
-            return;
-        } else if (gradeSection.isEmpty()) {
-            showToast(MainPanel, "Grade/Section is required!", false);
-            return;
-        } else if (lrn.isEmpty()) {
-            showToast(MainPanel, "LRN is required!", false);
-            return;
-        }
-
-        // LRN FORMAT VALIDATION
-        if (!lrn.matches("\\d{12}")) {
-            showToast(MainPanel, "LRN must contain exactly 12 digits.", false);
-            LRNField.requestFocus();
-            return;
-        }
-
-        // REASON VALIDATION
-        if (reason.isEmpty()) {
-            showToast(MainPanel, "Reason is needed to proceed on the check in", false);
-            return;
-        }
-
-        // MEDICINE CHECK
-        if (jComboBox1.getItemCount() == 0) {
-
-            int proceedWithoutMed = JOptionPane.showConfirmDialog(
-                this,
-                "There is no medicine available in the inventory.\n"
-                + "Do you want to proceed with the check-in without giving any medicine?",
-                "No Medicine Available",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE
-            );
-
-            if (proceedWithoutMed != JOptionPane.YES_OPTION) {
-                return;
-            }
-
-            pendingmedUsed = "None";
-            pendingmedsQty = 0;
-
-        } else {
-            
-            // MEDICINE SELECTION
-            int wantsMed = JOptionPane.showConfirmDialog(this,
-                "Would this student like to take medicine?", "Medicine", JOptionPane.YES_NO_OPTION);
-
-            if (wantsMed == JOptionPane.CLOSED_OPTION) return;
-
-            if (wantsMed == JOptionPane.YES_OPTION) {
-                Object selectedMed = jComboBox1.getSelectedItem();
-
-                if (selectedMed == null) {
-                    showToast(MainPanel, "Your inventory of medicine might be empty, please check first.", false);
-                    return;
-                }
-
-                pendingmedUsed = selectedMed.toString();
-
-                try {
-                    Medicine medProduct = productService.findByName(pendingmedUsed);
-
-                    // CHECK IF MEDICINE IS EXPIRED
-                    if (medProduct != null && medProduct.isExpired()) {
-                        showToast(MainPanel,
-                            pendingmedUsed + " is expired and cannot be given. Please choose another medicine.",
-                            false);
-                        return;
-                    }
-
-                    // ASK FOR QUANTITY
-                    String qtyInput = JOptionPane.showInputDialog(this,
-                        "How many pills of " + pendingmedUsed + "?", "1");
-
-                    if (qtyInput == null) return; // cancelled
-
-                    // VALIDATE QUANTITY
-                    try {
-                        pendingmedsQty = Integer.parseInt(qtyInput.trim());
-                    } catch (NumberFormatException ex) {
-                        showToast(MainPanel, "Please enter a valid whole number for pill quantity.", false);
-                        return;
-                    }
-
-                    if (pendingmedsQty <= 0) {
-                        showToast(MainPanel, "Pill quantity must be at least 1.", false);
-                        return;
-                    }
-
-                    // CHECK AVAILABLE STOCK
-                    if (medProduct != null && medProduct.getquantity() < pendingmedsQty) {
-                        showToast(MainPanel,
-                            pendingmedUsed + " only has " + medProduct.getquantity()
-                            + " pcs left. Please enter a smaller amount.", false);
-                        return;
-                    }
-
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(this,
-                        "Unable to check the selected medicine.", "Medicine Error", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-
-            } else {
-                // NO - Student does not want medicine
-                pendingmedUsed = "None";
-                pendingmedsQty = 0;
-            }
-        }
-
-        // CHECK EXISTING STUDENT / LRN
-        try {
-            String existingName = visitService.findNameForLrn(lrn);
-
-            // CHECK IF LRN BELONGS TO ANOTHER STUDENT
-            if (existingName != null && !existingName.equalsIgnoreCase(name)) {
-                JOptionPane.showMessageDialog(this,
-                    "This LRN is already registered under the name \"" + existingName
-                    + "\". Please verify the LRN or name.",
-                    "LRN Already Registered", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-
-            // CHECK IF STUDENT IS ALREADY CHECKED IN
-            if (visitService.isCurrentlyCheckedIn(lrn)) {
-                JOptionPane.showMessageDialog(this,
-                    "This student is already checked in.", "Already Checked In", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-
-            // REFRESH INFORMATION
-            refreshTableAndCounters();
-            refreshInventoryStatusDisplay();
-
-            // CLEAR PARENT/GUARDIAN FIELDS
-            ParentGurdianName.setText("");
-            PhoneField.setText("");
-
-            // SHOW PARENT/GUARDIAN PANEL USING LAYERING
-            if (SentHomeInformationPanel.getParent() != null) {
-                SentHomeInformationPanel.getParent().setComponentZOrder(SentHomeInformationPanel, 0);
-            }
-
-            glassOverlay.setBounds(0, 0, getWidth(), getHeight());
-            glassOverlay.setVisible(true);
-
-            // CENTER PARENT/GUARDIAN PANEL
-            java.awt.Dimension size = SentHomeInformationPanel.getPreferredSize();
-            int x = (getWidth() - size.width) / 2;
-            int y = (getHeight() - size.height) / 2;
-            SentHomeInformationPanel.setBounds(x, y, size.width, size.height);
-            SentHomeInformationPanel.setVisible(true);
-
-            // REFRESH LAYERED PANE
-            getLayeredPane().revalidate();
-            getLayeredPane().repaint();
-            this.revalidate();
-            this.repaint();
-
-        } catch (Exception ex) {
-            showToast(CheckInPopup, "Error saving check-in: " + ex.getMessage(), false);
-        }
-    }//GEN-LAST:event_CheckInBTNActionPerformed
- 
-       
-    private String selectedOldMedUsed = "None";
-    private int selectedOldMedsQty = 0;
-    private String selectedGuardianName = "";
-    private String selectedGuardianPhone = "";
-    
-    private void ReasonTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_ReasonTableMouseClicked
-       
-        int row = ReasonTable.getSelectedRow();
-      
-        if (row == -1) return;
-
-        CheckinSystem selected = currentVisits.get(row);
-
-        selectedVisitLrn = selected.getLrn();
-        selectedOldMedUsed = selected.getMedUsed();
-        selectedOldMedsQty = selected.getmedsQty();
-        selectedGuardianName = selected.getGuardianName();
-        selectedGuardianPhone = selected.getGuardianPhoneNums();
-
-        NameCheckIn.setText(selected.getName());
-        GSCheckIn.setText(selected.getGradeSection());
-        LRNField.setText(selected.getLrn());
-        LRNField.setEditable(true);
-        ReasonArea.setText(selected.getReason());
-        jComboBox1.setSelectedItem(selected.getMedUsed());
-         
-    
-    }//GEN-LAST:event_ReasonTableMouseClicked
-
-    private void ThemeToggleActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ThemeToggleActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_ThemeToggleActionPerformed
-
-    private void StatisticBTNActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StatisticBTNActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_StatisticBTNActionPerformed
-    
-    private String pendingmedUsed = "None";
-    private int pendingmedsQty = 0;
-    
-    
-       
-    private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {                                         
-            
-
-            int row = ReasonTable.getSelectedRow();
-
-            if (row == -1) {
-                JOptionPane.showMessageDialog(this, "Select a Student in the Table First...");
-                return;
-            }
-
-            if (ReasonTable.getSelectedRowCount() > 1) {
-                JOptionPane.showMessageDialog(this,
-                        "Please select only one student at a time to send home.",
-                        "Multiple Students Selected", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-
-            String lrn = (String) ReasonTable.getValueAt(row, 3);
-
-            try {
-                
-                CheckinSystem record = visitService.findActiveVisit(lrn);
-
-                if (record == null) {
-                    JOptionPane.showMessageDialog(this, "This Student has Already been sent");
-                    return;
-                }
-                
-                Object[] pickerOptions = {"Sent Home", "Sent Back to Classroom", "Cancel"};
-                int choice = JOptionPane.showOptionDialog(
-                        this,
-                        "Sent home Or Sent Back to room?",
-                        "Student Status",
-                        JOptionPane.DEFAULT_OPTION,
-                        JOptionPane.QUESTION_MESSAGE,
-                        null,
-                        pickerOptions,
-                        pickerOptions[0]);
-
-                if (choice != 0 && choice != 1) {
-                    // Cancel selected, or dialog closed with the X button — do nothing
-                    return;
-                }
-
-                if (choice == 1) {
-                    // ---- SENT BACK TO CLASSROOM ----
-                    String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
-                    boolean backSuccess = visitService.markSentBack(lrn, actor);
-                    
-                    if (!backSuccess) {
-                        JOptionPane.showMessageDialog(this, "Error... Unable to update the Student's Status");
-                        return;
-                    }
-
-                    refreshTableAndCounters();
-                    JOptionPane.showMessageDialog(this,
-                            record.getName() + " has been sent back to the classroom.");
-                    return;
-                }
-
-                // ---- SENT HOME (choice == 0) — existing flow, unchanged below ----
-                String actor = (loggedInAccount != null) ? loggedInAccount.GetName() : "Unknown";
-                boolean success = visitService.markSentHome(lrn, actor);
-
-                if (!success) {
-                    JOptionPane.showMessageDialog(this, "Error... Unable to update the Student's Status");
-                    return;
-                }
-
-                refreshTableAndCounters();
-
-                String safeName = record.getName().replaceAll("[^a-zA-Z0-9]", "_");
-                String defaultFileName = "SentHome_" + safeName + "_" + java.time.LocalDate.now() + ".pdf";
-
-                javax.swing.JFileChooser fileChooser = new javax.swing.JFileChooser();
-                fileChooser.setDialogTitle("Save Sent Home Slip");
-                fileChooser.setSelectedFile(new java.io.File(defaultFileName));
-                fileChooser.setFileFilter(
-                        new javax.swing.filechooser.FileNameExtensionFilter("PDF Files (*.pdf)", "pdf"));
-
-                int userChoice = fileChooser.showSaveDialog(this);
-                if (userChoice != javax.swing.JFileChooser.APPROVE_OPTION) {
-                    // Status is already updated to Sent Home - the user just chose not to save a slip right now.
-                    return;
-                }
-
-                java.io.File pdfFile = fileChooser.getSelectedFile();
-                if (!pdfFile.getName().toLowerCase().endsWith(".pdf")) {
-                    pdfFile = new java.io.File(pdfFile.getParentFile(), pdfFile.getName() + ".pdf");
-                }
-
-                generateSentHomePdf(record, pdfFile);
-
-                int openChoice = JOptionPane.showConfirmDialog(this,
-                        "Sent Home slip generated successfully. Would you like to open it?",
-                        "Slip Generated", JOptionPane.YES_NO_OPTION);
-
-                if (openChoice == JOptionPane.YES_OPTION) {
-                    try {
-                        if (java.awt.Desktop.isDesktopSupported()) {
-                            java.awt.Desktop.getDesktop().open(pdfFile);
-                        } else {
-                            JOptionPane.showMessageDialog(this, "Saved to: " + pdfFile.getAbsolutePath());
-                        }
-                    } catch (java.io.IOException ex) {
-                        JOptionPane.showMessageDialog(this,
-                                "Could not open the PDF automatically. Saved to:\n" + pdfFile.getAbsolutePath());
-                    }
-                } else {
-                    JOptionPane.showMessageDialog(this, "Saved to: " + pdfFile.getAbsolutePath());
-                }
-
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error updating status: " + ex.getMessage());
-            }
-    }  
-        //print layout
-        private void printSentHomeSlip(CheckinSystem record) {
-
-            String staffName = (loggedInAccount != null) ? loggedInAccount.GetName() : "N/A";
-            String sentHomeTime = java.time.LocalDateTime.now().format(
-            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a"));
-
-            java.util.List<String[]> fields = new java.util.ArrayList<>();
-            fields.add(new String[]{"Name", record.getName()});
-            fields.add(new String[]{"Grade/Section", record.getGradeSection()});
-            fields.add(new String[]{"LRN", record.getLrn()});
-            fields.add(new String[]{"Reason for Visit", record.getReason()});
-            fields.add(new String[]{"Medicine Used", record.getMedicineDisplay()});
-            fields.add(new String[]{"Checked In", record.getCheckInTime()});
-            fields.add(new String[]{"Sent Home", sentHomeTime});
-            fields.add(new String[]{"Parent/Guardian", dashOrValue(record.getGuardianName())});
-            fields.add(new String[]{"Guardian Phone", dashOrValue(record.getGuardianPhoneNums())});
-            fields.add(new String[]{"Clinic Staff", staffName});
-
-            java.awt.print.Printable printable = (graphics, pageFormat, pageIndex) -> {
-                if (pageIndex > 0) return java.awt.print.Printable.NO_SUCH_PAGE;
-
-                Graphics2D g2 = (Graphics2D) graphics;
-                g2.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
-
-                int y = 20;
-                g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.BOLD, 16));
-                g2.drawString("[School name] CLINIC", 10, y);
-                y += 20;
-                g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.BOLD, 13));
-                g2.drawString("STUDENT SENT HOME SLIP", 10, y);
-                y += 8;
-                g2.drawLine(10, y, (int) pageFormat.getImageableWidth() - 10, y);
-                y += 25;
-
-                g2.setFont(new java.awt.Font("Monospaced", java.awt.Font.PLAIN, 12));
-                for (String[] field : fields) {
-                    g2.drawString(String.format("%-16s: %s", field[0], field[1]), 10, y);
-                    y += 20;
-                }
-
-                y += 25;
-                g2.drawString("Released to (Parent/Guardian): ____________________________", 10, y);
-                y += 40;
-                g2.drawString("Guardian Signature:             ____________________________", 10, y);
-                y += 40;
-                g2.drawString("Nurse/Staff Signature:          ____________________________", 10, y);
-                y += 30;
-
-                g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.ITALIC, 10));
-                g2.drawString("Please keep this slip for your records.", 10, y);
-
-                return java.awt.print.Printable.PAGE_EXISTS;
-            };
-
-            java.awt.print.PrinterJob job = java.awt.print.PrinterJob.getPrinterJob();
-            job.setPrintable(printable);
-            job.setJobName("SentHomeSlip_" + record.getLrn());
-
-            if (job.printDialog()) {
-                try {
-                    job.print();
-                } catch (java.awt.print.PrinterException ex) {
-                    JOptionPane.showMessageDialog(this, "Printing failed: " + ex.getMessage());
-                }
-            }
-}
-        
-    private void generateSentHomePdf(CheckinSystem record, File destination) throws IOException {
-    String staffName = (loggedInAccount != null) ? loggedInAccount.GetName() : "N/A";
-    String sentHomeTime = java.time.LocalDateTime.now().format(
-            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a"));
-
-    try (org.apache.pdfbox.pdmodel.PDDocument document = new org.apache.pdfbox.pdmodel.PDDocument()) {
-        org.apache.pdfbox.pdmodel.PDPage page =
-                new org.apache.pdfbox.pdmodel.PDPage(org.apache.pdfbox.pdmodel.common.PDRectangle.LETTER);
-        document.addPage(page);
-
-        // Embedded fonts loaded per-document (PDFont instances are tied to one PDDocument)
-       org.apache.pdfbox.pdmodel.font.PDFont fontRegular =
-        loadSlipFont(document, "/Assets/Fonts/ClinicSans-Regular.ttf");
-
-        org.apache.pdfbox.pdmodel.font.PDFont fontBold =
-                loadSlipFont(document, "/Assets/Fonts/ClinicSans-Bold.ttf");
-
-        org.apache.pdfbox.pdmodel.font.PDFont fontItalic =
-                loadSlipFont(document, "/Assets/Fonts/ClinicSans-Italic.ttf");
-
-        try (org.apache.pdfbox.pdmodel.PDPageContentStream content =
-                     new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
-
-            float margin = 50;
-            float y = page.getMediaBox().getHeight() - margin;
-            float leading = 20;
-
-            content.setFont(fontBold, 16);
-            content.beginText();
-            content.newLineAtOffset(margin, y);
-            content.showText("[Your School Name] CLINIC");
-            content.endText();
-            y -= 20;
-
-            content.setFont(fontBold, 13);
-            content.beginText();
-            content.newLineAtOffset(margin, y);
-            content.showText("SENT HOME RECORD");
-            content.endText();
-            y -= 10;
-
-            content.moveTo(margin, y);
-            content.lineTo(page.getMediaBox().getWidth() - margin, y);
-            content.stroke();
-            y -= 25;
-
-            String[][] fields = {
-                {"Name", record.getName()},
-                {"Grade/Section", record.getGradeSection()},
-                {"LRN", record.getLrn()},
-                {"Reason for Visit", record.getReason()},
-                {"Medicine Used", record.getMedicineDisplay()},
-                {"Checked In", record.getCheckInTime()},
-                {"Sent Home", sentHomeTime},
-                {"Parent/Guardian", dashOrValue(record.getGuardianName())},
-                {"Guardian Phone", dashOrValue(record.getGuardianPhoneNums())},
-                {"Clinic Staff", staffName}
-            };
-
-            content.setFont(fontRegular, 12);
-            for (String[] field : fields) {
-                content.beginText();
-                content.newLineAtOffset(margin, y);
-                content.showText(String.format("%-16s: %s", field[0], safeText(field[1])));
-                content.endText();
-                y -= leading;
-            }
-
-            y -= 25;
-            content.beginText();
-            content.newLineAtOffset(margin, y);
-            content.showText("Released to (Parent/Guardian): ____________________________");
-            content.endText();
-            y -= 45;
-
-            content.beginText();
-            content.newLineAtOffset(margin, y);
-            content.showText("Guardian Signature:             ____________________________");
-            content.endText();
-            y -= 45;
-
-            content.beginText();
-            content.newLineAtOffset(margin, y);
-            content.showText("Nurse/Staff Signature:          ____________________________");
-            content.endText();
-            y -= 30;
-
-            content.setFont(fontItalic, 10);
-            content.beginText();
-            content.newLineAtOffset(margin, y);
-            content.showText("Please keep this slip for your records.");
-            content.endText();
-        }
-
-        document.save(destination);
-    }
-}
-
-    private org.apache.pdfbox.pdmodel.font.PDFont slipFontRegular;
-    private org.apache.pdfbox.pdmodel.font.PDFont slipFontBold;
-    private org.apache.pdfbox.pdmodel.font.PDFont slipFontItalic;
-
-    private org.apache.pdfbox.pdmodel.font.PDFont loadSlipFont(
-            org.apache.pdfbox.pdmodel.PDDocument document, String resourcePath) throws IOException {
-        try (java.io.InputStream is = Dashboard.class.getResourceAsStream(resourcePath)) {
-            if (is == null) {
-                throw new IOException("Missing bundled font resource: " + resourcePath);
-            }
-            return org.apache.pdfbox.pdmodel.font.PDType0Font.load(document, is);
-        }
-    }
-    
-// PDFBox's built-in Helvetica font can't render every Unicode character.
-// This keeps generation from crashing on unusual characters typed into Reason/Name fields.
-private String safeText(String value) {
-    if (value == null) return "-";
-    return value.replaceAll("[^\\x20-\\x7E]", "?");
-}
-
-    private String dashOrValue(String value) {
-    return (value == null || value.isBlank()) ? "—" : value;
-     }
-        
-    private void showTopAlertBanner(String message) {
-    javax.swing.JLabel alert = new javax.swing.JLabel(message, javax.swing.SwingConstants.CENTER);
-    alert.setOpaque(true);
-    alert.setBackground(new java.awt.Color(225, 29, 72)); // Modern Crimson/Coral Warning
-    alert.setForeground(java.awt.Color.WHITE);
-    alert.setFont(alert.getFont().deriveFont(java.awt.Font.BOLD, 13f));
-    
-    // Modern FlatLaf pill shape
-    alert.putClientProperty(com.formdev.flatlaf.FlatClientProperties.STYLE, "arc: 12;");
-
-    int bannerHeight = 40;
-    int bannerWidth = this.getWidth() - 100;
-    int startY = -bannerHeight; // Hidden above the frame
-    int targetY = 15;           // Slides down right over the header area
-    int relativeX = 50;
-
-    alert.setBounds(relativeX, startY, bannerWidth, bannerHeight);
-
-    javax.swing.JLayeredPane layeredPane = this.getLayeredPane();
-    layeredPane.add(alert, javax.swing.JLayeredPane.DRAG_LAYER);
-    layeredPane.revalidate();
-
-    // Slide DOWN Animation
-    javax.swing.Timer slideTimer = new javax.swing.Timer(10, null);
-    slideTimer.addActionListener(new java.awt.event.ActionListener() {
-        int currentY = startY;
-        
-        @Override
-        public void actionPerformed(java.awt.event.ActionEvent e) {
-            if (currentY < targetY) {
-                currentY += 3;
-                alert.setLocation(relativeX, currentY);
-                layeredPane.repaint();
-            } else {
-                slideTimer.stop();
-
-                // Stay visible for 5 seconds so staff can read all expired items
-                javax.swing.Timer delayTimer = new javax.swing.Timer(5000, evt -> {
-                    javax.swing.Timer slideUpTimer = new javax.swing.Timer(10, null);
-                    slideUpTimer.addActionListener(new java.awt.event.ActionListener() {
-                        int returnY = targetY;
-
-                        @Override
-                        public void actionPerformed(java.awt.event.ActionEvent e) {
-                            if (returnY > startY) {
-                                returnY -= 3;
-                                alert.setLocation(relativeX, returnY);
-                                layeredPane.repaint();
-                            } else {
-                                slideUpTimer.stop();
-                                layeredPane.remove(alert);
-                                layeredPane.repaint();
-                            }
-                        }
-                    });
-                    slideUpTimer.start();
-                });
-                delayTimer.setRepeats(false);
-                delayTimer.start();
-            }
-        }
-    });
-    
-    slideTimer.start();
-}
-    /*private void checkExpiredProducts() {
-    try {
-        
-        ArrayList<Medicine> medicine = productService.loadAll();
-        ArrayList<String> expiredItems = new ArrayList<>();
-        LocalDate today = LocalDate.now();
-        
-        // Try multiple date formatters if needed (e.g. yyyy-MM-dd or MM/dd/yyyy)
-        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-        for (Medicine p : medicine) {
-            // Option A: If status itself is marked as "Expired" or "OutOfStock"
-            if (p.getStatus() != null && p.getStatus().equalsIgnoreCase("Expired")) {
-                expiredItems.add(p.getname());
-                continue;
-            }
-
-            // Option B: If status stores a date string like "2026-08-01"
-            try {
-                LocalDate expDate = LocalDate.parse(p.getStatus().trim(), formatter);
-                if (expDate.isBefore(today) || expDate.isEqual(today)) {
-                    expiredItems.add(p.getname() + " (Exp: " + p.getStatus() + ")");
-                }
-            } catch (Exception ignored) {
-                // Skips items where getStatus() isn't a date string
-            }
-        }
-
-        if (!expiredItems.isEmpty()) {
-            String alertMsg = "⚠️ EXPIRED INVENTORY DETECTED: " + String.join(", ", expiredItems);
-            showTopAlertBanner(alertMsg);
-        }
-
-    } catch (Exception ex) {
-        logger.log(java.util.logging.Level.SEVERE, "Error checking product expiration", ex);
-    }
-}*/
-    
-    private void toggleSentHomePanel(boolean visible) {
-    SentHomeInformationPanel.setVisible(visible);
-    
-    // Explicitly toggle visibility for all components inside the panel
-    for (Component comp : SentHomeInformationPanel.getComponents()) {
-        comp.setVisible(visible);
-    }
-    
-    this.revalidate();
-    this.repaint();
-}
-    
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        com.formdev.flatlaf.FlatLightLaf.setup();
-        //java.awt.EventQueue.invokeLater(() -> new Dashboard().setVisible(true));
+    private void StatisticBTNActionPerformed(java.awt.event.ActionEvent evt) {
+        showPanel(StatisticPanel);
     }
 
+    private void ThemeToggleActionPerformed(java.awt.event.ActionEvent evt) {
+        // Legacy action removed: its original controls no longer exist in the generated form.
+    }
+
+    private void ReasonTableMouseClicked(java.awt.event.MouseEvent evt) {
+        selectStudentFromChooser();
+    }
+
+    public static void main(String[] args) {
+        FlatLightLaf.setup();
+        UIManager.put("Component.arc", 10);
+        UIManager.put("Button.arc", 10);
+        UIManager.put("TextComponent.arc", 10);
+    }
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton CheckInBTN;
     private javax.swing.JPanel CheckInPanel1;
@@ -2571,7 +1420,11 @@ private String safeText(String value) {
     private javax.swing.JButton InventoryBTN;
     private javax.swing.JLabel LRNLabel;
     private javax.swing.JButton Logout;
+    private javax.swing.JTextField LrnField;
     private javax.swing.JPanel MainPanel;
+    private javax.swing.JTextField MedicineField;
+    private javax.swing.JTextField NameField;
+    private javax.swing.JTextField ReasonField;
     private javax.swing.JTable ReasonTable;
     private javax.swing.JTextField SearchField;
     private javax.swing.JLabel SearchLabel;
@@ -2580,6 +1433,7 @@ private String safeText(String value) {
     private javax.swing.JButton StatisticBTN;
     private javax.swing.JPanel StatisticPanel;
     private javax.swing.JLabel StudentCheckinLabel;
+    private javax.swing.JTextField TempField;
     private javax.swing.JToggleButton ThemeToggle;
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton2;
@@ -2633,9 +1487,5 @@ private String safeText(String value) {
     private javax.swing.JTable jTable1;
     private javax.swing.JTable jTable2;
     private javax.swing.JTextField jTextField1;
-    private javax.swing.JTextField jTextField2;
-    private javax.swing.JTextField jTextField3;
-    private javax.swing.JTextField jTextField4;
-    private javax.swing.JTextField jTextField5;
     // End of variables declaration//GEN-END:variables
 }

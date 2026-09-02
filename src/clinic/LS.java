@@ -150,6 +150,8 @@ public class LS {
 
                 if (restoredAccount != null) {
 
+                    UserSession.start(restoredAccount);
+
                     new Dashboard(
                             restoredAccount
                     ).setVisible(true);

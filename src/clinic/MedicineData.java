@@ -36,7 +36,7 @@ public class MedicineData {
                 new ArrayList<>();
 
         String sql =
-                "SELECT name, exp_date, quantity "
+                "SELECT name, exp_date AS expiration_date, quantity "
                 + "FROM MEDICINES";
 
         try (Connection conn =
@@ -51,7 +51,7 @@ public class MedicineData {
                 medicine.add(
                         new Medicine(
                                 rs.getString("name"),
-                                rs.getString("exp_date"),
+                                rs.getString("expiration_date"),
                                 rs.getInt("quantity")
                         )
                 );
@@ -63,7 +63,7 @@ public class MedicineData {
 
     public void addItem(
             String name,
-            String expDate,
+            String expirationDate,
             int quantity,
             String performedBy)
             throws SQLException, IOException {
@@ -79,7 +79,7 @@ public class MedicineData {
                      conn.prepareStatement(sql)) {
 
             ps.setString(1, name);
-            ps.setString(2, expDate);
+            ps.setString(2, expirationDate);
             ps.setInt(3, quantity);
 
             ps.executeUpdate();
@@ -87,7 +87,7 @@ public class MedicineData {
 
         logActivity(
                 "ADD_MEDICINE",
-                quantity + "x " + name,
+                "Added new medicine: " + name + " (Qty: " + quantity + ")",
                 performedBy
         );
     }
@@ -368,6 +368,40 @@ public class MedicineData {
         }
     }
 
+    /** Restocks manually from Inventory and records a clear audit event. */
+    public boolean restockInventory(
+            String productName,
+            int quantity,
+            String performedBy) throws SQLException, IOException {
+
+        if (productName == null || productName.isBlank() || quantity <= 0) {
+            return false;
+        }
+
+        String sql = "UPDATE MEDICINES SET quantity = quantity + ? WHERE name = ?";
+        try (Connection conn = DatabaseManager.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, quantity);
+                ps.setString(2, productName);
+                if (ps.executeUpdate() == 0) {
+                    conn.rollback();
+                    return false;
+                }
+                ActivityLogData.log(conn, "RESTOCK_MEDICINE",
+                        "Restocked " + quantity + "x " + productName,
+                        performedBy);
+                conn.commit();
+                return true;
+            } catch (SQLException | RuntimeException ex) {
+                try { conn.rollback(); } catch (SQLException ignored) { }
+                throw ex;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
     /**
      * Connection-based overload, same shape as {@link #useMedicine(Connection,
      * String, String, int, String)}. Does NOT validate productName/quantity —
@@ -442,7 +476,7 @@ public class MedicineData {
             throws SQLException {
 
         String sql =
-                "SELECT name, exp_date, quantity "
+                "SELECT name, exp_date AS expiration_date, quantity "
                 + "FROM MEDICINES "
                 + "WHERE name = ?";
 
@@ -460,7 +494,7 @@ public class MedicineData {
 
                     return new Medicine(
                             rs.getString("name"),
-                            rs.getString("exp_date"),
+                            rs.getString("expiration_date"),
                             rs.getInt("quantity")
                     );
                 }

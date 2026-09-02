@@ -90,6 +90,17 @@ public class DatabaseManager {
                 + "guardian_name VARCHAR(255), "
                 + "guardian_phone VARCHAR(50))";
 
+        String createStudentsTable =
+                "CREATE TABLE IF NOT EXISTS STUDENTS ("
+                + "lrn VARCHAR(50) PRIMARY KEY, "
+                + "name VARCHAR(255) NOT NULL, "
+                + "grade_section VARCHAR(100) NOT NULL, "
+                + "teacher VARCHAR(255), "
+                + "allergy VARCHAR(500), "
+                + "health_conditions VARCHAR(1000), "
+                + "parent_name VARCHAR(255), "
+                + "phone_number VARCHAR(50), "
+                + "status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE')";
         String createActivityLogTable =
                 "CREATE TABLE IF NOT EXISTS ACTIVITY_LOG ("
                 + "id INT AUTO_INCREMENT PRIMARY KEY, "
@@ -109,6 +120,11 @@ public class DatabaseManager {
             stmt.execute(createMedicinesTable);
             stmt.execute(createVisitsTable);
             stmt.execute(createActivityLogTable);
+            stmt.execute(createStudentsTable);
+            stmt.execute(
+                    "CREATE INDEX IF NOT EXISTS IDX_STUDENTS_ACTIVE_SEARCH "
+                    + "ON STUDENTS(status, name, grade_section, lrn)"
+            );
 
             /*
              * Safe schema migrations for existing databases.
