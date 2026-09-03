@@ -26,3 +26,4 @@ Thumbs.db
 /data/*.trace.db
 *.mv.db
 *.trace.db
+/data/session.properties

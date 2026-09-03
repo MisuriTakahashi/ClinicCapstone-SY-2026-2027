@@ -17,22 +17,46 @@ import javax.swing.table.DefaultTableModel;
  * from the NetBeans form has been removed; the generated form remains intact.
  */
 public class Dashboard extends javax.swing.JFrame {
+    private javax.swing.JPanel dimmingOverlay;
     private final AccountSystem loggedInAccount;
     private javax.swing.JPanel currentPanel;
     private StudentDetails selectedStudent;
     private int studentSearchGeneration;
     private final javax.swing.JButton CancelCheckinBTN = new javax.swing.JButton("Cancel");
+    private javax.swing.JButton activeNavButton;
 
     public Dashboard(AccountSystem account) {
         loggedInAccount = account;
-        FlatLightLaf.setup();
-        initComponents();
-        UserSession.start(account);
-        configureNavigation();
-        configureClinicWorkflow();
-        installSessionPersistence();
-        setIconImage(AppIcon.getIcon());
-        setLocationRelativeTo(null);
+    FlatLightLaf.setup();
+    initComponents();
+    styleSidePanel();
+     javax.swing.Timer clockTimer = new javax.swing.Timer(1000, e -> {
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy  |  hh:mm:ss a");
+        DateTimeLabel.setText(now.format(formatter));
+    });
+    clockTimer.start();
+
+    // Create the overlay — size will be set dynamically when shown
+    dimmingOverlay = new DimmingOverlay();
+    getContentPane().add(dimmingOverlay, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1760, 850));
+    getContentPane().setComponentZOrder(dimmingOverlay, 1);
+
+    // Click outside the popup to close
+    dimmingOverlay.addMouseListener(new java.awt.event.MouseAdapter() {
+        @Override
+        public void mouseClicked(java.awt.event.MouseEvent evt) {
+            closeCheckinPopup();
+        }
+    });
+
+    UserSession.start(account);
+    configureNavigation();
+    configureClinicWorkflow();
+    installSessionPersistence();
+    setIconImage(AppIcon.getIcon());
+    setLocationRelativeTo(null);
+    updateActiveButton(HomeBTN);
     }
 
     public Dashboard() {
@@ -68,22 +92,89 @@ public class Dashboard extends javax.swing.JFrame {
         }
         showPanel(MainPanel);
     }
+   private void styleSidePanel() {
+    // 1. Define Colors
+    java.awt.Color sidePanelBg = new java.awt.Color(15, 23, 42); // Dark Slate
+    java.awt.Color activeText = java.awt.Color.WHITE;
+    java.awt.Color inactiveText = new java.awt.Color(148, 163, 184); // Muted Blue-Gray
+    java.awt.Color hoverBg = new java.awt.Color(30, 41, 59); // Slightly lighter slate for hover
+    java.awt.Color blueLine = new java.awt.Color(59, 130, 246); // The bright blue line
 
-    private void showPanel(javax.swing.JPanel target) {
-        if (target == null || currentPanel == target) {
-            return;
-        }
+    // Apply background to SidePanel
+    SidePanel.setBackground(sidePanelBg);
+    jLabel3.setForeground(java.awt.Color.WHITE); // Title color
 
-        // Swing actions run on the EDT. Hiding every peer first makes rapid
-        // clicks idempotent and prevents absolute-layout panels from stacking.
-        for (javax.swing.JPanel panel : new javax.swing.JPanel[]{MainPanel,
-                CheckInPanel1, CheckInPopup, StatisticPanel}) {
-            panel.setVisible(panel == target);
-        }
-        currentPanel = target;
-        getContentPane().revalidate();
-        getContentPane().repaint();
+    // 2. Setup all navigation buttons
+    javax.swing.JButton[] navButtons = {HomeBTN, CheckinBTN, StatisticBTN, InventoryBTN};
+    
+    for (javax.swing.JButton btn : navButtons) {
+        // Base inactive style
+        btn.setBackground(sidePanelBg);
+        btn.setForeground(inactiveText);
+        btn.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 14));
+        btn.setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 24, 12, 24));
+        btn.setFocusPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setOpaque(true); // Important for background color to show
+
+        // 3. Add Smart Hover Logic
+        btn.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                // Only apply hover style if this button is NOT the active one
+                if (btn != activeNavButton) {
+                    btn.setBackground(hoverBg);
+                    btn.setForeground(java.awt.Color.WHITE);
+                }
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                if (btn == activeNavButton) {
+                    // Re-apply active style to ensure it stays white with the blue line
+                    btn.setBackground(sidePanelBg); // Or a specific active bg if you want
+                    btn.setForeground(activeText);
+                    btn.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 14));
+                    btn.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                        javax.swing.BorderFactory.createMatteBorder(0, 4, 0, 0, blueLine),
+                        javax.swing.BorderFactory.createEmptyBorder(12, 20, 12, 24)
+                    ));
+                } else {
+                    // Revert to inactive style
+                    btn.setBackground(sidePanelBg);
+                    btn.setForeground(inactiveText);
+                    btn.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 14));
+                    btn.setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 24, 12, 24));
+                }
+            }
+        });
     }
+}
+
+  private void showPanel(javax.swing.JPanel target) {
+    if (target == null || currentPanel == target) {
+        return;
+    }
+    
+    for (javax.swing.JPanel panel : new javax.swing.JPanel[]{MainPanel,
+            CheckInPanel1, CheckInPopup, StatisticPanel}) {
+        panel.setVisible(panel == target);
+    }
+    currentPanel = target;
+    
+    // Update which button is highlighted
+    if (target == MainPanel) {
+        updateActiveButton(HomeBTN);
+    } else if (target == CheckInPanel1) {
+        updateActiveButton(CheckinBTN);
+    } else if (target == StatisticPanel) {
+        updateActiveButton(StatisticBTN);
+    }
+    // Note: InventoryBTN opens a new window, so it doesn't need panel switching
+    
+    getContentPane().revalidate();
+    getContentPane().repaint();
+}
 
     private boolean requireAdminPanelAccess() {
         if (loggedInAccount != null && loggedInAccount.canAccessAdminPanel()) {
@@ -120,85 +211,139 @@ public class Dashboard extends javax.swing.JFrame {
         loadMedicineChoices();
         refreshRecentVisits();
     }
+    private class DimmingOverlay extends javax.swing.JPanel {
+    public DimmingOverlay() {
+        setOpaque(false);
+        setVisible(false);
+    }
+    
+    @Override
+    protected void paintComponent(java.awt.Graphics g) {
+        super.paintComponent(g);
+        java.awt.Graphics2D g2d = (java.awt.Graphics2D) g.create();
+        g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+        // Semi-transparent dark slate background to simulate a blur/dim effect
+        g2d.setColor(new java.awt.Color(15, 23, 42, 120)); 
+        g2d.fillRect(0, 0, getWidth(), getHeight());
+        g2d.dispose();
+    }
+}
 
     /** Replaces the generated fixed-width popup content with a readable card. */
     private void configureCheckinPopupCard() {
-        CheckInPopup.removeAll();
-        CheckInPopup.setBackground(new java.awt.Color(255, 255, 255));
-        CheckInPopup.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(203, 213, 225)),
-                javax.swing.BorderFactory.createEmptyBorder(18, 22, 18, 22)));
-        CheckInPopup.setLayout(new java.awt.GridBagLayout());
+    CheckInPopup.removeAll();
+    CheckInPopup.setBackground(new java.awt.Color(255, 255, 255));
+    CheckInPopup.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(226, 232, 240), 2),
+            javax.swing.BorderFactory.createEmptyBorder(24, 28, 24, 28)));
+    CheckInPopup.setLayout(new java.awt.GridBagLayout());
 
-        StudentCheckinLabel.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 19));
-        StudentCheckinLabel.setForeground(new java.awt.Color(15, 23, 42));
-        StudentCheckinLabel.setText("Student Check-in");
-        for (javax.swing.JLabel label : new javax.swing.JLabel[]{jLabel7, jLabel8,
-                LRNLabel, jLabel9, jLabel29, jLabel11}) {
-            label.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 13));
-            label.setForeground(new java.awt.Color(51, 65, 85));
-        }
-        jLabel10.setText("Reason");
-        jLabel12.setText("Medicine");
-        jLabel10.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 12));
-        jLabel12.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 12));
-        jButton1.setText("Complete Check-in");
-        CancelCheckinBTN.setText("Cancel");
-        CancelCheckinBTN.addActionListener(e -> closeCheckinPopup());
+    StudentCheckinLabel.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 20));
+    StudentCheckinLabel.setForeground(new java.awt.Color(15, 23, 42));
+    StudentCheckinLabel.setText("Student Check-in");
 
-        java.awt.GridBagConstraints c = new java.awt.GridBagConstraints();
-        c.gridx = 0; c.gridy = 0; c.gridwidth = 2; c.anchor = java.awt.GridBagConstraints.WEST;
-        c.fill = java.awt.GridBagConstraints.HORIZONTAL; c.weightx = 1; c.insets = new java.awt.Insets(0, 0, 12, 0);
-        CheckInPopup.add(StudentCheckinLabel, c);
-        int row = 1;
-        for (javax.swing.JLabel label : new javax.swing.JLabel[]{jLabel7, jLabel8,
-                LRNLabel, jLabel9, jLabel29, jLabel11}) {
-            c.gridy = row++; c.insets = new java.awt.Insets(2, 0, 2, 0);
-            CheckInPopup.add(label, c);
-        }
-        c.gridwidth = 1; c.weightx = 0; c.gridy = row; c.gridx = 0;
-        c.insets = new java.awt.Insets(12, 0, 4, 10); CheckInPopup.add(jLabel10, c);
-        c.gridx = 1; c.weightx = 1; c.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        c.insets = new java.awt.Insets(12, 0, 4, 0); CheckInPopup.add(jTextField1, c);
-        c.gridy = ++row; c.gridx = 0; c.weightx = 0; c.insets = new java.awt.Insets(4, 0, 10, 10);
-        CheckInPopup.add(jLabel12, c);
-        c.gridx = 1; c.weightx = 1; c.insets = new java.awt.Insets(4, 0, 10, 0);
-        CheckInPopup.add(jComboBox1, c);
-        c.gridy = ++row; c.gridx = 0; c.gridwidth = 1; c.weightx = 0.5;
-        c.insets = new java.awt.Insets(4, 0, 0, 5); CheckInPopup.add(CancelCheckinBTN, c);
-        c.gridx = 1; c.weightx = 0.5; c.insets = new java.awt.Insets(4, 5, 0, 0);
-        CheckInPopup.add(jButton1, c);
-
-        // The generated AbsoluteLayout constraint gives this dialog too
-        // little space for full student details; replace it at runtime only.
-        getContentPane().add(CheckInPopup,
-                new org.netbeans.lib.awtextra.AbsoluteConstraints(500, 190, 520, 445));
+    for (javax.swing.JLabel label : new javax.swing.JLabel[]{jLabel7, jLabel8,
+            LRNLabel, jLabel9, jLabel29, jLabel11}) {
+        label.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 13));
+        label.setForeground(new java.awt.Color(71, 85, 105));
     }
+
+    jLabel10.setText("Reason");
+    jLabel12.setText("Medicine");
+    jLabel10.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 12));
+    jLabel12.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 12));
+    jLabel10.setForeground(new java.awt.Color(51, 65, 85));
+    jLabel12.setForeground(new java.awt.Color(51, 65, 85));
+
+    jButton1.setText("Complete Check-in");
+    jButton1.setBackground(new java.awt.Color(37, 99, 235));
+    jButton1.setForeground(new java.awt.Color(255, 255, 255));
+    jButton1.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 13));
+    jButton1.setBorderPainted(false);
+    jButton1.setFocusPainted(false);
+
+    CancelCheckinBTN.setText("Cancel");
+    CancelCheckinBTN.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 13));
+    CancelCheckinBTN.setForeground(new java.awt.Color(100, 116, 139));
+    CancelCheckinBTN.setBackground(new java.awt.Color(241, 245, 249));
+    CancelCheckinBTN.setBorderPainted(false);
+    CancelCheckinBTN.setFocusPainted(false);
+    CancelCheckinBTN.addActionListener(e -> closeCheckinPopup());
+
+    java.awt.GridBagConstraints c = new java.awt.GridBagConstraints();
+    c.gridx = 0; c.gridy = 0; c.gridwidth = 2; c.anchor = java.awt.GridBagConstraints.WEST;
+    c.fill = java.awt.GridBagConstraints.HORIZONTAL; c.weightx = 1; c.insets = new java.awt.Insets(0, 0, 16, 0);
+    CheckInPopup.add(StudentCheckinLabel, c);
+
+    int row = 1;
+    for (javax.swing.JLabel label : new javax.swing.JLabel[]{jLabel7, jLabel8,
+            LRNLabel, jLabel9, jLabel29, jLabel11}) {
+        c.gridy = row++; c.insets = new java.awt.Insets(4, 0, 4, 0);
+        CheckInPopup.add(label, c);
+    }
+
+    c.gridwidth = 1; c.weightx = 0; c.gridy = row; c.gridx = 0;
+    c.insets = new java.awt.Insets(16, 0, 6, 12); CheckInPopup.add(jLabel10, c);
+    c.gridx = 1; c.weightx = 1; c.fill = java.awt.GridBagConstraints.HORIZONTAL;
+    c.insets = new java.awt.Insets(16, 0, 6, 0); CheckInPopup.add(jTextField1, c);
+
+    c.gridy = ++row; c.gridx = 0; c.weightx = 0; c.insets = new java.awt.Insets(6, 0, 16, 12);
+    CheckInPopup.add(jLabel12, c);
+    c.gridx = 1; c.weightx = 1; c.insets = new java.awt.Insets(6, 0, 16, 0);
+    CheckInPopup.add(jComboBox1, c);
+
+    c.gridy = ++row; c.gridx = 0; c.gridwidth = 1; c.weightx = 0.5;
+    c.insets = new java.awt.Insets(8, 0, 0, 8); CheckInPopup.add(CancelCheckinBTN, c);
+    c.gridx = 1; c.weightx = 0.5; c.insets = new java.awt.Insets(8, 8, 0, 0);
+    CheckInPopup.add(jButton1, c);
+
+    // Set bounds WITHOUT re-adding to content pane
+    CheckInPopup.setBounds(500, 190, 540, 480);
+    CheckInPopup.setVisible(false);
+}
+
 
     /** Positions the panel in the center of the check-in workspace. */
-    private void centerCheckinPopup() {
-        int width = 520, height = 445;
-        int panelWidth = CheckInPanel1.getWidth() > 0 ? CheckInPanel1.getWidth()
-                : getContentPane().getWidth();
-        int panelHeight = CheckInPanel1.getHeight() > 0 ? CheckInPanel1.getHeight()
-                : getContentPane().getHeight();
-        int panelX = CheckInPanel1.getWidth() > 0 ? CheckInPanel1.getX() : 0;
-        int panelY = CheckInPanel1.getHeight() > 0 ? CheckInPanel1.getY() : 0;
-        int x = panelX + Math.max(0, (panelWidth - width) / 2);
-        int y = panelY + Math.max(0, (panelHeight - height) / 2);
-        getContentPane().add(CheckInPopup,
-                new org.netbeans.lib.awtextra.AbsoluteConstraints(x, y, width, height));
-    }
+   private void centerCheckinPopup() {
+    int width = 540, height = 480;
+    int panelWidth = CheckInPanel1.getWidth() > 0 ? CheckInPanel1.getWidth()
+            : getContentPane().getWidth();
+    int panelHeight = CheckInPanel1.getHeight() > 0 ? CheckInPanel1.getHeight()
+            : getContentPane().getHeight();
+    int panelX = CheckInPanel1.getWidth() > 0 ? CheckInPanel1.getX() : 0;
+    int panelY = CheckInPanel1.getHeight() > 0 ? CheckInPanel1.getY() : 0;
+    int x = panelX + Math.max(0, (panelWidth - width) / 2);
+    int y = panelY + Math.max(0, (panelHeight - height) / 2);
+    CheckInPopup.setBounds(x, y, width, height);
+}
+    private void showCheckinPopup() {
+    centerCheckinPopup();
+
+    // Force overlay to cover the entire frame, including the side panel
+    dimmingOverlay.setBounds(0, 0, getContentPane().getWidth(), getContentPane().getHeight());
+
+    // Z-order: 0 = topmost. Popup on top, overlay directly beneath it.
+    getContentPane().setComponentZOrder(CheckInPopup, 0);
+    getContentPane().setComponentZOrder(dimmingOverlay, 1);
+
+    dimmingOverlay.setVisible(true);
+    CheckInPopup.setVisible(true);
+    CheckInPopup.requestFocusInWindow();
+
+    getContentPane().revalidate();
+    getContentPane().repaint();
+}
 
     private void closeCheckinPopup() {
-        CheckInPopup.setVisible(false);
-        jTextField1.setText("");
-        if (jComboBox1.getItemCount() > 0) jComboBox1.setSelectedIndex(0);
-        selectedStudent = null;
-        ReasonTable.clearSelection();
-        CheckInPopup.revalidate();
-        CheckInPopup.repaint();
-    }
+    CheckInPopup.setVisible(false);
+    dimmingOverlay.setVisible(false);
+    jTextField1.setText("");
+    if (jComboBox1.getItemCount() > 0) jComboBox1.setSelectedIndex(0);
+    selectedStudent = null;
+
+    getContentPane().revalidate();
+    getContentPane().repaint();
+}
 
     /** Suggests an in-stock medicine for a recognized express-check-in symptom. */
     private void recommendMedicineFromReason() {
@@ -286,27 +431,25 @@ public class Dashboard extends javax.swing.JFrame {
 
     private void openCheckinForSelection() {
         int selectedRow = ReasonTable.getSelectedRow();
-        if (selectedRow < 0) {
-            JOptionPane.showMessageDialog(this, "Select a student from the table first.",
-                    "Student Required", JOptionPane.WARNING_MESSAGE);
+    if (selectedRow < 0) {
+        JOptionPane.showMessageDialog(this, "Select a student from the table first.",
+                "Student Required", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+    int modelRow = ReasonTable.convertRowIndexToModel(selectedRow);
+    String lrn = String.valueOf(ReasonTable.getModel().getValueAt(modelRow, 2));
+    
+    findStudent(lrn, student -> {
+        if (!lrn.equals(currentSelectedChooserLrn())) return;
+        if (student == null) {
+            JOptionPane.showMessageDialog(this, "The selected student is no longer active.",
+                    "Student Not Found", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        int modelRow = ReasonTable.convertRowIndexToModel(selectedRow);
-        String lrn = String.valueOf(ReasonTable.getModel().getValueAt(modelRow, 2));
-        findStudent(lrn, student -> {
-            if (!lrn.equals(currentSelectedChooserLrn())) return;
-            if (student == null) {
-                JOptionPane.showMessageDialog(this, "The selected student is no longer active.",
-                        "Student Not Found", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-            selectedStudent = student;
-            populatePopupStudent(student);
-            centerCheckinPopup();
-            CheckInPopup.setVisible(true);
-            CheckInPopup.revalidate();
-            CheckInPopup.repaint();
-        });
+        selectedStudent = student;
+        populatePopupStudent(student);
+        showCheckinPopup(); 
+    });
     }
 
     private void populatePopupStudent(StudentDetails student) {
@@ -497,38 +640,7 @@ NOT modify this code. The content of this method is always
         StatisticBTN = new javax.swing.JButton();
         InventoryBTN = new javax.swing.JButton();
         Logout = new javax.swing.JButton();
-        ThemeToggle = new javax.swing.JToggleButton();
         jLabel3 = new javax.swing.JLabel();
-        MainPanel = new javax.swing.JPanel();
-        jPanel2 = new javax.swing.JPanel();
-        jScrollPane3 = new javax.swing.JScrollPane();
-        jTable1 = new javax.swing.JTable();
-        jPanel3 = new javax.swing.JPanel();
-        jLabel13 = new javax.swing.JLabel();
-        jPanel8 = new javax.swing.JPanel();
-        ReasonField = new javax.swing.JTextField();
-        jButton2 = new javax.swing.JButton();
-        jLabel14 = new javax.swing.JLabel();
-        jLabel15 = new javax.swing.JLabel();
-        jLabel16 = new javax.swing.JLabel();
-        LrnField = new javax.swing.JTextField();
-        ECheckin = new javax.swing.JButton();
-        jLabel17 = new javax.swing.JLabel();
-        MedicineField = new javax.swing.JTextField();
-        jLabel18 = new javax.swing.JLabel();
-        TempField = new javax.swing.JTextField();
-        NameField = new javax.swing.JTextField();
-        jLabel19 = new javax.swing.JLabel();
-        jLabel20 = new javax.swing.JLabel();
-        jPanel9 = new javax.swing.JPanel();
-        jLabel2 = new javax.swing.JLabel();
-        jPanel11 = new javax.swing.JPanel();
-        jLabel5 = new javax.swing.JLabel();
-        jPanel10 = new javax.swing.JPanel();
-        jLabel1 = new javax.swing.JLabel();
-        jPanel12 = new javax.swing.JPanel();
-        jLabel4 = new javax.swing.JLabel();
-        DateTimeLabel = new javax.swing.JLabel();
         CheckInPopup = new javax.swing.JPanel();
         StudentCheckinLabel = new javax.swing.JLabel();
         jLabel7 = new javax.swing.JLabel();
@@ -568,6 +680,36 @@ NOT modify this code. The content of this method is always
         jScrollPane1 = new javax.swing.JScrollPane();
         jTable2 = new javax.swing.JTable();
         jLabel27 = new javax.swing.JLabel();
+        MainPanel = new javax.swing.JPanel();
+        jPanel2 = new javax.swing.JPanel();
+        jScrollPane3 = new javax.swing.JScrollPane();
+        jTable1 = new javax.swing.JTable();
+        jPanel3 = new javax.swing.JPanel();
+        jLabel13 = new javax.swing.JLabel();
+        jPanel8 = new javax.swing.JPanel();
+        ReasonField = new javax.swing.JTextField();
+        jButton2 = new javax.swing.JButton();
+        jLabel14 = new javax.swing.JLabel();
+        jLabel15 = new javax.swing.JLabel();
+        jLabel16 = new javax.swing.JLabel();
+        LrnField = new javax.swing.JTextField();
+        ECheckin = new javax.swing.JButton();
+        jLabel17 = new javax.swing.JLabel();
+        MedicineField = new javax.swing.JTextField();
+        jLabel18 = new javax.swing.JLabel();
+        TempField = new javax.swing.JTextField();
+        NameField = new javax.swing.JTextField();
+        jLabel19 = new javax.swing.JLabel();
+        jLabel20 = new javax.swing.JLabel();
+        jPanel9 = new javax.swing.JPanel();
+        jLabel2 = new javax.swing.JLabel();
+        jPanel11 = new javax.swing.JPanel();
+        jLabel5 = new javax.swing.JLabel();
+        jPanel10 = new javax.swing.JPanel();
+        jLabel1 = new javax.swing.JLabel();
+        jPanel12 = new javax.swing.JPanel();
+        jLabel4 = new javax.swing.JLabel();
+        DateTimeLabel = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setFocusable(false);
@@ -591,12 +733,6 @@ NOT modify this code. The content of this method is always
         Logout.setText("Logout");
         Logout.addActionListener(this::LogoutActionPerformed);
 
-        ThemeToggle.setBackground(new java.awt.Color(255, 255, 255));
-        ThemeToggle.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
-        ThemeToggle.setForeground(new java.awt.Color(0, 0, 0));
-        ThemeToggle.setText("Mode");
-        ThemeToggle.addActionListener(this::ThemeToggleActionPerformed);
-
         jLabel3.setFont(new java.awt.Font("Yu Gothic UI", 1, 24)); // NOI18N
         jLabel3.setForeground(new java.awt.Color(255, 255, 255));
         jLabel3.setText("Clinic Dashboard");
@@ -612,13 +748,10 @@ NOT modify this code. The content of this method is always
                     .addComponent(CheckinBTN, javax.swing.GroupLayout.DEFAULT_SIZE, 247, Short.MAX_VALUE)
                     .addComponent(StatisticBTN, javax.swing.GroupLayout.DEFAULT_SIZE, 247, Short.MAX_VALUE)
                     .addComponent(InventoryBTN, javax.swing.GroupLayout.DEFAULT_SIZE, 247, Short.MAX_VALUE)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, SidePanelLayout.createSequentialGroup()
-                        .addComponent(ThemeToggle, javax.swing.GroupLayout.PREFERRED_SIZE, 131, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(Logout, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                    .addComponent(Logout, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, SidePanelLayout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addContainerGap(47, Short.MAX_VALUE)
                 .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 202, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(21, 21, 21))
         );
@@ -635,296 +768,12 @@ NOT modify this code. The content of this method is always
                 .addComponent(StatisticBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 63, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(InventoryBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 63, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 270, Short.MAX_VALUE)
-                .addGroup(SidePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(Logout, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(ThemeToggle, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 276, Short.MAX_VALUE)
+                .addComponent(Logout, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
 
         getContentPane().add(SidePanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, -3, 270, 840));
-
-        MainPanel.setBackground(new java.awt.Color(255, 255, 255));
-
-        jTable1.setBackground(new java.awt.Color(255, 255, 255));
-        jTable1.setForeground(new java.awt.Color(0, 0, 0));
-        jTable1.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-
-            },
-            new String [] {
-                "Time", "Name", "Section", "Temp", "Symptoms", "Medicine", "Status"
-            }
-        ));
-        jScrollPane3.setViewportView(jTable1);
-
-        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
-        jPanel2.setLayout(jPanel2Layout);
-        jPanel2Layout.setHorizontalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane3)
-        );
-        jPanel2Layout.setVerticalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 323, Short.MAX_VALUE)
-        );
-
-        jLabel13.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel13.setText("SYMPTOM DISTRIBUTION (THIS WEEK)");
-
-        javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
-        jPanel3.setLayout(jPanel3Layout);
-        jPanel3Layout.setHorizontalGroup(
-            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel3Layout.createSequentialGroup()
-                .addGap(111, 111, 111)
-                .addComponent(jLabel13)
-                .addContainerGap(104, Short.MAX_VALUE))
-        );
-        jPanel3Layout.setVerticalGroup(
-            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jLabel13)
-                .addGap(151, 151, 151))
-        );
-
-        jPanel8.setBackground(new java.awt.Color(248, 247, 247));
-
-        jButton2.setText("Search");
-
-        jLabel14.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
-        jLabel14.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel14.setText("Student LRN:");
-
-        jLabel15.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
-        jLabel15.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel15.setText("Name:");
-
-        jLabel16.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
-        jLabel16.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel16.setText("Reason:");
-
-        ECheckin.setText("Check in");
-
-        jLabel17.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
-        jLabel17.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel17.setText("Medicine:");
-
-        jLabel18.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
-        jLabel18.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel18.setText("Temperature:");
-
-        javax.swing.GroupLayout jPanel8Layout = new javax.swing.GroupLayout(jPanel8);
-        jPanel8.setLayout(jPanel8Layout);
-        jPanel8Layout.setHorizontalGroup(
-            jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel8Layout.createSequentialGroup()
-                .addGap(30, 30, 30)
-                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel15)
-                    .addGroup(jPanel8Layout.createSequentialGroup()
-                        .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(jPanel8Layout.createSequentialGroup()
-                                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(jLabel14)
-                                    .addComponent(jLabel16)
-                                    .addComponent(jLabel17))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                    .addComponent(ReasonField, javax.swing.GroupLayout.DEFAULT_SIZE, 151, Short.MAX_VALUE)
-                                    .addComponent(MedicineField)
-                                    .addComponent(TempField)
-                                    .addComponent(NameField, javax.swing.GroupLayout.Alignment.TRAILING)
-                                    .addComponent(LrnField)))
-                            .addComponent(jLabel18))
-                        .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(jPanel8Layout.createSequentialGroup()
-                                .addGap(18, 18, 18)
-                                .addComponent(ECheckin, javax.swing.GroupLayout.PREFERRED_SIZE, 133, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(jPanel8Layout.createSequentialGroup()
-                                .addGap(43, 43, 43)
-                                .addComponent(jButton2)))))
-                .addContainerGap(44, Short.MAX_VALUE))
-        );
-        jPanel8Layout.setVerticalGroup(
-            jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel8Layout.createSequentialGroup()
-                .addGap(50, 50, 50)
-                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel14)
-                    .addComponent(LrnField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton2))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel15)
-                    .addComponent(NameField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel16)
-                    .addComponent(ReasonField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(7, 7, 7)
-                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel18)
-                    .addComponent(TempField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel17)
-                    .addComponent(MedicineField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(ECheckin))
-                .addContainerGap(89, Short.MAX_VALUE))
-        );
-
-        jLabel19.setFont(new java.awt.Font("Dialog", 1, 12)); // NOI18N
-        jLabel19.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel19.setText("Express Check in");
-
-        jLabel20.setFont(new java.awt.Font("Dialog", 1, 12)); // NOI18N
-        jLabel20.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel20.setText("Recent Clinic Visit and Action");
-
-        jLabel2.setText("High Temps");
-
-        javax.swing.GroupLayout jPanel9Layout = new javax.swing.GroupLayout(jPanel9);
-        jPanel9.setLayout(jPanel9Layout);
-        jPanel9Layout.setHorizontalGroup(
-            jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel9Layout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jLabel2)
-                .addGap(74, 74, 74))
-        );
-        jPanel9Layout.setVerticalGroup(
-            jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel9Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jLabel2)
-                .addContainerGap(152, Short.MAX_VALUE))
-        );
-
-        jLabel5.setText("Low Stock");
-
-        javax.swing.GroupLayout jPanel11Layout = new javax.swing.GroupLayout(jPanel11);
-        jPanel11.setLayout(jPanel11Layout);
-        jPanel11Layout.setHorizontalGroup(
-            jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel11Layout.createSequentialGroup()
-                .addGap(71, 71, 71)
-                .addComponent(jLabel5)
-                .addContainerGap(84, Short.MAX_VALUE))
-        );
-        jPanel11Layout.setVerticalGroup(
-            jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel11Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jLabel5)
-                .addContainerGap(145, Short.MAX_VALUE))
-        );
-
-        jLabel1.setText("Active Visits");
-
-        javax.swing.GroupLayout jPanel10Layout = new javax.swing.GroupLayout(jPanel10);
-        jPanel10.setLayout(jPanel10Layout);
-        jPanel10Layout.setHorizontalGroup(
-            jPanel10Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel10Layout.createSequentialGroup()
-                .addGap(62, 62, 62)
-                .addComponent(jLabel1)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-        );
-        jPanel10Layout.setVerticalGroup(
-            jPanel10Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel10Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jLabel1)
-                .addContainerGap(152, Short.MAX_VALUE))
-        );
-
-        jLabel4.setText("Total Today");
-
-        javax.swing.GroupLayout jPanel12Layout = new javax.swing.GroupLayout(jPanel12);
-        jPanel12.setLayout(jPanel12Layout);
-        jPanel12Layout.setHorizontalGroup(
-            jPanel12Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel12Layout.createSequentialGroup()
-                .addGap(65, 65, 65)
-                .addComponent(jLabel4)
-                .addContainerGap(65, Short.MAX_VALUE))
-        );
-        jPanel12Layout.setVerticalGroup(
-            jPanel12Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel12Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jLabel4)
-                .addContainerGap(145, Short.MAX_VALUE))
-        );
-
-        DateTimeLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 24)); // NOI18N
-        DateTimeLabel.setForeground(new java.awt.Color(0, 0, 0));
-
-        javax.swing.GroupLayout MainPanelLayout = new javax.swing.GroupLayout(MainPanel);
-        MainPanel.setLayout(MainPanelLayout);
-        MainPanelLayout.setHorizontalGroup(
-            MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(MainPanelLayout.createSequentialGroup()
-                .addGap(25, 25, 25)
-                .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addContainerGap())
-            .addGroup(MainPanelLayout.createSequentialGroup()
-                .addGap(25, 25, 25)
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(MainPanelLayout.createSequentialGroup()
-                        .addGap(9, 9, 9)
-                        .addComponent(jLabel20))
-                    .addComponent(jLabel19)
-                    .addGroup(MainPanelLayout.createSequentialGroup()
-                        .addComponent(jPanel8, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(44, 44, 44)
-                        .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 65, Short.MAX_VALUE)
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jPanel10, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jPanel12, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jPanel9, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jPanel11, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(53, 53, 53))
-            .addGroup(MainPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 564, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-        );
-        MainPanelLayout.setVerticalGroup(
-            MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MainPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 80, Short.MAX_VALUE)
-                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MainPanelLayout.createSequentialGroup()
-                        .addComponent(jLabel19)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(jPanel8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                        .addGap(22, 22, 22)
-                        .addComponent(jLabel20))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                        .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainPanelLayout.createSequentialGroup()
-                            .addComponent(jPanel9, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                            .addComponent(jPanel11, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainPanelLayout.createSequentialGroup()
-                            .addComponent(jPanel10, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                            .addComponent(jPanel12, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                .addGap(18, 18, 18)
-                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(25, 25, 25))
-        );
-
-        getContentPane().add(MainPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(269, -4, 1490, 840));
 
         CheckInPopup.setBackground(new java.awt.Color(226, 226, 226));
         CheckInPopup.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
@@ -1207,7 +1056,7 @@ NOT modify this code. The content of this method is always
             .addGroup(jPanel7Layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jLabel23, javax.swing.GroupLayout.PREFERRED_SIZE, 15, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(152, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         jLabel24.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
@@ -1227,7 +1076,7 @@ NOT modify this code. The content of this method is always
             .addGroup(jPanel13Layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jLabel24, javax.swing.GroupLayout.PREFERRED_SIZE, 15, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(191, Short.MAX_VALUE))
         );
 
         jLabel28.setText("Pie Chart");
@@ -1329,7 +1178,7 @@ NOT modify this code. The content of this method is always
                                     .addComponent(jPanel13, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                             .addComponent(jPanel15, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(jLabel27))))
-                .addContainerGap(24, Short.MAX_VALUE))
+                .addContainerGap(25, Short.MAX_VALUE))
         );
         StatisticPanelLayout.setVerticalGroup(
             StatisticPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1345,8 +1194,8 @@ NOT modify this code. The content of this method is always
                             .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(StatisticPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jPanel13, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                            .addComponent(jPanel13, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jPanel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
                 .addGap(27, 27, 27)
                 .addGroup(StatisticPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel26)
@@ -1358,7 +1207,291 @@ NOT modify this code. The content of this method is always
                 .addGap(42, 42, 42))
         );
 
-        getContentPane().add(StatisticPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(270, 40, 1490, 800));
+        getContentPane().add(StatisticPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(270, 0, 1490, 840));
+
+        MainPanel.setBackground(new java.awt.Color(255, 255, 255));
+
+        jTable1.setBackground(new java.awt.Color(255, 255, 255));
+        jTable1.setForeground(new java.awt.Color(0, 0, 0));
+        jTable1.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+
+            },
+            new String [] {
+                "Time", "Name", "Section", "Temp", "Symptoms", "Medicine", "Status"
+            }
+        ));
+        jScrollPane3.setViewportView(jTable1);
+
+        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
+        jPanel2.setLayout(jPanel2Layout);
+        jPanel2Layout.setHorizontalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jScrollPane3)
+        );
+        jPanel2Layout.setVerticalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 366, Short.MAX_VALUE)
+        );
+
+        jLabel13.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel13.setText("SYMPTOM DISTRIBUTION (THIS WEEK)");
+
+        javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
+        jPanel3.setLayout(jPanel3Layout);
+        jPanel3Layout.setHorizontalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addGap(111, 111, 111)
+                .addComponent(jLabel13)
+                .addContainerGap(171, Short.MAX_VALUE))
+        );
+        jPanel3Layout.setVerticalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
+                .addContainerGap(180, Short.MAX_VALUE)
+                .addComponent(jLabel13)
+                .addGap(151, 151, 151))
+        );
+
+        jPanel8.setBackground(new java.awt.Color(248, 247, 247));
+
+        jButton2.setText("Search");
+
+        jLabel14.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
+        jLabel14.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel14.setText("Student LRN:");
+
+        jLabel15.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
+        jLabel15.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel15.setText("Name:");
+
+        jLabel16.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
+        jLabel16.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel16.setText("Reason:");
+
+        ECheckin.setText("Check in");
+
+        jLabel17.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
+        jLabel17.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel17.setText("Medicine:");
+
+        jLabel18.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
+        jLabel18.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel18.setText("Temperature:");
+
+        javax.swing.GroupLayout jPanel8Layout = new javax.swing.GroupLayout(jPanel8);
+        jPanel8.setLayout(jPanel8Layout);
+        jPanel8Layout.setHorizontalGroup(
+            jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel8Layout.createSequentialGroup()
+                .addGap(30, 30, 30)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel15)
+                    .addGroup(jPanel8Layout.createSequentialGroup()
+                        .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel8Layout.createSequentialGroup()
+                                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(jLabel14)
+                                    .addComponent(jLabel16)
+                                    .addComponent(jLabel17))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                    .addComponent(ReasonField, javax.swing.GroupLayout.DEFAULT_SIZE, 151, Short.MAX_VALUE)
+                                    .addComponent(MedicineField)
+                                    .addComponent(TempField)
+                                    .addComponent(NameField, javax.swing.GroupLayout.Alignment.TRAILING)
+                                    .addComponent(LrnField)))
+                            .addComponent(jLabel18))
+                        .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel8Layout.createSequentialGroup()
+                                .addGap(18, 18, 18)
+                                .addComponent(ECheckin, javax.swing.GroupLayout.PREFERRED_SIZE, 133, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(jPanel8Layout.createSequentialGroup()
+                                .addGap(43, 43, 43)
+                                .addComponent(jButton2)))))
+                .addContainerGap(44, Short.MAX_VALUE))
+        );
+        jPanel8Layout.setVerticalGroup(
+            jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel8Layout.createSequentialGroup()
+                .addGap(50, 50, 50)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel14)
+                    .addComponent(LrnField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jButton2))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel15)
+                    .addComponent(NameField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel16)
+                    .addComponent(ReasonField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(7, 7, 7)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel18)
+                    .addComponent(TempField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel17)
+                    .addComponent(MedicineField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(ECheckin))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+
+        jLabel19.setFont(new java.awt.Font("Dialog", 1, 12)); // NOI18N
+        jLabel19.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel19.setText("Express Check in");
+
+        jLabel20.setFont(new java.awt.Font("Dialog", 1, 12)); // NOI18N
+        jLabel20.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel20.setText("Recent Clinic Visit and Action");
+
+        jLabel2.setText("High Temps");
+
+        javax.swing.GroupLayout jPanel9Layout = new javax.swing.GroupLayout(jPanel9);
+        jPanel9.setLayout(jPanel9Layout);
+        jPanel9Layout.setHorizontalGroup(
+            jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel9Layout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jLabel2)
+                .addGap(74, 74, 74))
+        );
+        jPanel9Layout.setVerticalGroup(
+            jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel9Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel2)
+                .addContainerGap(152, Short.MAX_VALUE))
+        );
+
+        jLabel5.setText("Low Stock");
+
+        javax.swing.GroupLayout jPanel11Layout = new javax.swing.GroupLayout(jPanel11);
+        jPanel11.setLayout(jPanel11Layout);
+        jPanel11Layout.setHorizontalGroup(
+            jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel11Layout.createSequentialGroup()
+                .addGap(71, 71, 71)
+                .addComponent(jLabel5)
+                .addContainerGap(84, Short.MAX_VALUE))
+        );
+        jPanel11Layout.setVerticalGroup(
+            jPanel11Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel11Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel5)
+                .addContainerGap(145, Short.MAX_VALUE))
+        );
+
+        jLabel1.setText("Active Visits");
+
+        javax.swing.GroupLayout jPanel10Layout = new javax.swing.GroupLayout(jPanel10);
+        jPanel10.setLayout(jPanel10Layout);
+        jPanel10Layout.setHorizontalGroup(
+            jPanel10Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel10Layout.createSequentialGroup()
+                .addGap(62, 62, 62)
+                .addComponent(jLabel1)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+        jPanel10Layout.setVerticalGroup(
+            jPanel10Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel10Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel1)
+                .addContainerGap(152, Short.MAX_VALUE))
+        );
+
+        jLabel4.setText("Total Today");
+
+        javax.swing.GroupLayout jPanel12Layout = new javax.swing.GroupLayout(jPanel12);
+        jPanel12.setLayout(jPanel12Layout);
+        jPanel12Layout.setHorizontalGroup(
+            jPanel12Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel12Layout.createSequentialGroup()
+                .addGap(65, 65, 65)
+                .addComponent(jLabel4)
+                .addContainerGap(65, Short.MAX_VALUE))
+        );
+        jPanel12Layout.setVerticalGroup(
+            jPanel12Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel12Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel4)
+                .addContainerGap(145, Short.MAX_VALUE))
+        );
+
+        DateTimeLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 24)); // NOI18N
+        DateTimeLabel.setForeground(new java.awt.Color(0, 0, 0));
+
+        javax.swing.GroupLayout MainPanelLayout = new javax.swing.GroupLayout(MainPanel);
+        MainPanel.setLayout(MainPanelLayout);
+        MainPanelLayout.setHorizontalGroup(
+            MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(MainPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 645, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addGroup(MainPanelLayout.createSequentialGroup()
+                .addGap(25, 25, 25)
+                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(MainPanelLayout.createSequentialGroup()
+                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel20)
+                            .addGroup(MainPanelLayout.createSequentialGroup()
+                                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(jLabel19)
+                                    .addComponent(jPanel8, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addGap(18, 18, 18)
+                                .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                        .addGap(18, 18, 18)
+                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(jPanel10, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jPanel12, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(jPanel9, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jPanel11, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(53, 53, 53))
+                    .addGroup(MainPanelLayout.createSequentialGroup()
+                        .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addContainerGap())))
+        );
+        MainPanelLayout.setVerticalGroup(
+            MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MainPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(DateTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 42, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(MainPanelLayout.createSequentialGroup()
+                        .addGap(27, 27, 27)
+                        .addComponent(jLabel19)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jPanel8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addGroup(MainPanelLayout.createSequentialGroup()
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainPanelLayout.createSequentialGroup()
+                                    .addComponent(jPanel9, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                    .addComponent(jPanel11, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainPanelLayout.createSequentialGroup()
+                                    .addComponent(jPanel10, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                    .addComponent(jPanel12, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                            .addComponent(jPanel3, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                .addGap(18, 18, 18)
+                .addComponent(jLabel20)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(25, 25, 25))
+        );
+
+        getContentPane().add(MainPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(269, -4, 1490, 840));
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -1370,6 +1503,13 @@ NOT modify this code. The content of this method is always
         dispose();
     }//GEN-LAST:event_InventoryBTNActionPerformed
     private void CheckInBTNActionPerformed(java.awt.event.ActionEvent evt) {
+        int selectedRow = ReasonTable.getSelectedRow();
+    if (selectedRow < 0) {
+        JOptionPane.showMessageDialog(this, 
+            "Please select a student from the table first.",
+            "Student Required", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
         openCheckinForSelection();
     }
 
@@ -1386,6 +1526,34 @@ NOT modify this code. The content of this method is always
         new LoginUi().setVisible(true);
         dispose();
     }
+
+/** Updates the navigation buttons to show which panel is currently active. */
+private void updateActiveButton(javax.swing.JButton btn) {
+    activeNavButton = btn; // Track the active button
+    
+    java.awt.Color sidePanelBg = new java.awt.Color(15, 23, 42);
+    java.awt.Color inactiveText = new java.awt.Color(148, 163, 184);
+    java.awt.Color blueLine = new java.awt.Color(59, 130, 246);
+
+    javax.swing.JButton[] navButtons = {HomeBTN, CheckinBTN, StatisticBTN, InventoryBTN};
+    
+    for (javax.swing.JButton b : navButtons) {
+        if (b == btn) {
+            // ACTIVE STATE: White text, Bold, Blue Line
+            b.setForeground(java.awt.Color.WHITE);
+            b.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 14));
+            b.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createMatteBorder(0, 4, 0, 0, blueLine),
+                javax.swing.BorderFactory.createEmptyBorder(12, 20, 12, 24)
+            ));
+        } else {
+            // INACTIVE STATE: Muted text, Plain, No line
+            b.setForeground(inactiveText);
+            b.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 14));
+            b.setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 24, 12, 24));
+        }
+    }
+}
 
     private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {
         // Legacy action removed: its original controls no longer exist in the generated form.
@@ -1434,7 +1602,6 @@ NOT modify this code. The content of this method is always
     private javax.swing.JPanel StatisticPanel;
     private javax.swing.JLabel StudentCheckinLabel;
     private javax.swing.JTextField TempField;
-    private javax.swing.JToggleButton ThemeToggle;
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton2;
     private javax.swing.JComboBox<String> jComboBox1;
