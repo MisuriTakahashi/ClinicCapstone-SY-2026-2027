@@ -135,28 +135,105 @@ public class AdminPanel extends javax.swing.JFrame {
     }
 
     /** Restores explicit colours/text after FlatLaf has initialized the form. */
-    private void restoreVisibleTextAndStyling() {
-        Color formLabelColor = new Color(0x33, 0x33, 0x33);
-        for (javax.swing.JLabel label : new javax.swing.JLabel[]{
-                jLabel7, jLabel8, jLabel10, LRNLabel, jLabel9, jLabel29,
-                jLabel30, jLabel31}) {
-            label.setForeground(formLabelColor);
-        }
-
-        Color sidebarBackground = new Color(15, 23, 42);
-        for (javax.swing.JButton button : new javax.swing.JButton[]{
-                jButton5, StudentManagementBTN, AccManageBTN, ExportBTN, jButton7}) {
-            button.setForeground(Color.WHITE);
-            button.setBackground(sidebarBackground);
-        }
-        jButton5.setText("Inventory");
-        StudentManagementBTN.setText("Student Management");
-        AccManageBTN.setText("Account Management");
-        ExportBTN.setText("Export Report");
-        jButton7.setText("Return");
-        jLabel1.setText("Activity Logs");
+   /** Restores explicit colours/text after FlatLaf has initialized the form. */
+private void restoreVisibleTextAndStyling() {
+    // --- Form labels: dark text so they're visible on the white form panel ---
+    Color formLabelColor = new Color(0x33, 0x33, 0x33);
+    for (javax.swing.JLabel label : new javax.swing.JLabel[]{
+            jLabel7, jLabel8, jLabel10, LRNLabel, jLabel9, jLabel29,
+            jLabel30, jLabel31, AccountNameLabel, AccountPasswordLabel, ConfirmPasswordLabel}) {
+        label.setForeground(formLabelColor);
+        label.setFont(label.getFont().deriveFont(java.awt.Font.BOLD, 12f));
     }
 
+    // --- Section titles ---
+    jLabel6.setForeground(new Color(0x1E, 0x29, 0x3B));
+    jLabel1.setForeground(new Color(0x1E, 0x29, 0x3B));
+    jLabel2.setForeground(new Color(0x1E, 0x29, 0x3B));
+
+    // --- Sidebar button text ---
+    jButton5.setText("Inventory");
+    StudentManagementBTN.setText("Student Management");
+    AccManageBTN.setText("Account Management");
+    ExportBTN.setText("Export Report");
+    jButton7.setText("Return");
+    jLabel1.setText("Activity Logs");
+
+    // --- Sidebar base colours ---
+    Color sidebarBackground = new Color(15, 23, 42);
+    jPanel3.setBackground(sidebarBackground);
+    for (javax.swing.JButton button : new javax.swing.JButton[]{
+            jButton5, StudentManagementBTN, AccManageBTN, ExportBTN, jButton7}) {
+        button.setBackground(sidebarBackground);
+        button.setOpaque(true);
+        button.setContentAreaFilled(true);
+        button.setFocusPainted(false);
+        button.setBorderPainted(true);
+    }
+
+    // --- Return button: muted style ---
+    jButton7.setForeground(new Color(0x94, 0xA3, 0xB8));
+    jButton7.setFont(jButton7.getFont().deriveFont(java.awt.Font.PLAIN));
+
+    // --- Content panel backgrounds ---
+    Color contentBg = new Color(0xF8, 0xFA, 0xFC);
+    jPanel1.setBackground(contentBg);
+    jPanel4.setBackground(contentBg);
+    jPanel5.setBackground(contentBg);
+    jPanel7.setBackground(contentBg);
+    AccountManagementPanel.setBackground(contentBg);
+
+    // --- Subtle separator between sidebar and content ---
+    javax.swing.border.Border sep = javax.swing.BorderFactory.createMatteBorder(
+            0, 1, 0, 0, new Color(0xE2, 0xE8, 0xF0));
+    jPanel4.setBorder(sep);
+    jPanel5.setBorder(sep);
+    AccountManagementPanel.setBorder(sep);
+
+    // --- Rounded scroll panes ---
+    String arcStyle = "arc: 10";
+    jScrollPane1.putClientProperty(FlatClientProperties.STYLE, arcStyle);
+    jScrollPane2.putClientProperty(FlatClientProperties.STYLE, arcStyle);
+    jScrollPane3.putClientProperty(FlatClientProperties.STYLE, arcStyle);
+    // jScrollPane4 already set in configureStudentManagement
+
+    // --- Tables: hide vertical grid lines ---
+    stockTable.setShowVerticalLines(false);
+    ReasonTable.setShowVerticalLines(false);
+    ACTTable.setShowVerticalLines(false);
+
+    // --- Set the default active sidebar indicator (Inventory) ---
+    updateSidebarActiveState(jButton5);
+}
+/**
+ * Highlights the active sidebar navigation button with a coloured left-side
+ * line and white bold text.  All other navigation buttons are reset to a
+ * muted style.
+ */
+private void updateSidebarActiveState(javax.swing.JButton activeBtn) {
+    javax.swing.JButton[] navButtons = {jButton5, StudentManagementBTN, AccManageBTN};
+
+    Color activeBg   = new Color(30, 41, 59);
+    Color activeFg   = Color.WHITE;
+    Color activeLine = new Color(59, 130, 246);   // blue indicator
+
+    Color inactiveBg = new Color(15, 23, 42);
+    Color inactiveFg = new Color(148, 163, 184);  // muted slate
+
+    for (javax.swing.JButton btn : navButtons) {
+        if (btn == activeBtn) {
+            btn.setBackground(activeBg);
+            btn.setForeground(activeFg);
+            btn.setFont(btn.getFont().deriveFont(java.awt.Font.BOLD));
+            btn.setBorder(javax.swing.BorderFactory.createMatteBorder(0, 4, 0, 0, activeLine));
+        } else {
+            btn.setBackground(inactiveBg);
+            btn.setForeground(inactiveFg);
+            btn.setFont(btn.getFont().deriveFont(java.awt.Font.PLAIN));
+            btn.setBorder(javax.swing.BorderFactory.createEmptyBorder());
+        }
+    }
+}
     /** Applies the RBAC matrix without changing NetBeans-generated layout. */
     private void configureRoleBasedAccess() {
         boolean headAdmin = loggedInAccount != null && loggedInAccount.isHeadAdmin();
@@ -253,39 +330,50 @@ public class AdminPanel extends javax.swing.JFrame {
      * several generated components, with jPanel4 serving as its anchor;
      * jPanel3 is deliberately excluded because it is the permanent sidebar.
      */
-    private void switchAdminPanel(javax.swing.JPanel activePanel) {
-        if (activeAdminPanel == activePanel) {
-            return;
-        }
-
-        jPanel5.setVisible(false);
-        AccountManagementPanel.setVisible(false);
-        jPanel4.setVisible(false);
-        jPanel6.setVisible(false);
-        jLabel1.setVisible(false);
-        jLabel6.setVisible(false);
-        RestockBTN.setVisible(false);
-        RestockBTN1.setVisible(false);
-        DeleteInventoryBTN.setVisible(false);
-        AddMedicineBTN.setVisible(false);
-
-        if (activePanel == jPanel4) {
-            jPanel4.setVisible(true);
-            jPanel6.setVisible(true);
-            jLabel1.setVisible(true);
-            jLabel6.setVisible(true);
-            RestockBTN.setVisible(true);
-            RestockBTN1.setVisible(true);
-            DeleteInventoryBTN.setVisible(true);
-            AddMedicineBTN.setVisible(true);
-        } else if (activePanel != null) {
-            activePanel.setVisible(true);
-        }
-
-        activeAdminPanel = activePanel;
-        jPanel1.revalidate();
-        jPanel1.repaint();
+   /**
+ * Makes the generated feature views mutually exclusive. Inventory spans
+ * several generated components, with jPanel4 serving as its anchor;
+ * jPanel3 is deliberately excluded because it is the permanent sidebar.
+ */
+private void switchAdminPanel(javax.swing.JPanel activePanel) {
+    if (activeAdminPanel == activePanel) {
+        return;
     }
+    jPanel5.setVisible(false);
+    AccountManagementPanel.setVisible(false);
+    jPanel4.setVisible(false);
+    jPanel6.setVisible(false);
+    jLabel1.setVisible(false);
+    jLabel6.setVisible(false);
+    RestockBTN.setVisible(false);
+    RestockBTN1.setVisible(false);
+    DeleteInventoryBTN.setVisible(false);
+    AddMedicineBTN.setVisible(false);
+
+    if (activePanel == jPanel4) {
+        jPanel4.setVisible(true);
+        jPanel6.setVisible(true);
+        jLabel1.setVisible(true);
+        jLabel6.setVisible(true);
+        RestockBTN.setVisible(true);
+        RestockBTN1.setVisible(true);
+        DeleteInventoryBTN.setVisible(true);
+        AddMedicineBTN.setVisible(true);
+        updateSidebarActiveState(jButton5);
+    } else if (activePanel == jPanel5) {
+        activePanel.setVisible(true);
+        updateSidebarActiveState(StudentManagementBTN);
+    } else if (activePanel == AccountManagementPanel) {
+        activePanel.setVisible(true);
+        updateSidebarActiveState(AccManageBTN);
+    } else if (activePanel != null) {
+        activePanel.setVisible(true);
+    }
+
+    activeAdminPanel = activePanel;
+    jPanel1.revalidate();
+    jPanel1.repaint();
+}
 
     private void refreshInventoryView() {
         DatabaseExecutor.run(() -> {
