@@ -2,6 +2,19 @@ package clinic;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import java.awt.Component;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.Color;
+import java.awt.BasicStroke;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -24,6 +37,17 @@ public class Dashboard extends javax.swing.JFrame {
     private int studentSearchGeneration;
     private final javax.swing.JButton CancelCheckinBTN = new javax.swing.JButton("Cancel");
     private javax.swing.JButton activeNavButton;
+    private javax.swing.JLabel homeTotalTodayValue;
+    private javax.swing.JLabel homeActiveVisitsValue;
+    private javax.swing.JLabel homeHighTempsValue;
+    private javax.swing.JLabel homeLowStockValue;
+    private SymptomChartPanel homeSymptomChart;
+    private WeeklyBarChartPanel weeklyBarChart;
+    private StatusPieChartPanel statusPieChart;
+    private javax.swing.JLabel statisticSpecialNeedsValue;
+    private javax.swing.JLabel statisticAllergyValue;
+    private javax.swing.JLabel statisticMedicineValue;
+    private javax.swing.JLabel statisticSentHomeValue;
 
     public Dashboard(AccountSystem account) {
         loggedInAccount = account;
@@ -53,6 +77,7 @@ public class Dashboard extends javax.swing.JFrame {
     UserSession.start(account);
     configureNavigation();
     configureClinicWorkflow();
+    configureStatistics();
     installSessionPersistence();
     setIconImage(AppIcon.getIcon());
     setLocationRelativeTo(null);
@@ -162,6 +187,10 @@ public class Dashboard extends javax.swing.JFrame {
     }
     currentPanel = target;
     
+    if (target == CheckInPanel1) {
+        loadStudentChooser(SearchField.getText().trim());
+    }
+    
     // Update which button is highlighted
     if (target == MainPanel) {
         updateActiveButton(HomeBTN);
@@ -187,6 +216,479 @@ public class Dashboard extends javax.swing.JFrame {
     }
 
     /** Wires the existing Dashboard controls to the existing visit/student DAOs. */
+
+    /**
+     * Adds live statistics to the existing NetBeans-generated panels without
+     * changing their layout, dimensions, colors, or navigation structure.
+     */
+    private void configureStatistics() {
+        setupHomeStatistics();
+        setupStatisticCards();
+        setupStatisticCharts();
+
+        // The generated form already contains the titles. The values are kept
+        // visually consistent by using the same Yu Gothic UI family.
+        refreshStatistics();
+    }
+
+    private void setupHomeStatistics() {
+        homeTotalTodayValue = addCardValue(jPanel12);
+        homeActiveVisitsValue = addCardValue(jPanel10);
+        homeHighTempsValue = addCardValue(jPanel9);
+        homeLowStockValue = addCardValue(jPanel11);
+
+        // The existing home panel is already titled "SYMPTOM DISTRIBUTION
+        // (THIS WEEK)". Replace only its empty body with a paint-only chart.
+        homeSymptomChart = new SymptomChartPanel();
+        installChartInExistingPanel(jPanel3, homeSymptomChart, jLabel13, 8);
+    }
+
+    private javax.swing.JLabel addCardValue(javax.swing.JPanel card) {
+        javax.swing.JLabel value = new javax.swing.JLabel("0", javax.swing.SwingConstants.CENTER);
+        value.setFont(new Font("Yu Gothic UI", Font.BOLD, 28));
+        value.setForeground(new Color(15, 23, 42));
+        value.setOpaque(false);
+
+        // Keep the generated title/layout untouched. The value is painted in
+        // the card through the panel's existing child hierarchy.
+        card.add(value, 0);
+        card.setComponentZOrder(value, 0);
+        positionCardValue(card, value);
+        card.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override public void componentResized(java.awt.event.ComponentEvent e) {
+                positionCardValue(card, value);
+            }
+        });
+        return value;
+    }
+
+    private void positionCardValue(javax.swing.JPanel card, javax.swing.JLabel value) {
+        int w = Math.max(80, card.getWidth() - 24);
+        int h = 48;
+        int y = Math.max(30, card.getHeight() / 2 - 12);
+        value.setBounds(12, y, w, h);
+    }
+
+    private void installChartInExistingPanel(javax.swing.JPanel host,
+            javax.swing.JComponent chart, javax.swing.JLabel title, int topPadding) {
+        // Do not alter the host's existing background/border or preferred
+        // size. The generated GroupLayout uses these panels' preferred sizes
+        // when sizing the surrounding UI, so preserve that size before using
+        // absolute child positions for the chart itself.
+        java.awt.Dimension originalPreferredSize = host.getPreferredSize();
+        host.setLayout(null);
+        host.setPreferredSize(originalPreferredSize);
+        title.setBounds(8, 8, Math.max(1, host.getWidth() - 16), Math.max(18, title.getHeight()));
+        host.add(title);
+        host.add(chart);
+        chart.setBounds(8, Math.max(title.getY() + title.getHeight() + topPadding, 28),
+                Math.max(20, host.getWidth() - 16),
+                Math.max(20, host.getHeight() - title.getY() - title.getHeight() - topPadding - 8));
+        host.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override public void componentResized(java.awt.event.ComponentEvent e) {
+                title.setBounds(8, 8, Math.max(1, host.getWidth() - 16), title.getHeight());
+                chart.setBounds(8, Math.max(title.getY() + title.getHeight() + topPadding, 28),
+                        Math.max(20, host.getWidth() - 16),
+                        Math.max(20, host.getHeight() - title.getY() - title.getHeight() - topPadding - 8));
+            }
+        });
+    }
+
+    private void setupStatisticCharts() {
+        weeklyBarChart = new WeeklyBarChartPanel();
+        statusPieChart = new StatusPieChartPanel();
+        installChartInExistingPanel(jPanel4, weeklyBarChart, jLabel22, 8);
+        installChartInExistingPanel(jPanel14, statusPieChart, jLabel28, 8);
+    }
+
+    private void refreshStatistics() {
+        DatabaseExecutor.run(() -> loadDashboardStatistics(), stats -> {
+            if (homeTotalTodayValue != null) homeTotalTodayValue.setText(Integer.toString(stats.totalToday));
+            if (homeActiveVisitsValue != null) homeActiveVisitsValue.setText(Integer.toString(stats.activeVisits));
+            if (homeHighTempsValue != null) homeHighTempsValue.setText(Integer.toString(stats.highTemps));
+            if (homeLowStockValue != null) homeLowStockValue.setText(Integer.toString(stats.lowStock));
+
+            if (homeSymptomChart != null) homeSymptomChart.setData(stats.weeklySymptoms);
+            if (weeklyBarChart != null) weeklyBarChart.setData(stats.weekdayCounts);
+            if (statusPieChart != null) statusPieChart.setData(stats.statusCounts);
+
+            updateStatisticCards(stats);
+            loadEmergencyIncidentLog();
+        }, ex -> {
+            // Statistics must never prevent the dashboard from opening.
+            // Keep the existing UI values when the database is unavailable.
+        });
+    }
+
+    private void setupStatisticCards() {
+        statisticSpecialNeedsValue = createStatisticCardValue(jPanel5, jLabel6);
+        statisticAllergyValue = createStatisticCardValue(jPanel6, jLabel21);
+        statisticMedicineValue = createStatisticCardValue(jPanel7, jLabel23);
+        statisticSentHomeValue = createStatisticCardValue(jPanel13, jLabel24);
+    }
+
+    private javax.swing.JLabel createStatisticCardValue(javax.swing.JPanel card, javax.swing.JLabel legacyLabel) {
+        // The NetBeans form gives the original labels a 15px height. That is
+        // enough for the old one-line captions, but not for the new two-line
+        // statistic text, which caused the top of the text to be clipped.
+        // Keep the original component for the form/layout and place a visual
+        // value label over it without changing the card's size or appearance.
+        legacyLabel.setVisible(false);
+
+        javax.swing.JLabel value = new javax.swing.JLabel("0", javax.swing.SwingConstants.CENTER);
+        value.setFont(legacyLabel.getFont());
+        value.setForeground(legacyLabel.getForeground());
+        value.setOpaque(false);
+        card.setLayout(null);
+        card.add(value);
+        card.setComponentZOrder(value, 0);
+        positionStatisticCardValue(card, value);
+        card.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override public void componentResized(java.awt.event.ComponentEvent e) {
+                positionStatisticCardValue(card, value);
+            }
+        });
+        return value;
+    }
+
+    private void positionStatisticCardValue(javax.swing.JPanel card, javax.swing.JLabel value) {
+        int width = Math.max(80, card.getWidth() - 20);
+        int height = Math.max(55, Math.min(82, card.getHeight() - 20));
+        int x = Math.max(0, (card.getWidth() - width) / 2);
+        int y = Math.max(10, (card.getHeight() - height) / 2);
+        value.setBounds(x, y, width, height);
+    }
+
+    private void updateStatisticCards(DashboardStatistics stats) {
+        setStatisticCardText(statisticSpecialNeedsValue, "Number of Student with Special Needs", stats.specialNeeds);
+        setStatisticCardText(statisticAllergyValue, "Number of Student with Allergy", stats.allergies);
+        setStatisticCardText(statisticMedicineValue, "Total Medicine Used this Month", stats.medicineUsedThisMonth);
+        setStatisticCardText(statisticSentHomeValue, "Total of Student Sent home/ Referred to Hospital", stats.sentHomeOrBack);
+    }
+
+    private void setStatisticCardText(javax.swing.JLabel label, String title, int value) {
+        if (label == null) {
+            return;
+        }
+        label.setText("<html><div style='text-align:center; line-height:1.15;'>"
+                + escapeHtml(title) + "<br><b><font size='6'>" + value + "</font></b></div></html>");
+        label.setVerticalAlignment(javax.swing.SwingConstants.CENTER);
+        label.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+    }
+
+    private static DashboardStatistics loadDashboardStatistics() throws java.sql.SQLException {
+        LocalDate today = LocalDate.now();
+        LocalDate monday = today.with(DayOfWeek.MONDAY);
+        LocalDate friday = monday.plusDays(4);
+
+        int[] weekdays = new int[5];
+        int totalToday = 0;
+        int activeVisits = 0;
+        int highTemps = 0;
+        int lowStock = 0;
+        int specialNeeds = 0;
+        int allergies = 0;
+        int medicineUsedThisMonth = 0;
+        int sentHomeOrBack = 0;
+        Map<String, Integer> symptoms = new LinkedHashMap<>();
+        Map<String, Integer> statuses = new LinkedHashMap<>();
+        statuses.put("In Clinic", 0);
+        statuses.put("Sent Home", 0);
+        statuses.put("Sent Back", 0);
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+            // VISITS stores check_in_time as yyyy-MM-dd hh:mm a. Prefix matching
+            // by ISO date is intentionally used because it is stable and indexed
+            // enough for this small desktop application's data volume.
+            String visitSql = "SELECT check_in_time, status, reason, meds_qty, med_used, temperature "
+                    + "FROM VISITS WHERE archived = FALSE";
+            try (PreparedStatement ps = conn.prepareStatement(visitSql);
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String time = rs.getString("check_in_time");
+                    LocalDate date = parseVisitDate(time);
+                    String status = safeText(rs.getString("status"));
+                    String reason = safeText(rs.getString("reason"));
+                    String medicine = safeText(rs.getString("med_used"));
+                    int medsQty = Math.max(0, rs.getInt("meds_qty"));
+                    String temperature = safeText(rs.getString("temperature"));
+                    try {
+                        if (!temperature.isBlank() && Double.parseDouble(temperature) >= 38.0) highTemps++;
+                    } catch (NumberFormatException ignored) { }
+
+                    if (date != null) {
+                        if (date.equals(today)) totalToday++;
+                        if (date.isEqual(monday) || (date.isAfter(monday) && date.isBefore(friday.plusDays(1)))) {
+                            weekdays[date.getDayOfWeek().getValue() - 1]++;
+                            if (!reason.isBlank()) {
+                                String normalized = reason.trim();
+                                symptoms.merge(normalized, 1, Integer::sum);
+                            }
+                        }
+                        if (date.getYear() == today.getYear() && date.getMonth() == today.getMonth()
+                                && !medicine.isBlank() && !"none".equalsIgnoreCase(medicine)) {
+                            medicineUsedThisMonth += medsQty;
+                        }
+                    }
+
+                    if ("In Clinic".equalsIgnoreCase(status)) activeVisits++;
+                    if ("Sent Home".equalsIgnoreCase(status) || "Sent Back".equalsIgnoreCase(status)) sentHomeOrBack++;
+                    if (statuses.containsKey(status)) statuses.put(status, statuses.get(status) + 1);
+                }
+            }
+
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT COUNT(*) FROM STUDENTS WHERE status = 'ACTIVE' AND health_conditions IS NOT NULL "
+                    + "AND TRIM(health_conditions) <> ''");
+                 ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) specialNeeds = rs.getInt(1);
+            }
+
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT COUNT(*) FROM STUDENTS WHERE status = 'ACTIVE' AND allergy IS NOT NULL "
+                    + "AND TRIM(allergy) <> ''");
+                 ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) allergies = rs.getInt(1);
+            }
+
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT COUNT(*) FROM MEDICINES WHERE quantity <= 10");
+                 ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) lowStock = rs.getInt(1);
+            }
+
+        }
+
+        return new DashboardStatistics(totalToday, activeVisits, highTemps, lowStock,
+                specialNeeds, allergies, medicineUsedThisMonth, sentHomeOrBack,
+                weekdays, symptoms, statuses);
+    }
+
+    private static boolean columnExists(Connection conn, String table, String column)
+            throws java.sql.SQLException {
+        try (ResultSet rs = conn.getMetaData().getColumns(null, null, table.toUpperCase(Locale.ROOT),
+                column.toUpperCase(Locale.ROOT))) {
+            return rs.next();
+        }
+    }
+
+    private static LocalDate parseVisitDate(String value) {
+        if (value == null || value.isBlank()) return null;
+        String datePart = value.length() >= 10 ? value.substring(0, 10) : value;
+        try {
+            return LocalDate.parse(datePart);
+        } catch (DateTimeParseException ignored) {
+            return null;
+        }
+    }
+
+    private static String safeText(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private void loadEmergencyIncidentLog() {
+        DatabaseExecutor.run(() -> {
+            java.util.List<Object[]> rows = new java.util.ArrayList<>();
+            String sql = "SELECT check_in_time, name, reason, status FROM VISITS "
+                    + "WHERE archived = FALSE AND (UPPER(status) = 'SENT HOME' OR UPPER(status) = 'SENT BACK') "
+                    + "ORDER BY id DESC";
+            try (Connection conn = DatabaseManager.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql);
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next() && rows.size() < 100) {
+                    rows.add(new Object[]{rs.getString("check_in_time"), rs.getString("name"),
+                        rs.getString("reason"), rs.getString("status")});
+                }
+            }
+            return rows;
+        }, rows -> {
+            DefaultTableModel model = (DefaultTableModel) jTable2.getModel();
+            model.setRowCount(0);
+            for (Object[] row : rows) model.addRow(row);
+        }, ex -> {
+            // Keep the existing table intact on a transient database error.
+        });
+    }
+
+    private record DashboardStatistics(
+            int totalToday, int activeVisits, int highTemps, int lowStock,
+            int specialNeeds, int allergies, int medicineUsedThisMonth, int sentHomeOrBack,
+            int[] weekdayCounts, Map<String, Integer> weeklySymptoms,
+            Map<String, Integer> statusCounts) {}
+
+    private abstract static class BaseChartPanel extends javax.swing.JPanel {
+        protected static final Color TEXT = new Color(15, 23, 42);
+        protected static final Color MUTED = new Color(100, 116, 139);
+        protected static final Color GRID = new Color(226, 232, 240);
+        protected static final Color BLUE = new Color(37, 99, 235);
+
+        BaseChartPanel() {
+            setOpaque(false);
+        }
+
+        protected void setupGraphics(Graphics2D g) {
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g.setFont(new Font("Yu Gothic UI", Font.PLAIN, 11));
+        }
+
+        protected void drawNoData(Graphics2D g) {
+            g.setColor(MUTED);
+            String text = "No data available";
+            java.awt.FontMetrics fm = g.getFontMetrics();
+            g.drawString(text, Math.max(0, (getWidth() - fm.stringWidth(text)) / 2),
+                    Math.max(20, getHeight() / 2));
+        }
+    }
+
+    private static final class WeeklyBarChartPanel extends BaseChartPanel {
+        private int[] values = new int[5];
+
+        void setData(int[] counts) {
+            values = counts == null ? new int[5] : java.util.Arrays.copyOf(counts, 5);
+            repaint();
+        }
+
+        @Override protected void paintComponent(Graphics g0) {
+            super.paintComponent(g0);
+            Graphics2D g = (Graphics2D) g0.create();
+            setupGraphics(g);
+            int left = 34, right = 12, top = 8, bottom = 28;
+            int w = getWidth() - left - right, h = getHeight() - top - bottom;
+            if (w <= 20 || h <= 20) { g.dispose(); return; }
+
+            int max = 0;
+            for (int v : values) max = Math.max(max, v);
+            if (max == 0) { drawNoData(g); g.dispose(); return; }
+
+            g.setColor(GRID);
+            for (int i = 0; i <= 4; i++) {
+                int y = top + h - (h * i / 4);
+                g.drawLine(left, y, left + w, y);
+            }
+            g.setColor(TEXT);
+            int barSpace = w / 5;
+            for (int i = 0; i < 5; i++) {
+                int barW = Math.max(18, barSpace / 2);
+                int bh = (int) Math.round((values[i] / (double) max) * (h - 8));
+                int x = left + i * barSpace + (barSpace - barW) / 2;
+                int y = top + h - bh;
+                g.setColor(BLUE);
+                g.fillRoundRect(x, y, barW, bh, 8, 8);
+                g.setColor(TEXT);
+                String val = Integer.toString(values[i]);
+                g.drawString(val, x + Math.max(0, (barW - g.getFontMetrics().stringWidth(val)) / 2), Math.max(top + 11, y - 4));
+                String day = new String[]{"Mon", "Tue", "Wed", "Thu", "Fri"}[i];
+                g.drawString(day, x + Math.max(0, (barW - g.getFontMetrics().stringWidth(day)) / 2), top + h + 18);
+            }
+            g.dispose();
+        }
+    }
+
+    private static final class StatusPieChartPanel extends BaseChartPanel {
+        private Map<String, Integer> values = new LinkedHashMap<>();
+
+        void setData(Map<String, Integer> data) {
+            values = data == null ? new LinkedHashMap<>() : new LinkedHashMap<>(data);
+            repaint();
+        }
+
+        @Override protected void paintComponent(Graphics g0) {
+            super.paintComponent(g0);
+            Graphics2D g = (Graphics2D) g0.create();
+            setupGraphics(g);
+            int total = values.values().stream().mapToInt(Integer::intValue).sum();
+            if (total <= 0) { drawNoData(g); g.dispose(); return; }
+
+            // Center the complete pie-chart group within the existing panel
+            // while keeping the current panel size, title, and legend style.
+            int size = Math.min(getHeight() - 18, Math.min(getWidth() / 2, 210));
+            int legendWidth = 190;
+            int groupWidth = size + 20 + legendWidth;
+            int groupX = Math.max(8, (getWidth() - groupWidth) / 2);
+            int x = groupX, y = Math.max(6, (getHeight() - size) / 2);
+            int start = 90;
+            int remaining = 360;
+            int[] sliceAngles = new int[values.size()];
+            int idx = 0;
+            for (int v : values.values()) {
+                int angle = (idx == values.size() - 1) ? remaining : (int) Math.round(v * 360.0 / total);
+                sliceAngles[idx++] = Math.max(0, angle);
+                remaining -= angle;
+            }
+
+            idx = 0;
+            for (Map.Entry<String, Integer> entry : values.entrySet()) {
+                g.setColor(chartColor(idx));
+                g.fillArc(x, y, size, size, start, sliceAngles[idx]);
+                start += sliceAngles[idx++];
+            }
+
+            int legendX = x + size + 20;
+            int legendY = Math.max(20, y + 18);
+            idx = 0;
+            for (Map.Entry<String, Integer> entry : values.entrySet()) {
+                int value = Math.max(0, entry.getValue());
+                g.setColor(chartColor(idx));
+                g.fillRoundRect(legendX, legendY - 10, 10, 10, 3, 3);
+                g.setColor(TEXT);
+                String text = entry.getKey() + " (" + value + ")";
+                g.drawString(text, legendX + 16, legendY);
+                legendY += 24;
+                idx++;
+            }
+            g.dispose();
+        }
+
+        private static Color chartColor(int index) {
+            return switch (index % 3) {
+                case 0 -> new Color(37, 99, 235);
+                case 1 -> new Color(16, 185, 129);
+                default -> new Color(245, 158, 11);
+            };
+        }
+    }
+
+    private static final class SymptomChartPanel extends BaseChartPanel {
+        private Map<String, Integer> values = new LinkedHashMap<>();
+
+        void setData(Map<String, Integer> data) {
+            values = data == null ? new LinkedHashMap<>() : new LinkedHashMap<>(data);
+            repaint();
+        }
+
+        @Override protected void paintComponent(Graphics g0) {
+            super.paintComponent(g0);
+            Graphics2D g = (Graphics2D) g0.create();
+            setupGraphics(g);
+            if (values.isEmpty()) { drawNoData(g); g.dispose(); return; }
+
+            // Show all categories, ordered by count, without hiding data.
+            java.util.List<Map.Entry<String, Integer>> entries = new java.util.ArrayList<>(values.entrySet());
+            entries.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
+            int maxBars = Math.min(entries.size(), 8);
+            int left = 8, right = 8, top = 6;
+            int rowH = Math.max(18, (getHeight() - top - 8) / maxBars);
+            int max = entries.stream().limit(maxBars).mapToInt(Map.Entry::getValue).max().orElse(1);
+            for (int i = 0; i < maxBars; i++) {
+                Map.Entry<String, Integer> e = entries.get(i);
+                int y = top + i * rowH;
+                String label = e.getKey();
+                if (label.length() > 18) label = label.substring(0, 17) + "…";
+                g.setColor(MUTED);
+                g.drawString(label, left, y + 12);
+                int bx = left + 105;
+                int bw = Math.max(2, getWidth() - bx - right - 28);
+                int bar = (int) Math.round(e.getValue() / (double) max * bw);
+                g.setColor(BLUE);
+                g.fillRoundRect(bx, y + 3, bar, Math.max(10, rowH - 8), 6, 6);
+                g.setColor(TEXT);
+                g.drawString(Integer.toString(e.getValue()), bx + bar + 6, y + 13);
+            }
+            g.dispose();
+        }
+    }
+
     private void configureClinicWorkflow() {
         jButton2.addActionListener(e -> findExpressStudent());
         LrnField.addActionListener(e -> findExpressStudent());
@@ -205,6 +707,11 @@ public class Dashboard extends javax.swing.JFrame {
             @Override public void insertUpdate(DocumentEvent e) { recommendMedicineFromReason(); }
             @Override public void removeUpdate(DocumentEvent e) { recommendMedicineFromReason(); }
             @Override public void changedUpdate(DocumentEvent e) { recommendMedicineFromReason(); }
+        });
+        jTextField1.getDocument().addDocumentListener(new DocumentListener() {
+            @Override public void insertUpdate(DocumentEvent e) { recommendPopupMedicine(); }
+            @Override public void removeUpdate(DocumentEvent e) { recommendPopupMedicine(); }
+            @Override public void changedUpdate(DocumentEvent e) { recommendPopupMedicine(); }
         });
         configureCheckinPopupCard();
         loadStudentChooser("");
@@ -345,57 +852,72 @@ public class Dashboard extends javax.swing.JFrame {
     getContentPane().repaint();
 }
 
-    /** Suggests an in-stock medicine for a recognized express-check-in symptom. */
+    /** Suggests an in-stock medicine based on the purpose saved in Inventory. */
     private void recommendMedicineFromReason() {
         if (!MedicineField.getText().trim().isEmpty()) return;
         final String reason = ReasonField.getText();
-        final String recommendation = recommendationFor(reason);
-        if (recommendation == null) return;
+        if (reason == null || reason.isBlank()) return;
 
         DatabaseExecutor.run(() -> new MedicineData().loadAll(), medicines -> {
-            // Do not overwrite a nurse's manual entry or a newer reason.
             if (!MedicineField.getText().trim().isEmpty()
                     || !reason.equals(ReasonField.getText())) return;
-            String suggested = inStockRecommendation(recommendation, medicines);
-            MedicineField.setText(suggested);
+            String suggested = findMedicineForReason(reason, medicines);
+            if (suggested != null) MedicineField.setText(suggested);
         }, ex -> {
-            // A failed stock lookup must not interrupt check-in or erase a
-            // manual value. The generic recommendation remains optional.
+            // Inventory lookup failure must not break the check-in form.
         });
     }
 
-    private static String recommendationFor(String reason) {
-        String symptom = reason == null ? "" : reason.toLowerCase(Locale.ROOT);
-        if (containsAny(symptom, "fever", "headache", "body pain", "temp"))
-            return "Paracetamol / Biogesic";
-        if (containsAny(symptom, "cough", "colds", "flu", "runny nose"))
-            return "Solmux / Neozep / Decolgen";
-        if (containsAny(symptom, "stomach ache", "hyperacidity", "hyperacid", "indigestion"))
-            return "Kremil-S / Antacid";
-        if (containsAny(symptom, "allergy", "itch", "rashes")) return "Cetirizine";
-        if (containsAny(symptom, "wound", "cut", "scratch")) return "Betadine / Bandage";
-        if (containsAny(symptom, "dizziness", "fatigue"))
-            return "Rest / Oral Rehydration Solution";
+    private static String findMedicineForReason(String reason, java.util.List<Medicine> medicines) {
+        String normalizedReason = normalizeForMatching(reason);
+        if (normalizedReason.isBlank()) return null;
+
+        // Prefer a medicine whose saved purpose directly matches the reason.
+        for (Medicine medicine : medicines) {
+            if (medicine.getquantity() <= 0 || medicine.isExpired()) continue;
+            String purpose = normalizeForMatching(medicine.getPurpose());
+            if (!purpose.isBlank() && matchesPurpose(normalizedReason, purpose)) {
+                return medicine.getname();
+            }
+        }
+
+        // Backward-compatible fallback for older inventory rows without a purpose.
+        if (containsAny(normalizedReason, "fever", "lagnat", "may lagnat", "maylagnat",
+                "nilalagnat", "mainit ang katawan", "mainit katawan")) {
+            for (Medicine medicine : medicines) {
+                if (medicine.getquantity() > 0 && !medicine.isExpired()
+                        && medicine.getname() != null
+                        && normalizeForMatching(medicine.getname()).contains("paracetamol")) {
+                    return medicine.getname();
+                }
+            }
+        }
         return null;
+    }
+
+    private static boolean matchesPurpose(String reason, String purpose) {
+        String[] reasonWords = reason.split("\\s+");
+        for (String word : reasonWords) {
+            if (word.length() >= 4 && purpose.contains(word)) return true;
+        }
+        String[] purposeWords = purpose.split("\\s+");
+        for (String word : purposeWords) {
+            if (word.length() >= 4 && reason.contains(word)) return true;
+        }
+        return containsAny(reason, "fever", "lagnat", "cough", "ubo", "headache", "sakit ng ulo",
+                "allergy", "pangati", "itch", "stomach", "tiyan", "wound", "sugat", "cold", "sipon")
+                && containsAny(purpose, "fever", "lagnat", "cough", "ubo", "headache", "sakit ng ulo",
+                "allergy", "pangati", "itch", "stomach", "tiyan", "wound", "sugat", "cold", "sipon");
+    }
+
+    private static String normalizeForMatching(String text) {
+        if (text == null) return "";
+        return text.toLowerCase(Locale.ROOT).trim().replaceAll("\\s+", " ");
     }
 
     private static boolean containsAny(String text, String... keywords) {
         for (String keyword : keywords) if (text.contains(keyword)) return true;
         return false;
-    }
-
-    private static String inStockRecommendation(String recommendation,
-            java.util.List<Medicine> medicines) {
-        String[] options = recommendation.split(" / ");
-        for (String option : options) {
-            for (Medicine medicine : medicines) {
-                if (medicine.getname().equalsIgnoreCase(option)
-                        && medicine.getquantity() > 0 && !medicine.isExpired()) {
-                    return medicine.getname();
-                }
-            }
-        }
-        return recommendation + " (Out of Stock)";
     }
 
     private void loadMedicineChoices() {
@@ -408,6 +930,28 @@ public class Dashboard extends javax.swing.JFrame {
         }, ex -> JOptionPane.showMessageDialog(this,
                 "Unable to load medicines: " + ex.getMessage(), "Medicine Load Error",
                 JOptionPane.ERROR_MESSAGE));
+    }
+
+    private void recommendPopupMedicine() {
+        String reason = jTextField1.getText() == null ? "" : jTextField1.getText().trim();
+        if (reason.isBlank()) {
+            if (jComboBox1.getItemCount() > 0) jComboBox1.setSelectedIndex(0);
+            return;
+        }
+        final String requestedReason = reason;
+        DatabaseExecutor.run(() -> new MedicineData().loadAll(), medicines -> {
+            if (!requestedReason.equals(jTextField1.getText().trim())) return;
+            String suggested = findMedicineForReason(requestedReason, medicines);
+            if (suggested == null) return;
+            for (int i = 0; i < jComboBox1.getItemCount(); i++) {
+                if (suggested.equalsIgnoreCase(String.valueOf(jComboBox1.getItemAt(i)))) {
+                    jComboBox1.setSelectedIndex(i);
+                    return;
+                }
+            }
+        }, ex -> {
+            // Inventory lookup failure must not break check-in.
+        });
     }
 
     private void selectStudentFromChooser() {
@@ -501,7 +1045,9 @@ public class Dashboard extends javax.swing.JFrame {
                     "Student Required", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        submitCheckin(selectedStudent, ReasonField.getText().trim(), MedicineField.getText().trim());
+        String temperature = validateTemperature(TempField.getText().trim());
+        if (temperature == null) return;
+        submitCheckin(selectedStudent, ReasonField.getText().trim(), MedicineField.getText().trim(), temperature);
     }
 
     private void submitPopupCheckin() {
@@ -512,10 +1058,14 @@ public class Dashboard extends javax.swing.JFrame {
         }
         Object item = jComboBox1.getSelectedItem();
         String medicine = item == null ? "None" : item.toString();
-        submitCheckin(selectedStudent, jTextField1.getText().trim(), medicine);
+        submitCheckin(selectedStudent, jTextField1.getText().trim(), medicine, "");
     }
 
     private void submitCheckin(StudentDetails student, String reason, String medicine) {
+        submitCheckin(student, reason, medicine, "");
+    }
+
+    private void submitCheckin(StudentDetails student, String reason, String medicine, String temperature) {
         if (reason == null || reason.isBlank()) {
             JOptionPane.showMessageDialog(this, "Enter a reason for the clinic visit.",
                     "Reason Required", JOptionPane.WARNING_MESSAGE);
@@ -523,18 +1073,36 @@ public class Dashboard extends javax.swing.JFrame {
         }
         String medicineName = medicine == null || medicine.isBlank() ? "None" : medicine;
         String actor = loggedInAccount == null ? "Unknown" : loggedInAccount.GetName();
+
+        DatabaseExecutor.run(() -> new VisitData().isCurrentlyCheckedIn(student.lrn()), alreadyCheckedIn -> {
+            if (alreadyCheckedIn) {
+                JOptionPane.showMessageDialog(this,
+                        student.name() + " is already checked in.",
+                        "Already Checked In", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            performCheckinSave(student, reason, medicineName, temperature, actor);
+        }, ex -> JOptionPane.showMessageDialog(this,
+                "Unable to verify the student's current clinic status: " + ex.getMessage(),
+                "Check-in Error", JOptionPane.ERROR_MESSAGE));
+    }
+
+    private void performCheckinSave(StudentDetails student, String reason, String medicineName,
+            String temperature, String actor) {
         ECheckin.setEnabled(false);
         jButton1.setEnabled(false);
         DatabaseExecutor.run(() -> new VisitData().checkInWithMedicine(
                 student.name(), student.gradeSection(), student.lrn(), reason, medicineName,
                 "None".equalsIgnoreCase(medicineName) ? 0 : 1,
-                student.parentName(), student.phoneNumber(), new MedicineData(), actor), result -> {
+                student.parentName(), student.phoneNumber(), temperature, new MedicineData(), actor), result -> {
             ECheckin.setEnabled(true);
             jButton1.setEnabled(true);
             refreshRecentVisits();
+            refreshStatistics();
             closeCheckinPopup();
             ReasonField.setText("");
             MedicineField.setText("");
+            TempField.setText("");
             JOptionPane.showMessageDialog(this,
                     result.medicineDeducted() || "None".equalsIgnoreCase(medicineName)
                             ? "Student checked in successfully."
@@ -546,6 +1114,26 @@ public class Dashboard extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Unable to save the check-in: " + ex.getMessage(),
                     "Check-in Error", JOptionPane.ERROR_MESSAGE);
         });
+    }
+
+    /** Validates clinic temperature without changing the existing field/UI. */
+    private String validateTemperature(String raw) {
+        if (raw == null || raw.isBlank()) return "";
+        try {
+            double value = Double.parseDouble(raw);
+            if (!Double.isFinite(value) || value < 34.0 || value > 45.0) {
+                JOptionPane.showMessageDialog(this,
+                        "Enter a valid temperature between 34.0 and 45.0 °C.",
+                        "Invalid Temperature", JOptionPane.WARNING_MESSAGE);
+                return null;
+            }
+            return String.format(Locale.ROOT, "%.1f", value);
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Enter a valid temperature, for example 37.5.",
+                    "Invalid Temperature", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
     }
 
     private void loadStudentChooser(String search) {
@@ -571,7 +1159,7 @@ public class Dashboard extends javax.swing.JFrame {
             model.setRowCount(0);
             for (CheckinSystem visit : visits) {
                 model.addRow(new Object[]{visit.getCheckInTime(), visit.getName(),
-                        visit.getGradeSection(), "", visit.getReason(), visit.getMedUsed(),
+                        visit.getGradeSection(), visit.getTemperature(), visit.getReason(), visit.getMedUsed(),
                         visit.getStatus()});
             }
         }, ex -> JOptionPane.showMessageDialog(this,
@@ -597,11 +1185,22 @@ public class Dashboard extends javax.swing.JFrame {
         }
     }
 
+    /**
+     * Loads only students who currently have an active clinic visit.
+     * The Check In page is a live clinic-visit list, not a copy of Student Management.
+     * Search filters this active-visit list by name, section, or LRN.
+     */
     private static java.util.ArrayList<StudentDetails> findStudents(String search) throws java.sql.SQLException {
         java.util.ArrayList<StudentDetails> students = new java.util.ArrayList<>();
-        String sql = "SELECT name, grade_section, lrn, allergy, health_conditions, parent_name, phone_number "
-                + "FROM STUDENTS WHERE status = 'ACTIVE' AND (UPPER(name) LIKE ? OR UPPER(grade_section) LIKE ? OR UPPER(lrn) LIKE ?) "
-                + "ORDER BY name, lrn";
+        String sql =
+                "SELECT s.name, s.grade_section, s.lrn, s.allergy, s.health_conditions, "
+                + "s.parent_name, s.phone_number "
+                + "FROM STUDENTS s "
+                + "WHERE s.status = 'ACTIVE' "
+                + "AND EXISTS (SELECT 1 FROM VISITS v "
+                + "WHERE v.lrn = s.lrn AND v.status = 'In Clinic' AND v.archived = FALSE) "
+                + "AND (UPPER(s.name) LIKE ? OR UPPER(s.grade_section) LIKE ? OR UPPER(s.lrn) LIKE ?) "
+                + "ORDER BY s.name, s.lrn";
         String filter = "%" + (search == null ? "" : search.trim().toUpperCase()) + "%";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -1556,7 +2155,56 @@ private void updateActiveButton(javax.swing.JButton btn) {
 }
 
     private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {
-        // Legacy action removed: its original controls no longer exist in the generated form.
+        int selectedRow = ReasonTable.getSelectedRow();
+        if (selectedRow < 0) {
+            JOptionPane.showMessageDialog(this,
+                    "Select a checked-in student first.",
+                    "Student Required", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String lrn = currentSelectedChooserLrn();
+        if (lrn == null || lrn.isBlank()) {
+            JOptionPane.showMessageDialog(this,
+                    "The selected student could not be identified.",
+                    "Student Required", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        Object[] options = {"Sent Home", "Sent Back", "Cancel"};
+        int choice = JOptionPane.showOptionDialog(
+                this,
+                "What should happen to the selected student?",
+                "Visit Action",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]);
+
+        if (choice != 0 && choice != 1) return;
+
+        String actor = loggedInAccount == null ? "Unknown" : loggedInAccount.GetName();
+        DatabaseExecutor.run(
+                () -> choice == 0
+                        ? new VisitData().markSentHome(lrn, actor)
+                        : new VisitData().markSentBack(lrn, actor),
+                updated -> {
+                    if (!updated) {
+                        JOptionPane.showMessageDialog(this,
+                                "The selected student no longer has an active clinic visit.",
+                                "Visit Not Found", JOptionPane.WARNING_MESSAGE);
+                        loadStudentChooser(SearchField.getText().trim());
+                        return;
+                    }
+                    selectedStudent = null;
+                    loadStudentChooser(SearchField.getText().trim());
+                    refreshRecentVisits();
+                    refreshStatistics();
+                },
+                ex -> JOptionPane.showMessageDialog(this,
+                        "Unable to update the clinic visit: " + ex.getMessage(),
+                        "Visit Update Error", JOptionPane.ERROR_MESSAGE));
     }
 
     private void StatisticBTNActionPerformed(java.awt.event.ActionEvent evt) {

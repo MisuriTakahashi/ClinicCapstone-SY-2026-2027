@@ -19,10 +19,17 @@ public class CheckinSystem {
     private String status;
     private String guardianName;
     private String guardianPhoneNums;
+    private String temperature;
 
     public CheckinSystem(String name, String gradeSection, String lrn, String reason,
                           String medUsed, int medsQty ,String checkInTime, String status,
                           String guardianName, String guardianPhoneNums) {
+        this(name, gradeSection, lrn, reason, medUsed, medsQty, checkInTime, status, guardianName, guardianPhoneNums, "");
+    }
+
+    public CheckinSystem(String name, String gradeSection, String lrn, String reason,
+                          String medUsed, int medsQty ,String checkInTime, String status,
+                          String guardianName, String guardianPhoneNums, String temperature) {
         this.name = name;
         this.gradeSection = gradeSection;
         this.lrn = lrn;
@@ -33,6 +40,7 @@ public class CheckinSystem {
         this.status = status;
         this.guardianName = guardianName;
         this.guardianPhoneNums = guardianPhoneNums;
+        this.temperature = temperature == null ? "" : temperature;
     }
     
     //getters
@@ -66,6 +74,7 @@ public class CheckinSystem {
     public String getGuardianPhoneNums() { 
         return guardianPhoneNums;
     }
+    public String getTemperature() { return temperature; }
     
     //setters
     
@@ -93,6 +102,7 @@ public class CheckinSystem {
     public void setGuardianPhone(String guardianPhoneNums) {
         this.guardianPhoneNums = guardianPhoneNums;
     }
+    public void setTemperature(String temperature) { this.temperature = temperature == null ? "" : temperature; }
     
     // Returns the medicine name and quantity for display.
     // Returns "None" when no medicine was used.

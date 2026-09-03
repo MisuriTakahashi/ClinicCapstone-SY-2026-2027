@@ -36,7 +36,7 @@ public class MedicineData {
                 new ArrayList<>();
 
         String sql =
-                "SELECT name, exp_date AS expiration_date, quantity "
+                "SELECT name, exp_date AS expiration_date, quantity, purpose "
                 + "FROM MEDICINES";
 
         try (Connection conn =
@@ -52,7 +52,8 @@ public class MedicineData {
                         new Medicine(
                                 rs.getString("name"),
                                 rs.getString("expiration_date"),
-                                rs.getInt("quantity")
+                                rs.getInt("quantity"),
+                                rs.getString("purpose")
                         )
                 );
             }
@@ -65,13 +66,14 @@ public class MedicineData {
             String name,
             String expirationDate,
             int quantity,
+            String purpose,
             String performedBy)
             throws SQLException, IOException {
 
         String sql =
                 "INSERT INTO MEDICINES("
-                + "name, exp_date, quantity"
-                + ") VALUES(?, ?, ?)";
+                + "name, exp_date, quantity, purpose"
+                + ") VALUES(?, ?, ?, ?)";
 
         try (Connection conn =
                      DatabaseManager.getConnection();
@@ -81,6 +83,7 @@ public class MedicineData {
             ps.setString(1, name);
             ps.setString(2, expirationDate);
             ps.setInt(3, quantity);
+            ps.setString(4, purpose == null ? "" : purpose);
 
             ps.executeUpdate();
         }
@@ -121,12 +124,13 @@ public class MedicineData {
             String newName,
             String newExpDate,
             int newQuantity,
+            String newPurpose,
             String performedBy)
             throws SQLException, IOException {
 
         String sql =
                 "UPDATE MEDICINES "
-                + "SET name = ?, exp_date = ?, quantity = ? "
+                + "SET name = ?, exp_date = ?, quantity = ?, purpose = ? "
                 + "WHERE name = ?";
 
         int rows;
@@ -139,7 +143,8 @@ public class MedicineData {
             ps.setString(1, newName);
             ps.setString(2, newExpDate);
             ps.setInt(3, newQuantity);
-            ps.setString(4, currentName);
+            ps.setString(4, newPurpose == null ? "" : newPurpose);
+            ps.setString(5, currentName);
 
             rows = ps.executeUpdate();
         }
@@ -155,7 +160,9 @@ public class MedicineData {
                 + newName
                 + " ("
                 + newQuantity
-                + "x)",
+                + "x, purpose: "
+                + (newPurpose == null ? "" : newPurpose)
+                + ")",
                 performedBy
         );
 
@@ -476,7 +483,7 @@ public class MedicineData {
             throws SQLException {
 
         String sql =
-                "SELECT name, exp_date AS expiration_date, quantity "
+                "SELECT name, exp_date AS expiration_date, quantity, purpose "
                 + "FROM MEDICINES "
                 + "WHERE name = ?";
 
@@ -495,7 +502,8 @@ public class MedicineData {
                     return new Medicine(
                             rs.getString("name"),
                             rs.getString("expiration_date"),
-                            rs.getInt("quantity")
+                            rs.getInt("quantity"),
+                            rs.getString("purpose")
                     );
                 }
 

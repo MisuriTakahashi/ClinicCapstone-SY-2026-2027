@@ -340,6 +340,17 @@ public class AdminPanel extends javax.swing.JFrame {
             return;
         }
 
+        String purpose = JOptionPane.showInputDialog(this,
+                "What is this medicine for? (Example: fever / lagnat):",
+                "Add Medicine", JOptionPane.QUESTION_MESSAGE);
+        if (purpose == null) return;
+        purpose = purpose.trim();
+        if (purpose.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "A medicine purpose is required so the system can make suggestions.",
+                    "Purpose Required", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
         String rawQuantity = JOptionPane.showInputDialog(this, "Initial quantity:",
                 "Add Medicine", JOptionPane.QUESTION_MESSAGE);
         if (rawQuantity == null) return;
@@ -369,12 +380,13 @@ public class AdminPanel extends javax.swing.JFrame {
 
         final String medicineName = name;
         final String storedExpirationDate = expirationDate;
+        final String medicinePurpose = purpose;
         AddMedicineBTN.setEnabled(false);
         DatabaseExecutor.run(() -> {
             MedicineData medicineData = new MedicineData();
             if (medicineData.nameExists(medicineName)) return false;
             medicineData.addItem(medicineName, storedExpirationDate, quantity,
-                    loggedInAccount.GetName());
+                    medicinePurpose, loggedInAccount.GetName());
             return true;
         }, added -> {
             AddMedicineBTN.setEnabled(true);
@@ -455,6 +467,16 @@ public class AdminPanel extends javax.swing.JFrame {
             }
             String newName = JOptionPane.showInputDialog(this, "Product name:", medicine.getname());
             if (newName == null) return;
+            newName = newName.trim();
+            String purpose = JOptionPane.showInputDialog(this,
+                    "What is this medicine for? (Example: fever / lagnat):", medicine.getPurpose());
+            if (purpose == null) return;
+            purpose = purpose.trim();
+            if (purpose.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "A medicine purpose is required.",
+                        "Purpose Required", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
             String expiration = JOptionPane.showInputDialog(this,
                     "Expiration date (YYYY-MM-DD):", medicine.getExpDate());
             if (expiration == null) return;
@@ -472,7 +494,8 @@ public class AdminPanel extends javax.swing.JFrame {
             }
             if (currentName.equals(newName.trim())
                     && medicine.getExpDate().equals(expiration.trim())
-                    && medicine.getquantity() == quantity) {
+                    && medicine.getquantity() == quantity
+                    && medicine.getPurpose().equals(purpose)) {
                 JOptionPane.showMessageDialog(this, "No changes were made.",
                         "Edit Cancelled", JOptionPane.INFORMATION_MESSAGE);
                 return;
@@ -485,9 +508,12 @@ public class AdminPanel extends javax.swing.JFrame {
                         "Invalid Expiration Date", JOptionPane.WARNING_MESSAGE);
                 return;
             }
+            final String finalNewName = newName.trim();
+            final String finalExpiration = expiration.trim();
+            final String finalPurpose = purpose;
             RestockBTN1.setEnabled(false);
             DatabaseExecutor.run(() -> new MedicineData().editItem(currentName,
-                    newName.trim(), expiration.trim(), quantity, loggedInAccount.GetName()), edited -> {
+                    finalNewName, finalExpiration, quantity, finalPurpose, loggedInAccount.GetName()), edited -> {
                 RestockBTN1.setEnabled(true);
                 if (edited) {
                     refreshInventoryView();

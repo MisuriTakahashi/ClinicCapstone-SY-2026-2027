@@ -74,7 +74,8 @@ public class DatabaseManager {
                 + "id INT AUTO_INCREMENT PRIMARY KEY, "
                 + "name VARCHAR(255) UNIQUE NOT NULL, "
                 + "exp_date VARCHAR(50) NOT NULL, "
-                + "quantity INT NOT NULL)";
+                + "quantity INT NOT NULL, "
+                + "purpose VARCHAR(500) NOT NULL DEFAULT '')";
 
         String createVisitsTable =
                 "CREATE TABLE IF NOT EXISTS VISITS ("
@@ -141,6 +142,18 @@ public class DatabaseManager {
                     + "ADD COLUMN IF NOT EXISTS "
                     + "archived BOOLEAN "
                     + "NOT NULL DEFAULT FALSE"
+            );
+
+            stmt.execute(
+                    "ALTER TABLE MEDICINES "
+                    + "ADD COLUMN IF NOT EXISTS purpose VARCHAR(500) "
+                    + "NOT NULL DEFAULT ''"
+            );
+
+            stmt.execute(
+                    "ALTER TABLE VISITS "
+                    + "ADD COLUMN IF NOT EXISTS temperature VARCHAR(20) "
+                    + "DEFAULT ''"
             );
 
             /*

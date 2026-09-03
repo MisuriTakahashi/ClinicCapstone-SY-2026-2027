@@ -14,13 +14,19 @@ public class Medicine {
         private String name; // the name of the item
         private String ExpDate; // exp date
         private int quantity; // quantity 
+        private String purpose; // what the medicine is for
     
         private static final int LOW_STOCK_THRESHOLD = 10;
     
         public Medicine(String name , String ExpDate , int quantity){
+            this(name, ExpDate, quantity, "");
+        }
+
+        public Medicine(String name, String ExpDate, int quantity, String purpose){
             this.name = name;
             this.ExpDate = ExpDate;
             this.quantity = quantity;
+            this.purpose = purpose == null ? "" : purpose.trim();
         }
         
         //getters
@@ -40,6 +46,10 @@ public class Medicine {
         public int getquantity(){
             return quantity;
         }
+
+        public String getPurpose(){
+            return purpose;
+        }
         
         
         //setters
@@ -55,6 +65,10 @@ public class Medicine {
         public void setquantity(int quantity) 
         { 
             this.quantity = quantity; 
+        }
+
+        public void setPurpose(String purpose) {
+            this.purpose = purpose == null ? "" : purpose.trim();
         }
 
         

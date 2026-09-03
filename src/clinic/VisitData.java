@@ -35,9 +35,13 @@ public class VisitData {
  
     public void checkIn(String name, String gradeSection, String lrn, String reason, String medUsed,
                          int medsQty, String guardianName, String guardianPhone) throws SQLException {
- 
+        checkIn(name, gradeSection, lrn, reason, medUsed, medsQty, guardianName, guardianPhone, "");
+    }
+
+    public void checkIn(String name, String gradeSection, String lrn, String reason, String medUsed,
+                         int medsQty, String guardianName, String guardianPhone, String temperature) throws SQLException {
         try (Connection conn = DatabaseManager.getConnection()) {
-            checkIn(conn, name, gradeSection, lrn, reason, medUsed, medsQty, guardianName, guardianPhone);
+            checkIn(conn, name, gradeSection, lrn, reason, medUsed, medsQty, guardianName, guardianPhone, temperature);
         }
     }
  
@@ -47,22 +51,19 @@ public class VisitData {
      */
     void checkIn(Connection conn, String name, String gradeSection, String lrn, String reason, String medUsed,
                  int medsQty, String guardianName, String guardianPhone) throws SQLException {
- 
+        checkIn(conn, name, gradeSection, lrn, reason, medUsed, medsQty, guardianName, guardianPhone, "");
+    }
+
+    void checkIn(Connection conn, String name, String gradeSection, String lrn, String reason, String medUsed,
+                 int medsQty, String guardianName, String guardianPhone, String temperature) throws SQLException {
         String now = LocalDateTime.now().format(TIME_FORMAT);
         String sql = "INSERT INTO VISITS(name, grade_section, lrn, reason, med_used, meds_qty, "
-                + "check_in_time, status, guardian_name, guardian_phone) VALUES(?,?,?,?,?,?,?,?,?,?)";
- 
+                + "check_in_time, status, guardian_name, guardian_phone, temperature) VALUES(?,?,?,?,?,?,?,?,?,?,?)";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, name);
-            ps.setString(2, gradeSection);
-            ps.setString(3, lrn);
-            ps.setString(4, reason);
-            ps.setString(5, medUsed);
-            ps.setInt(6, medsQty);
-            ps.setString(7, now);
-            ps.setString(8, "In Clinic");
-            ps.setString(9, guardianName);
-            ps.setString(10, guardianPhone);
+            ps.setString(1, name); ps.setString(2, gradeSection); ps.setString(3, lrn);
+            ps.setString(4, reason); ps.setString(5, medUsed); ps.setInt(6, medsQty);
+            ps.setString(7, now); ps.setString(8, "In Clinic"); ps.setString(9, guardianName);
+            ps.setString(10, guardianPhone); ps.setString(11, temperature == null ? "" : temperature);
             ps.executeUpdate();
         }
     }
@@ -85,13 +86,21 @@ public class VisitData {
         String name, String gradeSection, String lrn, String reason,
         String medUsed, int medsQty, String guardianName, String guardianPhone,
         MedicineData medicineData, String performedBy) throws SQLException {
+        return checkInWithMedicine(name, gradeSection, lrn, reason, medUsed, medsQty,
+                guardianName, guardianPhone, "", medicineData, performedBy);
+    }
+
+    public CheckInResult checkInWithMedicine(
+        String name, String gradeSection, String lrn, String reason,
+        String medUsed, int medsQty, String guardianName, String guardianPhone,
+        String temperature, MedicineData medicineData, String performedBy) throws SQLException {
 
     try (Connection conn = DatabaseManager.getConnection()) {
 
         conn.setAutoCommit(false);
 
         try {
-            checkIn(conn, name, gradeSection, lrn, reason, medUsed, medsQty, guardianName, guardianPhone);
+            checkIn(conn, name, gradeSection, lrn, reason, medUsed, medsQty, guardianName, guardianPhone, temperature);
 
             boolean deducted = true;
 
@@ -157,7 +166,7 @@ private static String buildCheckInLogDetails(
     public ArrayList<CheckinSystem> loadAll() throws SQLException {
         ArrayList<CheckinSystem> visits = new ArrayList<>();
         String sql = "SELECT name, grade_section, lrn, reason, med_used, meds_qty, "
-                + "check_in_time, status, guardian_name, guardian_phone FROM VISITS";
+                + "check_in_time, status, guardian_name, guardian_phone, temperature FROM VISITS";
  
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -174,7 +183,8 @@ private static String buildCheckInLogDetails(
                         rs.getString("check_in_time"),
                         rs.getString("status"),
                         rs.getString("guardian_name"),
-                        rs.getString("guardian_phone")
+                        rs.getString("guardian_phone"),
+                        rs.getString("temperature")
                 ));
             }
         }
@@ -229,7 +239,7 @@ private static String buildCheckInLogDetails(
     public ArrayList<CheckinSystem> getVisitsByDate(String dateIso) throws SQLException {
         ArrayList<CheckinSystem> visits = new ArrayList<>();
         String sql = "SELECT name, grade_section, lrn, reason, med_used, meds_qty, "
-                + "check_in_time, status, guardian_name, guardian_phone FROM VISITS "
+                + "check_in_time, status, guardian_name, guardian_phone, temperature FROM VISITS "
                 + "WHERE check_in_time LIKE ? ORDER BY id ASC";
  
         try (Connection conn = DatabaseManager.getConnection();
@@ -241,7 +251,8 @@ private static String buildCheckInLogDetails(
                             rs.getString("name"), rs.getString("grade_section"), rs.getString("lrn"),
                             rs.getString("reason"), rs.getString("med_used"), rs.getInt("meds_qty"),
                             rs.getString("check_in_time"), rs.getString("status"),
-                            rs.getString("guardian_name"), rs.getString("guardian_phone")
+                            rs.getString("guardian_name"), rs.getString("guardian_phone"),
+                        rs.getString("temperature")
                     ));
                 }
             }
@@ -263,7 +274,7 @@ private static String buildCheckInLogDetails(
     public ArrayList<CheckinSystem> loadActive() throws SQLException {
         ArrayList<CheckinSystem> visits = new ArrayList<>();
         String sql = "SELECT name, grade_section, lrn, reason, med_used, meds_qty, "
-                + "check_in_time, status, guardian_name, guardian_phone FROM VISITS WHERE archived = FALSE";
+                + "check_in_time, status, guardian_name, guardian_phone, temperature FROM VISITS WHERE archived = FALSE";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -272,7 +283,7 @@ private static String buildCheckInLogDetails(
                         rs.getString("name"), rs.getString("grade_section"), rs.getString("lrn"),
                         rs.getString("reason"), rs.getString("med_used"), rs.getInt("meds_qty"),
                         rs.getString("check_in_time"), rs.getString("status"),
-                        rs.getString("guardian_name"), rs.getString("guardian_phone")
+                        rs.getString("guardian_name"), rs.getString("guardian_phone"), rs.getString("temperature")
                 ));
             }
         }
@@ -281,7 +292,7 @@ private static String buildCheckInLogDetails(
  
     public CheckinSystem findActiveVisit(String lrn) throws SQLException {
          String sql = "SELECT name, grade_section, lrn, reason, med_used, meds_qty, "
-            + "check_in_time, status, guardian_name, guardian_phone FROM VISITS "
+            + "check_in_time, status, guardian_name, guardian_phone, temperature FROM VISITS "
             + "WHERE lrn = ? AND status = 'In Clinic' AND archived = FALSE";
  
         try (Connection conn = DatabaseManager.getConnection();
@@ -299,7 +310,8 @@ private static String buildCheckInLogDetails(
                             rs.getString("check_in_time"),
                             rs.getString("status"),
                             rs.getString("guardian_name"),
-                            rs.getString("guardian_phone")
+                            rs.getString("guardian_phone"),
+                            rs.getString("temperature")
                     );
                 }
                 return null;
@@ -313,7 +325,7 @@ private static String buildCheckInLogDetails(
      */
     CheckinSystem findActiveVisit(Connection conn, String lrn) throws SQLException {
         String sql = "SELECT name, grade_section, lrn, reason, med_used, meds_qty, "
-            + "check_in_time, status, guardian_name, guardian_phone FROM VISITS "
+            + "check_in_time, status, guardian_name, guardian_phone, temperature FROM VISITS "
             + "WHERE lrn = ? AND status = 'In Clinic' AND archived = FALSE";
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -330,7 +342,8 @@ private static String buildCheckInLogDetails(
                             rs.getString("check_in_time"),
                             rs.getString("status"),
                             rs.getString("guardian_name"),
-                            rs.getString("guardian_phone")
+                            rs.getString("guardian_phone"),
+                            rs.getString("temperature")
                     );
                 }
                 return null;
@@ -675,7 +688,7 @@ private static String buildCheckInLogDetails(
      */
     private CheckinSystem findVisitForEdit(Connection conn, String lrn) throws SQLException {
         String sql = "SELECT name, grade_section, lrn, reason, med_used, meds_qty, "
-                + "check_in_time, status, guardian_name, guardian_phone FROM VISITS "
+                + "check_in_time, status, guardian_name, guardian_phone, temperature FROM VISITS "
                 + "WHERE lrn = ? AND archived = FALSE ORDER BY id DESC LIMIT 1";
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -692,7 +705,8 @@ private static String buildCheckInLogDetails(
                             rs.getString("check_in_time"),
                             rs.getString("status"),
                             rs.getString("guardian_name"),
-                            rs.getString("guardian_phone")
+                            rs.getString("guardian_phone"),
+                            rs.getString("temperature")
                     );
                 }
                 return null;
