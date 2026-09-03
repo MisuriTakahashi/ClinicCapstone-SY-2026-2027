@@ -30,6 +30,14 @@ import javax.swing.table.DefaultTableModel;
  * from the NetBeans form has been removed; the generated form remains intact.
  */
 public class Dashboard extends javax.swing.JFrame {
+    private static final Color MAIN_BACKGROUND = Color.decode("#F8F9FA");
+    private static final Color CARD_BACKGROUND = Color.WHITE;
+    private static final Color TEXT_DARK = Color.decode("#1E293B");
+    private static final Color CARD_BORDER = Color.decode("#E5E7EB");
+    private static final Color TABLE_GRID = Color.decode("#F1F5F9");
+    private static final Color ACCENT_BLUE = Color.decode("#2563EB");
+    private static final Color TABLE_HEADER = Color.decode("#1E293B");
+    private static final Color TABLE_HOVER = Color.decode("#F1F5F9");
     private javax.swing.JPanel dimmingOverlay;
     private final AccountSystem loggedInAccount;
     private javax.swing.JPanel currentPanel;
@@ -59,6 +67,7 @@ public class Dashboard extends javax.swing.JFrame {
         loggedInAccount = account;
     FlatLightLaf.setup();
     initComponents();
+    applyModernContentTheme();
     styleSidePanel();
      javax.swing.Timer clockTimer = new javax.swing.Timer(1000, e -> {
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
@@ -123,7 +132,7 @@ public class Dashboard extends javax.swing.JFrame {
         }
         showPanel(MainPanel);
     }
-   private void styleSidePanel() {
+    private void styleSidePanel() {
     // 1. Define Colors
     java.awt.Color sidePanelBg = new java.awt.Color(15, 23, 42); // Dark Slate
     java.awt.Color activeText = java.awt.Color.WHITE;
@@ -181,6 +190,155 @@ public class Dashboard extends javax.swing.JFrame {
         });
     }
 }
+
+    /** Applies the light theme only to content right of the dark navigation rail. */
+    private void applyModernContentTheme() {
+        for (javax.swing.JPanel panel : new javax.swing.JPanel[]{MainPanel, CheckInPanel1, StatisticPanel}) {
+            panel.setBackground(MAIN_BACKGROUND);
+        }
+
+        for (javax.swing.JComponent card : new javax.swing.JComponent[]{
+                jPanel2, jPanel3, jPanel4, jPanel5, jPanel6, jPanel7, jPanel8,
+                jPanel9, jPanel10, jPanel11, jPanel12, jPanel13, jPanel14, jPanel15}) {
+            styleCard(card);
+        }
+
+        styleTable(ReasonTable, -1);
+        styleTable(jTable1, 6);
+        styleTable(jTable2, 3);
+
+        stylePrimaryButton(CheckInBTN);
+        stylePrimaryButton(SentHomeBTN);
+        stylePrimaryButton(ECheckin);
+        stylePrimaryButton(jButton1);
+        EmergencyBTN.setBackground(Color.decode("#DC2626"));
+        EmergencyBTN.setForeground(Color.WHITE);
+        EmergencyBTN.setFocusPainted(false);
+
+        for (javax.swing.JScrollPane pane : new javax.swing.JScrollPane[]{jScrollPane1, jScrollPane2, jScrollPane3}) {
+            pane.setBackground(CARD_BACKGROUND);
+            pane.getViewport().setBackground(CARD_BACKGROUND);
+            pane.setBorder(new RoundedBorder(CARD_BORDER, 14));
+        }
+    }
+
+    private static void styleCard(javax.swing.JComponent card) {
+        card.setBackground(CARD_BACKGROUND);
+        card.setBorder(new RoundedBorder(CARD_BORDER, 14));
+        card.putClientProperty("JComponent.arc", 14);
+    }
+
+    private static void stylePrimaryButton(javax.swing.JButton button) {
+        button.setBackground(ACCENT_BLUE);
+        button.setForeground(Color.WHITE);
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+    }
+
+    private static void styleTable(javax.swing.JTable table, int statusColumn) {
+        table.setRowHeight(38);
+        table.setFont(new Font("Yu Gothic UI", Font.PLAIN, 13));
+        table.setForeground(TEXT_DARK);
+        table.setBackground(CARD_BACKGROUND);
+        table.setSelectionBackground(Color.decode("#DBEAFE"));
+        table.setSelectionForeground(TEXT_DARK);
+        table.setShowVerticalLines(false);
+        table.setShowHorizontalLines(true);
+        table.setGridColor(TABLE_GRID);
+        table.setIntercellSpacing(new java.awt.Dimension(0, 1));
+
+        javax.swing.table.JTableHeader header = table.getTableHeader();
+        header.setBackground(TABLE_HEADER);
+        header.setForeground(Color.WHITE);
+        header.setFont(new Font("Yu Gothic UI", Font.BOLD, 13));
+        header.setPreferredSize(new java.awt.Dimension(header.getPreferredSize().width, 40));
+        header.setDefaultRenderer(new ModernTableHeaderRenderer());
+
+        for (int column = 0; column < table.getColumnCount(); column++) {
+            table.getColumnModel().getColumn(column).setCellRenderer(new ModernTableCellRenderer());
+        }
+        if (statusColumn >= 0 && statusColumn < table.getColumnCount()) {
+            table.getColumnModel().getColumn(statusColumn).setCellRenderer(new StatusBadgeRenderer());
+        }
+        table.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
+            @Override public void mouseMoved(java.awt.event.MouseEvent event) {
+                table.putClientProperty("dashboard.hoverRow", table.rowAtPoint(event.getPoint()));
+                table.repaint();
+            }
+        });
+        table.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseExited(java.awt.event.MouseEvent event) {
+                table.putClientProperty("dashboard.hoverRow", -1);
+                table.repaint();
+            }
+        });
+    }
+
+    private static final class ModernTableHeaderRenderer extends javax.swing.table.DefaultTableCellRenderer {
+        @Override public Component getTableCellRendererComponent(javax.swing.JTable table, Object value,
+                boolean selected, boolean focused, int row, int column) {
+            super.getTableCellRendererComponent(table, value, selected, focused, row, column);
+            setOpaque(true);
+            setBackground(TABLE_HEADER);
+            setForeground(Color.WHITE);
+            setFont(new Font("Yu Gothic UI", Font.BOLD, 13));
+            setHorizontalAlignment(LEFT);
+            setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 12, 0, 12));
+            return this;
+        }
+    }
+
+    private static class ModernTableCellRenderer extends javax.swing.table.DefaultTableCellRenderer {
+        @Override public Component getTableCellRendererComponent(javax.swing.JTable table, Object value,
+                boolean selected, boolean focused, int row, int column) {
+            super.getTableCellRendererComponent(table, value, selected, focused, row, column);
+            int hoverRow = table.getClientProperty("dashboard.hoverRow") instanceof Integer hovered ? hovered : -1;
+            setOpaque(true);
+            setForeground(TEXT_DARK);
+            setBackground(selected ? Color.decode("#DBEAFE") : row == hoverRow ? TABLE_HOVER : CARD_BACKGROUND);
+            setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 12, 0, 12));
+            return this;
+        }
+    }
+
+    private static final class StatusBadgeRenderer extends ModernTableCellRenderer {
+        @Override public Component getTableCellRendererComponent(javax.swing.JTable table, Object value,
+                boolean selected, boolean focused, int row, int column) {
+            super.getTableCellRendererComponent(table, value, selected, focused, row, column);
+            String status = value == null ? "" : value.toString().trim().toLowerCase(Locale.ROOT);
+            if (status.contains("clinic") || status.equals("active")) {
+                setBackground(Color.decode("#E0F2FE")); setForeground(Color.decode("#0284C7"));
+            } else if (status.contains("home") || status.contains("refer")) {
+                setBackground(Color.decode("#FEE2E2")); setForeground(Color.decode("#DC2626"));
+            } else if (status.contains("back")) {
+                setBackground(Color.decode("#DCFCE7")); setForeground(Color.decode("#16A34A"));
+            }
+            setHorizontalAlignment(CENTER);
+            return this;
+        }
+    }
+
+    private static final class RoundedBorder extends javax.swing.border.AbstractBorder {
+        private final Color color;
+        private final int arc;
+
+        RoundedBorder(Color color, int arc) {
+            this.color = color;
+            this.arc = arc;
+        }
+
+        @Override public java.awt.Insets getBorderInsets(Component component) {
+            return new java.awt.Insets(1, 1, 1, 1);
+        }
+
+        @Override public void paintBorder(Component component, Graphics graphics, int x, int y, int width, int height) {
+            Graphics2D g = (Graphics2D) graphics.create();
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g.setColor(color);
+            g.drawRoundRect(x, y, width - 1, height - 1, arc, arc);
+            g.dispose();
+        }
+    }
 
   private void showPanel(javax.swing.JPanel target) {
     if (target == null || currentPanel == target) {
@@ -1361,12 +1519,17 @@ public class Dashboard extends javax.swing.JFrame {
             model.setRowCount(0);
             for (CheckinSystem visit : visits) {
                 model.addRow(new Object[]{visit.getCheckInTime(), visit.getName(),
-                        visit.getGradeSection(), visit.getTemperature(), visit.getReason(), visit.getMedUsed(),
+                        visit.getGradeSection(), displayTemperature(visit.getTemperature()), visit.getReason(), visit.getMedUsed(),
                         visit.getStatus()});
             }
         }, ex -> JOptionPane.showMessageDialog(this,
                 "Unable to load recent clinic visits: " + ex.getMessage(), "Visit Load Error",
                 JOptionPane.ERROR_MESSAGE));
+    }
+
+    /** Uses a clear clinical-log label for visits without a recorded temperature. */
+    private static String displayTemperature(String temperature) {
+        return temperature == null || temperature.isBlank() ? "Not Recorded" : temperature.trim();
     }
 
     /** Archives the one recent visit selected in the single-selection table. */

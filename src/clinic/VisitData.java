@@ -66,9 +66,14 @@ public class VisitData {
             ps.setString(1, name); ps.setString(2, gradeSection); ps.setString(3, lrn);
             ps.setString(4, reason); ps.setString(5, medUsed); ps.setInt(6, medsQty);
             ps.setString(7, now); ps.setString(8, "In Clinic"); ps.setString(9, guardianName);
-            ps.setString(10, guardianPhone); ps.setString(11, temperature == null ? "" : temperature);
+            ps.setString(10, guardianPhone); ps.setString(11, normalizeTemperatureForStorage(temperature));
             ps.executeUpdate();
         }
+    }
+
+    /** Store missing temperatures consistently so blank/whitespace input is never persisted as data. */
+    private static String normalizeTemperatureForStorage(String temperature) {
+        return temperature == null ? "" : temperature.trim();
     }
 
     private boolean isCurrentlyCheckedIn(Connection conn, String lrn) throws SQLException {
