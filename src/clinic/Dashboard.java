@@ -19,6 +19,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.Locale;
+import javax.swing.BorderFactory;
 import javax.swing.JOptionPane;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
@@ -30,10 +31,10 @@ import javax.swing.table.DefaultTableModel;
  * from the NetBeans form has been removed; the generated form remains intact.
  */
 public class Dashboard extends javax.swing.JFrame {
-    private static final Color MAIN_BACKGROUND = Color.decode("#F8F9FA");
+    private static final Color MAIN_BACKGROUND = Color.decode("#F8FAFC");
     private static final Color CARD_BACKGROUND = Color.WHITE;
     private static final Color TEXT_DARK = Color.decode("#1E293B");
-    private static final Color CARD_BORDER = Color.decode("#E5E7EB");
+    private static final Color CARD_BORDER = Color.decode("#E2E8F0");
     private static final Color TABLE_GRID = Color.decode("#F1F5F9");
     private static final Color ACCENT_BLUE = Color.decode("#2563EB");
     private static final Color TABLE_HEADER = Color.decode("#1E293B");
@@ -67,6 +68,7 @@ public class Dashboard extends javax.swing.JFrame {
         loggedInAccount = account;
     FlatLightLaf.setup();
     initComponents();
+    MainPanel.setLayout(new java.awt.BorderLayout());
     applyModernContentTheme();
     styleSidePanel();
      javax.swing.Timer clockTimer = new javax.swing.Timer(1000, e -> {
@@ -88,6 +90,35 @@ public class Dashboard extends javax.swing.JFrame {
             closeCheckinPopup();
         }
     });
+    
+    // Define your status accent colors
+    Color mintColor   = new Color(13, 148, 136);  // Total Visits / Teal
+    Color emeraldColor = new Color(16, 185, 129); // Active Visits / Green
+    Color redColor     = new Color(239, 68, 68);  // High Temp Cases / Red
+    Color amberColor   = new Color(245, 158, 11);  // Low Stock / Amber
+
+    // Apply colored top border (4px height) with a clean inner padding/margin
+    jPanel12.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createMatteBorder(4, 0, 0, 0, mintColor),
+        BorderFactory.createEmptyBorder(10, 10, 10, 10)
+    ));
+
+    jPanel10.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createMatteBorder(4, 0, 0, 0, emeraldColor),
+        BorderFactory.createEmptyBorder(10, 10, 10, 10)
+    ));
+
+    jPanel9.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createMatteBorder(4, 0, 0, 0, redColor),
+        BorderFactory.createEmptyBorder(10, 10, 10, 10)
+    ));
+
+    jPanel11.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createMatteBorder(4, 0, 0, 0, amberColor),
+        BorderFactory.createEmptyBorder(10, 10, 10, 10)
+    ));
+    
+    
 
     UserSession.start(account);
     configureNavigation();
@@ -192,153 +223,132 @@ public class Dashboard extends javax.swing.JFrame {
 }
 
     /** Applies the light theme only to content right of the dark navigation rail. */
-    private void applyModernContentTheme() {
-        for (javax.swing.JPanel panel : new javax.swing.JPanel[]{MainPanel, CheckInPanel1, StatisticPanel}) {
-            panel.setBackground(MAIN_BACKGROUND);
-        }
-
-        for (javax.swing.JComponent card : new javax.swing.JComponent[]{
-                jPanel2, jPanel3, jPanel4, jPanel5, jPanel6, jPanel7, jPanel8,
-                jPanel9, jPanel10, jPanel11, jPanel12, jPanel13, jPanel14, jPanel15}) {
-            styleCard(card);
-        }
-
-        styleTable(ReasonTable, -1);
-        styleTable(jTable1, 6);
-        styleTable(jTable2, 3);
-
-        stylePrimaryButton(CheckInBTN);
-        stylePrimaryButton(SentHomeBTN);
-        stylePrimaryButton(ECheckin);
-        stylePrimaryButton(jButton1);
-        EmergencyBTN.setBackground(Color.decode("#DC2626"));
-        EmergencyBTN.setForeground(Color.WHITE);
-        EmergencyBTN.setFocusPainted(false);
-
-        for (javax.swing.JScrollPane pane : new javax.swing.JScrollPane[]{jScrollPane1, jScrollPane2, jScrollPane3}) {
-            pane.setBackground(CARD_BACKGROUND);
-            pane.getViewport().setBackground(CARD_BACKGROUND);
-            pane.setBorder(new RoundedBorder(CARD_BORDER, 14));
-        }
+   private void applyModernContentTheme() {
+    for (javax.swing.JPanel panel : new javax.swing.JPanel[]{MainPanel, CheckInPanel1, StatisticPanel}) {
+        panel.setBackground(MAIN_BACKGROUND);
     }
-
-    private static void styleCard(javax.swing.JComponent card) {
-        card.setBackground(CARD_BACKGROUND);
-        card.setBorder(new RoundedBorder(CARD_BORDER, 14));
-        card.putClientProperty("JComponent.arc", 14);
+    for (javax.swing.JComponent card : new javax.swing.JComponent[]{
+            jPanel2, jPanel3, jPanel4, jPanel5, jPanel6, jPanel7, jPanel8,
+            jPanel9, jPanel10, jPanel11, jPanel12, jPanel13, jPanel14, jPanel15}) {
+        styleCard(card);
     }
-
-    private static void stylePrimaryButton(javax.swing.JButton button) {
-        button.setBackground(ACCENT_BLUE);
-        button.setForeground(Color.WHITE);
-        button.setFocusPainted(false);
-        button.setBorderPainted(false);
+    styleTable(ReasonTable, -1);
+    styleTable(jTable1, 6); // Column 6 is Status
+    styleTable(jTable2, 3); // Column 3 is Action/Status
+    
+    for (javax.swing.JScrollPane pane : new javax.swing.JScrollPane[]{jScrollPane1, jScrollPane2, jScrollPane3}) {
+        pane.setBackground(CARD_BACKGROUND);
+        pane.getViewport().setBackground(CARD_BACKGROUND);
+        pane.setBorder(new RoundedBorder(CARD_BORDER, 12));
     }
+}
 
-    private static void styleTable(javax.swing.JTable table, int statusColumn) {
-        table.setRowHeight(38);
-        table.setFont(new Font("Yu Gothic UI", Font.PLAIN, 13));
-        table.setForeground(TEXT_DARK);
-        table.setBackground(CARD_BACKGROUND);
-        table.setSelectionBackground(Color.decode("#DBEAFE"));
-        table.setSelectionForeground(TEXT_DARK);
-        table.setShowVerticalLines(false);
-        table.setShowHorizontalLines(true);
-        table.setGridColor(TABLE_GRID);
-        table.setIntercellSpacing(new java.awt.Dimension(0, 1));
+private static void styleCard(javax.swing.JComponent card) {
+    card.setBackground(CARD_BACKGROUND);
+    card.setBorder(new RoundedBorder(CARD_BORDER, 12));
+    card.putClientProperty("JComponent.arc", 12);
+}
 
-        javax.swing.table.JTableHeader header = table.getTableHeader();
-        header.setBackground(TABLE_HEADER);
-        header.setForeground(Color.WHITE);
-        header.setFont(new Font("Yu Gothic UI", Font.BOLD, 13));
-        header.setPreferredSize(new java.awt.Dimension(header.getPreferredSize().width, 40));
-        header.setDefaultRenderer(new ModernTableHeaderRenderer());
+private static void styleTable(javax.swing.JTable table, int statusColumn) {
+    table.setRowHeight(42);
+    table.setFont(new Font("Yu Gothic UI", Font.PLAIN, 13));
+    table.setForeground(TEXT_DARK);
+    table.setBackground(CARD_BACKGROUND);
+    table.setSelectionBackground(Color.decode("#DBEAFE"));
+    table.setSelectionForeground(TEXT_DARK);
+    table.setShowVerticalLines(false);
+    table.setShowHorizontalLines(true);
+    table.setGridColor(TABLE_GRID);
+    table.setIntercellSpacing(new java.awt.Dimension(0, 1));
 
-        for (int column = 0; column < table.getColumnCount(); column++) {
-            table.getColumnModel().getColumn(column).setCellRenderer(new ModernTableCellRenderer());
-        }
-        if (statusColumn >= 0 && statusColumn < table.getColumnCount()) {
-            table.getColumnModel().getColumn(statusColumn).setCellRenderer(new StatusBadgeRenderer());
-        }
-        table.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
-            @Override public void mouseMoved(java.awt.event.MouseEvent event) {
-                table.putClientProperty("dashboard.hoverRow", table.rowAtPoint(event.getPoint()));
-                table.repaint();
-            }
-        });
-        table.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override public void mouseExited(java.awt.event.MouseEvent event) {
-                table.putClientProperty("dashboard.hoverRow", -1);
-                table.repaint();
-            }
-        });
+    javax.swing.table.JTableHeader header = table.getTableHeader();
+    header.setBackground(TABLE_HEADER);
+    header.setForeground(Color.WHITE);
+    header.setFont(new Font("Yu Gothic UI", Font.BOLD, 13));
+    header.setPreferredSize(new java.awt.Dimension(header.getPreferredSize().width, 45));
+    header.setDefaultRenderer(new ModernTableHeaderRenderer());
+
+    for (int column = 0; column < table.getColumnCount(); column++) {
+        table.getColumnModel().getColumn(column).setCellRenderer(new ModernTableCellRenderer());
     }
-
-    private static final class ModernTableHeaderRenderer extends javax.swing.table.DefaultTableCellRenderer {
-        @Override public Component getTableCellRendererComponent(javax.swing.JTable table, Object value,
-                boolean selected, boolean focused, int row, int column) {
-            super.getTableCellRendererComponent(table, value, selected, focused, row, column);
-            setOpaque(true);
-            setBackground(TABLE_HEADER);
-            setForeground(Color.WHITE);
-            setFont(new Font("Yu Gothic UI", Font.BOLD, 13));
-            setHorizontalAlignment(LEFT);
-            setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 12, 0, 12));
-            return this;
-        }
+    if (statusColumn >= 0 && statusColumn < table.getColumnCount()) {
+        table.getColumnModel().getColumn(statusColumn).setCellRenderer(new StatusBadgeRenderer());
     }
-
-    private static class ModernTableCellRenderer extends javax.swing.table.DefaultTableCellRenderer {
-        @Override public Component getTableCellRendererComponent(javax.swing.JTable table, Object value,
-                boolean selected, boolean focused, int row, int column) {
-            super.getTableCellRendererComponent(table, value, selected, focused, row, column);
-            int hoverRow = table.getClientProperty("dashboard.hoverRow") instanceof Integer hovered ? hovered : -1;
-            setOpaque(true);
-            setForeground(TEXT_DARK);
-            setBackground(selected ? Color.decode("#DBEAFE") : row == hoverRow ? TABLE_HOVER : CARD_BACKGROUND);
-            setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 12, 0, 12));
-            return this;
+    
+    // Add hover effect
+    table.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
+        @Override public void mouseMoved(java.awt.event.MouseEvent event) {
+            table.putClientProperty("dashboard.hoverRow", table.rowAtPoint(event.getPoint()));
+            table.repaint();
         }
+    });
+    table.addMouseListener(new java.awt.event.MouseAdapter() {
+        @Override public void mouseExited(java.awt.event.MouseEvent event) {
+            table.putClientProperty("dashboard.hoverRow", -1);
+            table.repaint();
+        }
+    });
+}
+
+// --- Inner Classes for Table Styling ---
+private static final class ModernTableHeaderRenderer extends javax.swing.table.DefaultTableCellRenderer {
+    @Override public Component getTableCellRendererComponent(javax.swing.JTable table, Object value, boolean selected, boolean focused, int row, int column) {
+        super.getTableCellRendererComponent(table, value, selected, focused, row, column);
+        setOpaque(true);
+        setBackground(TABLE_HEADER);
+        setForeground(Color.WHITE);
+        setFont(new Font("Yu Gothic UI", Font.BOLD, 13));
+        setHorizontalAlignment(LEFT);
+        setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 16, 0, 16));
+        return this;
     }
+}
 
-    private static final class StatusBadgeRenderer extends ModernTableCellRenderer {
-        @Override public Component getTableCellRendererComponent(javax.swing.JTable table, Object value,
-                boolean selected, boolean focused, int row, int column) {
-            super.getTableCellRendererComponent(table, value, selected, focused, row, column);
-            String status = value == null ? "" : value.toString().trim().toLowerCase(Locale.ROOT);
-            if (status.contains("clinic") || status.equals("active")) {
-                setBackground(Color.decode("#E0F2FE")); setForeground(Color.decode("#0284C7"));
-            } else if (status.contains("home") || status.contains("refer")) {
-                setBackground(Color.decode("#FEE2E2")); setForeground(Color.decode("#DC2626"));
-            } else if (status.contains("back")) {
-                setBackground(Color.decode("#DCFCE7")); setForeground(Color.decode("#16A34A"));
-            }
-            setHorizontalAlignment(CENTER);
-            return this;
-        }
+private static class ModernTableCellRenderer extends javax.swing.table.DefaultTableCellRenderer {
+    @Override public Component getTableCellRendererComponent(javax.swing.JTable table, Object value, boolean selected, boolean focused, int row, int column) {
+        super.getTableCellRendererComponent(table, value, selected, focused, row, column);
+        int hoverRow = table.getClientProperty("dashboard.hoverRow") instanceof Integer hovered ? hovered : -1;
+        setOpaque(true);
+        setForeground(TEXT_DARK);
+        setBackground(selected ? Color.decode("#DBEAFE") : row == hoverRow ? TABLE_HOVER : CARD_BACKGROUND);
+        setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 16, 0, 16));
+        return this;
     }
+}
 
-    private static final class RoundedBorder extends javax.swing.border.AbstractBorder {
-        private final Color color;
-        private final int arc;
-
-        RoundedBorder(Color color, int arc) {
-            this.color = color;
-            this.arc = arc;
+private static final class StatusBadgeRenderer extends ModernTableCellRenderer {
+    @Override public Component getTableCellRendererComponent(javax.swing.JTable table, Object value, boolean selected, boolean focused, int row, int column) {
+        super.getTableCellRendererComponent(table, value, selected, focused, row, column);
+        String status = value == null ? "" : value.toString().trim().toLowerCase(Locale.ROOT);
+        setHorizontalAlignment(CENTER);
+        setFont(new Font("Yu Gothic UI", Font.BOLD, 12));
+        
+        if (status.contains("clinic") || status.equals("active")) {
+            setBackground(Color.decode("#E0F2FE")); setForeground(Color.decode("#0284C7")); setText("● In Clinic");
+        } else if (status.contains("home") || status.contains("refer")) {
+            setBackground(Color.decode("#FEE2E2")); setForeground(Color.decode("#DC2626")); setText("● Sent Home");
+        } else if (status.contains("back")) {
+            setBackground(Color.decode("#DCFCE7")); setForeground(Color.decode("#16A34A")); setText("● Sent Back");
+        } else {
+            setBackground(Color.decode("#F1F5F9")); setForeground(Color.decode("#64748B")); setText("● " + value.toString().trim());
         }
-
-        @Override public java.awt.Insets getBorderInsets(Component component) {
-            return new java.awt.Insets(1, 1, 1, 1);
-        }
-
-        @Override public void paintBorder(Component component, Graphics graphics, int x, int y, int width, int height) {
-            Graphics2D g = (Graphics2D) graphics.create();
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g.setColor(color);
-            g.drawRoundRect(x, y, width - 1, height - 1, arc, arc);
-            g.dispose();
-        }
+        return this;
     }
+}
+
+private static final class RoundedBorder extends javax.swing.border.AbstractBorder {
+    private final Color color;
+    private final int arc;
+    RoundedBorder(Color color, int arc) { this.color = color; this.arc = arc; }
+    @Override public java.awt.Insets getBorderInsets(Component component) { return new java.awt.Insets(1, 1, 1, 1); }
+    @Override public void paintBorder(Component component, Graphics graphics, int x, int y, int width, int height) {
+        Graphics2D g = (Graphics2D) graphics.create();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(color);
+        g.drawRoundRect(x, y, width - 1, height - 1, arc, arc);
+        g.dispose();
+    }
+}
 
   private void showPanel(javax.swing.JPanel target) {
     if (target == null || currentPanel == target) {
@@ -1006,87 +1016,73 @@ public class Dashboard extends javax.swing.JFrame {
 }
 
     /** Replaces the generated fixed-width popup content with a readable card. */
-    private void configureCheckinPopupCard() {
+   private void configureCheckinPopupCard() {
     CheckInPopup.removeAll();
-    CheckInPopup.setBackground(new java.awt.Color(255, 255, 255));
+    CheckInPopup.setBackground(CARD_BACKGROUND);
     CheckInPopup.setBorder(javax.swing.BorderFactory.createCompoundBorder(
-            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(226, 232, 240), 2),
-            javax.swing.BorderFactory.createEmptyBorder(24, 28, 24, 28)));
+            javax.swing.BorderFactory.createLineBorder(CARD_BORDER, 2),
+            javax.swing.BorderFactory.createEmptyBorder(28, 32, 28, 32)));
     CheckInPopup.setLayout(new java.awt.GridBagLayout());
 
-    StudentCheckinLabel.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 20));
-    StudentCheckinLabel.setForeground(new java.awt.Color(15, 23, 42));
+    StudentCheckinLabel.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 22));
+    StudentCheckinLabel.setForeground(TEXT_DARK);
     StudentCheckinLabel.setText("Student Check-in");
 
-    for (javax.swing.JLabel label : new javax.swing.JLabel[]{jLabel7, jLabel8,
-             LRNLabel, jLabel9, jLabel29, jLabel11, jLabel30}) {
+    for (javax.swing.JLabel label : new javax.swing.JLabel[]{jLabel7, jLabel8, LRNLabel, jLabel9, jLabel29, jLabel11}) {
         label.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 13));
-        label.setForeground(new java.awt.Color(71, 85, 105));
+        label.setForeground(Color.decode("#475569"));
     }
 
     jLabel10.setText("Reason");
     jLabel12.setText("Medicine");
     jLabel10.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 12));
     jLabel12.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 12));
-    jLabel10.setForeground(new java.awt.Color(51, 65, 85));
-    jLabel12.setForeground(new java.awt.Color(51, 65, 85));
+    jLabel10.setForeground(TEXT_DARK);
+    jLabel12.setForeground(TEXT_DARK);
 
     jButton1.setText("Complete Check-in");
-    jButton1.setBackground(new java.awt.Color(37, 99, 235));
-    jButton1.setForeground(new java.awt.Color(255, 255, 255));
-    jButton1.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 13));
+    jButton1.setBackground(ACCENT_BLUE);
+    jButton1.setForeground(Color.WHITE);
+    jButton1.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 14));
     jButton1.setBorderPainted(false);
     jButton1.setFocusPainted(false);
 
-    popupEmergencyBTN.setBackground(new java.awt.Color(185, 28, 28));
-    popupEmergencyBTN.setForeground(java.awt.Color.WHITE);
-    popupEmergencyBTN.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 13));
-    popupEmergencyBTN.setBorderPainted(false);
-
     CancelCheckinBTN.setText("Cancel");
     CancelCheckinBTN.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 13));
-    CancelCheckinBTN.setForeground(new java.awt.Color(100, 116, 139));
-    CancelCheckinBTN.setBackground(new java.awt.Color(241, 245, 249));
+    CancelCheckinBTN.setForeground(Color.decode("#64748B"));
+    CancelCheckinBTN.setBackground(Color.decode("#F1F5F9"));
     CancelCheckinBTN.setBorderPainted(false);
     CancelCheckinBTN.setFocusPainted(false);
     CancelCheckinBTN.addActionListener(e -> closeCheckinPopup());
 
     java.awt.GridBagConstraints c = new java.awt.GridBagConstraints();
     c.gridx = 0; c.gridy = 0; c.gridwidth = 2; c.anchor = java.awt.GridBagConstraints.WEST;
-    c.fill = java.awt.GridBagConstraints.HORIZONTAL; c.weightx = 1; c.insets = new java.awt.Insets(0, 0, 16, 0);
+    c.fill = java.awt.GridBagConstraints.HORIZONTAL; c.weightx = 1; c.insets = new java.awt.Insets(0, 0, 20, 0);
     CheckInPopup.add(StudentCheckinLabel, c);
 
     int row = 1;
-    for (javax.swing.JLabel label : new javax.swing.JLabel[]{jLabel7, jLabel8,
-             LRNLabel, jLabel9, jLabel29, jLabel11}) {
+    for (javax.swing.JLabel label : new javax.swing.JLabel[]{jLabel7, jLabel8, LRNLabel, jLabel9, jLabel29, jLabel11}) {
         c.gridy = row++; c.insets = new java.awt.Insets(4, 0, 4, 0);
         CheckInPopup.add(label, c);
     }
 
     c.gridwidth = 1; c.weightx = 0; c.gridy = row; c.gridx = 0;
-    c.insets = new java.awt.Insets(16, 0, 6, 12); CheckInPopup.add(jLabel10, c);
+    c.insets = new java.awt.Insets(20, 0, 6, 12); CheckInPopup.add(jLabel10, c);
     c.gridx = 1; c.weightx = 1; c.fill = java.awt.GridBagConstraints.HORIZONTAL;
-    c.insets = new java.awt.Insets(16, 0, 6, 0); CheckInPopup.add(jTextField1, c);
+    c.insets = new java.awt.Insets(20, 0, 6, 0); CheckInPopup.add(jTextField1, c);
 
-    c.gridy = ++row; c.gridx = 0; c.weightx = 0; c.insets = new java.awt.Insets(6, 0, 16, 12);
+    c.gridy = ++row; c.gridx = 0; c.weightx = 0; c.insets = new java.awt.Insets(6, 0, 20, 12);
     CheckInPopup.add(jLabel12, c);
-    c.gridx = 1; c.weightx = 1; c.insets = new java.awt.Insets(6, 0, 16, 0);
+    c.gridx = 1; c.weightx = 1; c.insets = new java.awt.Insets(6, 0, 20, 0);
     CheckInPopup.add(jComboBox1, c);
-
-    c.gridy = ++row; c.gridx = 0; c.weightx = 0; c.insets = new java.awt.Insets(6, 0, 16, 12);
-    CheckInPopup.add(jLabel30, c);
-    c.gridx = 1; c.weightx = 1; c.insets = new java.awt.Insets(6, 0, 16, 0);
-    CheckInPopup.add(jTextField2, c);
 
     c.gridy = ++row; c.gridx = 0; c.gridwidth = 1; c.weightx = 0.5;
     c.insets = new java.awt.Insets(8, 0, 0, 8); CheckInPopup.add(CancelCheckinBTN, c);
-    c.gridx = 1; c.weightx = 0.5; c.insets = new java.awt.Insets(8, 4, 0, 4);
-    CheckInPopup.add(popupEmergencyBTN, c);
-    c.gridx = 2; c.weightx = 0.5; c.insets = new java.awt.Insets(8, 8, 0, 0);
+    c.gridx = 1; c.weightx = 0.5; c.insets = new java.awt.Insets(8, 8, 0, 0);
     CheckInPopup.add(jButton1, c);
 
     // Set bounds WITHOUT re-adding to content pane
-    CheckInPopup.setBounds(500, 150, 540, 560);
+    CheckInPopup.setBounds(500, 150, 540, 520);
     CheckInPopup.setVisible(false);
 }
 
@@ -1694,9 +1690,9 @@ NOT modify this code. The content of this method is always
         jLabel29 = new javax.swing.JLabel();
         jLabel30 = new javax.swing.JLabel();
         jTextField2 = new javax.swing.JTextField();
+        EmergencyBTN = new javax.swing.JButton();
         CheckInPanel1 = new javax.swing.JPanel();
         CheckInBTN = new javax.swing.JButton();
-        EmergencyBTN = new javax.swing.JButton();
         SentHomeBTN = new javax.swing.JButton();
         SearchField = new javax.swing.JTextField();
         SearchLabel = new javax.swing.JLabel();
@@ -1751,6 +1747,7 @@ NOT modify this code. The content of this method is always
         jPanel12 = new javax.swing.JPanel();
         jLabel4 = new javax.swing.JLabel();
         DateTimeLabel = new javax.swing.JLabel();
+        jLabel31 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setFocusable(false);
@@ -1768,9 +1765,7 @@ NOT modify this code. The content of this method is always
         InventoryBTN.setText("Inventory and Management");
         InventoryBTN.addActionListener(this::InventoryBTNActionPerformed);
 
-        Logout.setBackground(new java.awt.Color(255, 255, 255));
         Logout.setFont(new java.awt.Font("Yu Gothic UI", 1, 12)); // NOI18N
-        Logout.setForeground(new java.awt.Color(0, 0, 0));
         Logout.setText("Logout");
         Logout.addActionListener(this::LogoutActionPerformed);
 
@@ -1820,31 +1815,24 @@ NOT modify this code. The content of this method is always
         CheckInPopup.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
 
         StudentCheckinLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 18)); // NOI18N
-        StudentCheckinLabel.setForeground(new java.awt.Color(0, 0, 0));
         StudentCheckinLabel.setText("Student Check-in");
 
         jLabel7.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        jLabel7.setForeground(new java.awt.Color(0, 0, 0));
         jLabel7.setText("Name:");
 
         jLabel8.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        jLabel8.setForeground(new java.awt.Color(0, 0, 0));
         jLabel8.setText("Grade/Section:");
 
         LRNLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        LRNLabel.setForeground(new java.awt.Color(0, 0, 0));
         LRNLabel.setText("LRN:");
 
         jLabel9.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        jLabel9.setForeground(new java.awt.Color(0, 0, 0));
         jLabel9.setText("Allergy:");
 
         jLabel10.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        jLabel10.setForeground(new java.awt.Color(0, 0, 0));
         jLabel10.setText("Reason");
 
         jLabel12.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        jLabel12.setForeground(new java.awt.Color(0, 0, 0));
         jLabel12.setText("Medicine");
 
         jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
@@ -1854,16 +1842,15 @@ NOT modify this code. The content of this method is always
         jButton1.setText("Proceed");
 
         jLabel11.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        jLabel11.setForeground(new java.awt.Color(0, 0, 0));
         jLabel11.setText("Status:");
 
         jLabel29.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        jLabel29.setForeground(new java.awt.Color(0, 0, 0));
         jLabel29.setText("Health Condition:");
 
         jLabel30.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        jLabel30.setForeground(new java.awt.Color(0, 0, 0));
         jLabel30.setText("Temperature");
+
+        EmergencyBTN.setText("EMERGENCY");
 
         javax.swing.GroupLayout CheckInPopupLayout = new javax.swing.GroupLayout(CheckInPopup);
         CheckInPopup.setLayout(CheckInPopupLayout);
@@ -1878,8 +1865,10 @@ NOT modify this code. The content of this method is always
                         .addGap(35, 35, 35)
                         .addGroup(CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(CheckInPopupLayout.createSequentialGroup()
-                                .addGap(127, 127, 127)
-                                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 117, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addGap(35, 35, 35)
+                                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 117, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(EmergencyBTN))
                             .addComponent(jLabel7)
                             .addGroup(CheckInPopupLayout.createSequentialGroup()
                                 .addGroup(CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1928,7 +1917,9 @@ NOT modify this code. The content of this method is always
                     .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel12))
                 .addGap(27, 27, 27)
-                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 38, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 38, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(EmergencyBTN))
                 .addGap(28, 28, 28))
         );
 
@@ -1943,12 +1934,6 @@ NOT modify this code. The content of this method is always
         CheckInBTN.setText("Check In");
         CheckInBTN.addActionListener(this::CheckInBTNActionPerformed);
 
-        EmergencyBTN.setBackground(new java.awt.Color(185, 28, 28));
-        EmergencyBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
-        EmergencyBTN.setForeground(new java.awt.Color(255, 255, 255));
-        EmergencyBTN.setText("Emergency");
-        EmergencyBTN.addActionListener(this::EmergencyBTNActionPerformed);
-
         SentHomeBTN.setBackground(new java.awt.Color(0, 102, 204));
         SentHomeBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
         SentHomeBTN.setForeground(new java.awt.Color(255, 255, 255));
@@ -1956,12 +1941,9 @@ NOT modify this code. The content of this method is always
         SentHomeBTN.addActionListener(this::SentHomeBTNActionPerformed);
 
         SearchLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
-        SearchLabel.setForeground(new java.awt.Color(0, 0, 0));
         SearchLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         SearchLabel.setText("Search:");
 
-        ReasonTable.setBackground(new java.awt.Color(255, 255, 255));
-        ReasonTable.setForeground(new java.awt.Color(0, 0, 0));
         ReasonTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
                 {null, null, null, null, null},
@@ -2011,12 +1993,10 @@ NOT modify this code. The content of this method is always
                 .addContainerGap())
             .addGroup(CheckInPanel1Layout.createSequentialGroup()
                 .addGap(456, 456, 456)
-                .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 174, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(EmergencyBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 174, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 194, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(SentHomeBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 174, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(465, Short.MAX_VALUE))
+                .addContainerGap(653, Short.MAX_VALUE))
         );
         CheckInPanel1Layout.setVerticalGroup(
             CheckInPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -2030,7 +2010,6 @@ NOT modify this code. The content of this method is always
                 .addGap(18, 18, 18)
                 .addGroup(CheckInPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(CheckInBTN, javax.swing.GroupLayout.DEFAULT_SIZE, 42, Short.MAX_VALUE)
-                    .addComponent(EmergencyBTN, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(SentHomeBTN, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
@@ -2038,7 +2017,6 @@ NOT modify this code. The content of this method is always
         getContentPane().add(CheckInPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(270, 0, 1490, 840));
 
         StatisticPanel.setBackground(new java.awt.Color(255, 255, 255));
-        StatisticPanel.setForeground(new java.awt.Color(0, 0, 0));
 
         jLabel22.setText("Weekly Bar Graph");
 
@@ -2159,11 +2137,9 @@ NOT modify this code. The content of this method is always
         );
 
         jLabel25.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
-        jLabel25.setForeground(new java.awt.Color(0, 0, 0));
         jLabel25.setText("STATISTICS & HEALTH MONITORS");
 
         jLabel26.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
-        jLabel26.setForeground(new java.awt.Color(0, 0, 0));
         jLabel26.setText("CHRONIC HEALTH CONDITIONS");
 
         jTable2.setModel(new javax.swing.table.DefaultTableModel(
@@ -2174,7 +2150,7 @@ NOT modify this code. The content of this method is always
                 {null, null, null, null}
             },
             new String [] {
-                "Data", "Name", "Symptom", "Action"
+                "Date", "Name", "Symptom", "Action"
             }
         ) {
             boolean[] canEdit = new boolean [] {
@@ -2209,7 +2185,6 @@ NOT modify this code. The content of this method is always
         );
 
         jLabel27.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
-        jLabel27.setForeground(new java.awt.Color(0, 0, 0));
         jLabel27.setText("EMERGENCY & REFERRAL INCIDENT LOG");
 
         javax.swing.GroupLayout StatisticPanelLayout = new javax.swing.GroupLayout(StatisticPanel);
@@ -2271,8 +2246,6 @@ NOT modify this code. The content of this method is always
 
         MainPanel.setBackground(new java.awt.Color(255, 255, 255));
 
-        jTable1.setBackground(new java.awt.Color(255, 255, 255));
-        jTable1.setForeground(new java.awt.Color(0, 0, 0));
         jTable1.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
 
@@ -2319,16 +2292,16 @@ NOT modify this code. The content of this method is always
         jPanel3Layout.setHorizontalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel3Layout.createSequentialGroup()
-                .addGap(111, 111, 111)
+                .addGap(136, 136, 136)
                 .addComponent(jLabel13)
-                .addContainerGap(171, Short.MAX_VALUE))
+                .addContainerGap(146, Short.MAX_VALUE))
         );
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
-                .addContainerGap(180, Short.MAX_VALUE)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addGap(165, 165, 165)
                 .addComponent(jLabel13)
-                .addGap(151, 151, 151))
+                .addContainerGap(166, Short.MAX_VALUE))
         );
 
         jPanel8.setBackground(new java.awt.Color(248, 247, 247));
@@ -2336,25 +2309,20 @@ NOT modify this code. The content of this method is always
         jButton2.setText("Search");
 
         jLabel14.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
-        jLabel14.setForeground(new java.awt.Color(0, 0, 0));
         jLabel14.setText("Student LRN:");
 
         jLabel15.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
-        jLabel15.setForeground(new java.awt.Color(0, 0, 0));
         jLabel15.setText("Name:");
 
         jLabel16.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
-        jLabel16.setForeground(new java.awt.Color(0, 0, 0));
         jLabel16.setText("Reason:");
 
         ECheckin.setText("Check in");
 
         jLabel17.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
-        jLabel17.setForeground(new java.awt.Color(0, 0, 0));
         jLabel17.setText("Medicine:");
 
         jLabel18.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
-        jLabel18.setForeground(new java.awt.Color(0, 0, 0));
         jLabel18.setText("Temperature:");
 
         javax.swing.GroupLayout jPanel8Layout = new javax.swing.GroupLayout(jPanel8);
@@ -2367,6 +2335,7 @@ NOT modify this code. The content of this method is always
                     .addComponent(jLabel15)
                     .addGroup(jPanel8Layout.createSequentialGroup()
                         .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel18)
                             .addGroup(jPanel8Layout.createSequentialGroup()
                                 .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addComponent(jLabel14)
@@ -2378,8 +2347,7 @@ NOT modify this code. The content of this method is always
                                     .addComponent(MedicineField)
                                     .addComponent(TempField)
                                     .addComponent(NameField, javax.swing.GroupLayout.Alignment.TRAILING)
-                                    .addComponent(LrnField)))
-                            .addComponent(jLabel18))
+                                    .addComponent(LrnField))))
                         .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(jPanel8Layout.createSequentialGroup()
                                 .addGap(18, 18, 18)
@@ -2414,15 +2382,13 @@ NOT modify this code. The content of this method is always
                     .addComponent(jLabel17)
                     .addComponent(MedicineField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(ECheckin))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(119, Short.MAX_VALUE))
         );
 
         jLabel19.setFont(new java.awt.Font("Dialog", 1, 12)); // NOI18N
-        jLabel19.setForeground(new java.awt.Color(0, 0, 0));
         jLabel19.setText("Express Check in");
 
         jLabel20.setFont(new java.awt.Font("Dialog", 1, 12)); // NOI18N
-        jLabel20.setForeground(new java.awt.Color(0, 0, 0));
         jLabel20.setText("Recent Clinic Visit and Action");
 
         jLabel2.setText("High Temps");
@@ -2502,7 +2468,9 @@ NOT modify this code. The content of this method is always
         );
 
         DateTimeLabel.setFont(new java.awt.Font("Yu Gothic UI", 1, 24)); // NOI18N
-        DateTimeLabel.setForeground(new java.awt.Color(0, 0, 0));
+
+        jLabel31.setFont(new java.awt.Font("Dialog", 1, 12)); // NOI18N
+        jLabel31.setText("SYMPTOM DISTRIBUTION (THIS WEEK)");
 
         javax.swing.GroupLayout MainPanelLayout = new javax.swing.GroupLayout(MainPanel);
         MainPanel.setLayout(MainPanelLayout);
@@ -2523,7 +2491,11 @@ NOT modify this code. The content of this method is always
                                     .addComponent(jLabel19)
                                     .addComponent(jPanel8, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                                 .addGap(18, 18, 18)
-                                .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                                .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addGroup(MainPanelLayout.createSequentialGroup()
+                                        .addComponent(jLabel31)
+                                        .addGap(0, 0, Short.MAX_VALUE))
+                                    .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
                         .addGap(18, 18, 18)
                         .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                             .addComponent(jPanel10, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
@@ -2550,6 +2522,8 @@ NOT modify this code. The content of this method is always
                         .addComponent(jPanel8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                     .addGroup(MainPanelLayout.createSequentialGroup()
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(jLabel31)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, MainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                                 .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainPanelLayout.createSequentialGroup()
@@ -2664,13 +2638,11 @@ NOT modify this code. The content of this method is always
 /** Updates the navigation buttons to show which panel is currently active. */
 private void updateActiveButton(javax.swing.JButton btn) {
     activeNavButton = btn; // Track the active button
-    
     java.awt.Color sidePanelBg = new java.awt.Color(15, 23, 42);
     java.awt.Color inactiveText = new java.awt.Color(148, 163, 184);
     java.awt.Color blueLine = new java.awt.Color(59, 130, 246);
 
     javax.swing.JButton[] navButtons = {HomeBTN, CheckinBTN, StatisticBTN, InventoryBTN};
-    
     for (javax.swing.JButton b : navButtons) {
         if (b == btn) {
             // ACTIVE STATE: White text, Bold, Blue Line
@@ -2756,18 +2728,30 @@ private void updateActiveButton(javax.swing.JButton btn) {
 
     public static void main(String[] args) {
         FlatLightLaf.setup();
-        UIManager.put("Component.arc", 10);
-        UIManager.put("Button.arc", 10);
-        UIManager.put("TextComponent.arc", 10);
+        UIManager.put("Component.arc", 12);
+        UIManager.put("Button.arc", 12);
+        UIManager.put("TextComponent.arc", 8);
+    
+    // Better table styling defaults
+        UIManager.put("Table.showVerticalLines", false);
+        UIManager.put("Table.showHorizontalLines", true);
+        UIManager.put("TableHeader.height", 45);
+        UIManager.put("Table.rowHeight", 42);
+        UIManager.put("TableHeader.font", new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 13));
+        UIManager.put("Table.font", new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 13));
+
+        // Better input field padding
+        UIManager.put("TextField.margin", new java.awt.Insets(8, 12, 8, 12));
+        UIManager.put("ComboBox.padding", new java.awt.Insets(8, 12, 8, 12));
     }
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton CheckInBTN;
     private javax.swing.JPanel CheckInPanel1;
     private javax.swing.JPanel CheckInPopup;
-    private javax.swing.JButton EmergencyBTN;
     private javax.swing.JButton CheckinBTN;
     private javax.swing.JLabel DateTimeLabel;
     private javax.swing.JButton ECheckin;
+    private javax.swing.JButton EmergencyBTN;
     private javax.swing.JButton HomeBTN;
     private javax.swing.JButton InventoryBTN;
     private javax.swing.JLabel LRNLabel;
@@ -2813,6 +2797,7 @@ private void updateActiveButton(javax.swing.JButton btn) {
     private javax.swing.JLabel jLabel29;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel30;
+    private javax.swing.JLabel jLabel31;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
