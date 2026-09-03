@@ -53,12 +53,15 @@ public class Dashboard extends javax.swing.JFrame {
     private SymptomChartPanel homeSymptomChart;
     private WeeklyBarChartPanel weeklyBarChart;
     private HealthConditionsPieChartPanel healthConditionsPieChart;
+    private javax.swing.table.DefaultTableModel healthConditionsLegendModel;
     private javax.swing.JLabel statisticSpecialNeedsValue;
     private javax.swing.JLabel statisticAllergyValue;
     private javax.swing.JLabel statisticMedicineValue;
     private javax.swing.JLabel statisticSentHomeValue;
     private final javax.swing.JButton popupEmergencyBTN = new javax.swing.JButton("Emergency");
     private final javax.swing.JButton expressEmergencyBTN = new javax.swing.JButton("Emergency");
+    private final javax.swing.JButton checkInPanelEmergencyBTN = new javax.swing.JButton("Emergency");
+    private final javax.swing.JComboBox<String> expressMedicineComboBox = new javax.swing.JComboBox<>();
     private final javax.swing.JButton expressDispositionBTN = new javax.swing.JButton("Send Home / Back");
     private final javax.swing.JButton archiveVisitBTN = new javax.swing.JButton("Archive Selected");
     private final javax.swing.JButton exportReportBTN = new javax.swing.JButton("Export Report");
@@ -234,7 +237,7 @@ public class Dashboard extends javax.swing.JFrame {
     }
     styleTable(ReasonTable, -1);
     styleTable(jTable1, 6); // Column 6 is Status
-    styleTable(jTable2, 3); // Column 3 is Action/Status
+    styleTable(jTable2, -1);
     
     for (javax.swing.JScrollPane pane : new javax.swing.JScrollPane[]{jScrollPane1, jScrollPane2, jScrollPane3}) {
         pane.setBackground(CARD_BACKGROUND);
@@ -472,9 +475,50 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
     private void setupStatisticCharts() {
         weeklyBarChart = new WeeklyBarChartPanel();
         healthConditionsPieChart = new HealthConditionsPieChartPanel();
+        javax.swing.JPanel pieAndLegend = createHealthConditionsChartArea();
         jLabel28.setText("Health Conditions & Allergies");
         installChartInExistingPanel(jPanel4, weeklyBarChart, jLabel22, 8);
-        installChartInExistingPanel(jPanel14, healthConditionsPieChart, jLabel28, 8);
+        installChartInExistingPanel(jPanel14, pieAndLegend, jLabel28, 8);
+    }
+
+    /** Creates the side-by-side pie chart and scrollable, data-backed legend table. */
+    private javax.swing.JPanel createHealthConditionsChartArea() {
+        healthConditionsLegendModel = new javax.swing.table.DefaultTableModel(
+                new Object[]{"Color", "Condition / Allergy", "Student Count", "Percentage"}, 0) {
+            @Override public boolean isCellEditable(int row, int column) { return false; }
+            @Override public Class<?> getColumnClass(int column) {
+                return column == 0 ? Color.class : super.getColumnClass(column);
+            }
+        };
+        javax.swing.JTable legendTable = new javax.swing.JTable(healthConditionsLegendModel);
+        legendTable.setRowHeight(24);
+        legendTable.setShowVerticalLines(false);
+        legendTable.setGridColor(BaseChartPanel.GRID);
+        legendTable.getColumnModel().getColumn(0).setPreferredWidth(42);
+        legendTable.getColumnModel().getColumn(0).setMaxWidth(42);
+        legendTable.getColumnModel().getColumn(1).setPreferredWidth(150);
+        legendTable.getColumnModel().getColumn(2).setPreferredWidth(78);
+        legendTable.getColumnModel().getColumn(3).setPreferredWidth(76);
+        legendTable.getColumnModel().getColumn(0).setCellRenderer(new javax.swing.table.DefaultTableCellRenderer() {
+            @Override public Component getTableCellRendererComponent(javax.swing.JTable table, Object value,
+                    boolean selected, boolean focused, int row, int column) {
+                super.getTableCellRendererComponent(table, "", selected, focused, row, column);
+                setOpaque(true);
+                setBackground(value instanceof Color color ? color : table.getBackground());
+                setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 10, 5, 10));
+                return this;
+            }
+        });
+        javax.swing.JScrollPane legendScroll = new javax.swing.JScrollPane(legendTable);
+        legendScroll.setPreferredSize(new java.awt.Dimension(350, 100));
+        legendScroll.getViewport().setBackground(Color.WHITE);
+        legendScroll.setBorder(BorderFactory.createLineBorder(BaseChartPanel.GRID));
+
+        javax.swing.JPanel container = new javax.swing.JPanel(new java.awt.BorderLayout(12, 0));
+        container.setOpaque(false);
+        container.add(healthConditionsPieChart, java.awt.BorderLayout.CENTER);
+        container.add(legendScroll, java.awt.BorderLayout.EAST);
+        return container;
     }
 
     private void refreshStatistics() {
@@ -487,6 +531,7 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
             if (homeSymptomChart != null) homeSymptomChart.setData(stats.weeklySymptoms);
             if (weeklyBarChart != null) weeklyBarChart.setData(stats.weekdayCounts);
             if (healthConditionsPieChart != null) healthConditionsPieChart.setData(stats.healthConditionCounts);
+            updateHealthConditionsLegend(stats.healthConditionCounts);
 
             updateStatisticCards(stats);
             loadEmergencyIncidentLog();
@@ -498,13 +543,30 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
 
     private void setupStatisticCards() {
         statisticSpecialNeedsValue = createStatisticCardValue(jPanel5, jLabel6,
-                "Number of Student with Special Needs");
+                "Number of Student who has Health Conditions");
         statisticAllergyValue = createStatisticCardValue(jPanel6, jLabel21,
                 "Number of Student with Allergy");
         statisticMedicineValue = createStatisticCardValue(jPanel7, jLabel23,
                 "Total Medicine Used this Month");
         statisticSentHomeValue = createStatisticCardValue(jPanel13, jLabel24,
-                "Total of Student Sent home / Referred to Hospital");
+                "Total of Student Sent home / Back to the Classroom");
+    }
+
+    /** Keeps the table legend synchronized with the pie-slice category order and colors. */
+    private void updateHealthConditionsLegend(Map<String, Integer> values) {
+        if (healthConditionsLegendModel == null) return;
+        healthConditionsLegendModel.setRowCount(0);
+        int total = values == null ? 0 : values.values().stream().mapToInt(Integer::intValue).sum();
+        if (values == null || total <= 0) return;
+        int index = 0;
+        for (Map.Entry<String, Integer> entry : values.entrySet()) {
+            int count = Math.max(0, entry.getValue());
+            double percentage = count * 100.0 / total;
+            healthConditionsLegendModel.addRow(new Object[]{
+                HealthConditionsPieChartPanel.chartColor(index++), entry.getKey(), count,
+                String.format(Locale.ROOT, "%.1f%%", percentage)
+            });
+        }
     }
 
     private javax.swing.JLabel createStatisticCardValue(javax.swing.JPanel card,
@@ -513,14 +575,15 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
         // visual role with independently positioned title/value labels so a
         // wrapped title cannot clip the metric in compact card sizes.
         legacyLabel.setVisible(false);
-        card.setMinimumSize(new java.awt.Dimension(245, 112));
-        card.setPreferredSize(new java.awt.Dimension(245, 112));
+        card.setMinimumSize(new java.awt.Dimension(255, 118));
+        card.setPreferredSize(new java.awt.Dimension(255, 118));
         javax.swing.JLabel value = new javax.swing.JLabel("0", javax.swing.SwingConstants.CENTER);
         value.setFont(new Font("Yu Gothic UI", Font.BOLD, 32));
         value.setOpaque(false);
-        javax.swing.JLabel title = new javax.swing.JLabel("<html><div style='width:220px;'>"
-                + escapeHtml(titleText) + "</div></html>", javax.swing.SwingConstants.LEFT);
-        title.setFont(new Font("Yu Gothic UI", Font.BOLD, 12));
+        javax.swing.JLabel title = new javax.swing.JLabel("<html><div style='width:190px; text-align:center;'>"
+                + escapeHtml(titleText) + "</div></html>", javax.swing.SwingConstants.CENTER);
+        title.setFont(new Font("Yu Gothic UI", Font.BOLD, 11));
+        title.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         title.setVerticalAlignment(javax.swing.SwingConstants.TOP);
         title.setOpaque(false);
         java.awt.Color background = card.getBackground() == null
@@ -547,17 +610,22 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
 
     private void positionStatisticCardValue(javax.swing.JPanel card, javax.swing.JLabel title,
             javax.swing.JLabel value) {
-        int width = Math.max(80, card.getWidth() - 24);
-        title.setBounds(12, 10, width, 36);
-        int valueY = 47;
+        int width = Math.max(80, card.getWidth() - 20);
+        title.setBounds(10, 8, width, 42);
+        int valueY = 51;
         value.setBounds(12, valueY, width, Math.max(46, card.getHeight() - valueY - 10));
     }
 
     private void updateStatisticCards(DashboardStatistics stats) {
-        setStatisticCardText(statisticSpecialNeedsValue, stats.specialNeeds);
-        setStatisticCardText(statisticAllergyValue, stats.allergies);
+        updateHealthMetricsCards(stats);
         setStatisticCardText(statisticMedicineValue, stats.medicineUsedThisMonth);
         setStatisticCardText(statisticSentHomeValue, stats.sentHomeOrBack);
+    }
+
+    /** Updates the independently calculated health-condition and allergy metrics. */
+    private void updateHealthMetricsCards(DashboardStatistics stats) {
+        setStatisticCardText(statisticSpecialNeedsValue, stats.specialNeeds);
+        setStatisticCardText(statisticAllergyValue, stats.allergies);
     }
 
     private void setStatisticCardText(javax.swing.JLabel label, int value) {
@@ -570,16 +638,15 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
     }
 
     private void configureIncidentLogTable() {
-        jTable2.getColumnModel().getColumn(0).setHeaderValue("Date");
-        jTable2.getTableHeader().repaint();
+        jTable2.setModel(new DefaultTableModel(new Object[]{"Date", "Name", "Reason"}, 0) {
+            @Override public boolean isCellEditable(int row, int column) { return false; }
+        });
+        styleTable(jTable2, -1);
         javax.swing.table.DefaultTableCellRenderer left = new javax.swing.table.DefaultTableCellRenderer();
         left.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
-        javax.swing.table.DefaultTableCellRenderer center = new javax.swing.table.DefaultTableCellRenderer();
-        center.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jTable2.getColumnModel().getColumn(0).setCellRenderer(left);
         jTable2.getColumnModel().getColumn(1).setCellRenderer(left);
         jTable2.getColumnModel().getColumn(2).setCellRenderer(left);
-        jTable2.getColumnModel().getColumn(3).setCellRenderer(center);
     }
 
     private static DashboardStatistics loadDashboardStatistics() throws java.sql.SQLException {
@@ -651,23 +718,27 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
             }
 
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT COUNT(*) FROM STUDENTS WHERE status = 'ACTIVE' AND health_conditions IS NOT NULL "
-                    + "AND TRIM(health_conditions) <> ''");
+                    "SELECT COUNT(DISTINCT lrn) FROM STUDENTS WHERE status = 'ACTIVE' "
+                    + "AND health_conditions IS NOT NULL AND TRIM(health_conditions) <> '' "
+                    + "AND UPPER(TRIM(health_conditions)) <> 'NONE'");
                  ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) specialNeeds = rs.getInt(1);
             }
 
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT COUNT(*) FROM STUDENTS WHERE status = 'ACTIVE' AND allergy IS NOT NULL "
-                    + "AND TRIM(allergy) <> ''");
+                    "SELECT COUNT(DISTINCT lrn) FROM STUDENTS WHERE status = 'ACTIVE' "
+                    + "AND allergy IS NOT NULL AND TRIM(allergy) <> '' "
+                    + "AND UPPER(TRIM(allergy)) <> 'NONE'");
                  ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) allergies = rs.getInt(1);
             }
 
             try (PreparedStatement ps = conn.prepareStatement(
                     "SELECT health_conditions, allergy FROM STUDENTS WHERE status = 'ACTIVE' "
-                    + "AND ((health_conditions IS NOT NULL AND TRIM(health_conditions) <> '') "
-                    + "OR (allergy IS NOT NULL AND TRIM(allergy) <> ''))");
+                    + "AND ((health_conditions IS NOT NULL AND TRIM(health_conditions) <> '' "
+                    + "AND UPPER(TRIM(health_conditions)) <> 'NONE') "
+                    + "OR (allergy IS NOT NULL AND TRIM(allergy) <> '' "
+                    + "AND UPPER(TRIM(allergy)) <> 'NONE'))");
                  ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     addHealthConditionCounts(healthConditions, rs.getString("health_conditions"));
@@ -693,7 +764,9 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
         if (rawValue == null || rawValue.isBlank()) return;
         for (String value : rawValue.split(",")) {
             String condition = value.trim();
-            if (!condition.isEmpty()) counts.merge(condition, 1, Integer::sum);
+            if (!condition.isEmpty() && !"NONE".equalsIgnoreCase(condition)) {
+                counts.merge(condition, 1, Integer::sum);
+            }
         }
     }
 
@@ -722,15 +795,15 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
     private void loadEmergencyIncidentLog() {
         DatabaseExecutor.run(() -> {
             java.util.List<Object[]> rows = new java.util.ArrayList<>();
-            String sql = "SELECT check_in_time, name, reason, status FROM VISITS "
-                    + "WHERE archived = FALSE AND (UPPER(status) = 'SENT HOME' OR UPPER(status) = 'SENT BACK') "
+            String sql = "SELECT check_in_time, name, reason FROM VISITS "
+                    + "WHERE UPPER(COALESCE(reason, '')) LIKE '%EMERGENCY%' "
                     + "ORDER BY id DESC";
             try (Connection conn = DatabaseManager.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql);
                  ResultSet rs = ps.executeQuery()) {
                 while (rs.next() && rows.size() < 100) {
                     rows.add(new Object[]{rs.getString("check_in_time"), rs.getString("name"),
-                        rs.getString("reason"), rs.getString("status")});
+                        rs.getString("reason")});
                 }
             }
             return rows;
@@ -833,13 +906,11 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
             int total = values.values().stream().mapToInt(Integer::intValue).sum();
             if (total <= 0) { drawNoData(g); g.dispose(); return; }
 
-            // Center the complete pie-chart group within the existing panel
-            // while keeping the current panel size, title, and legend style.
-            int size = Math.min(getHeight() - 18, Math.min(getWidth() / 2, 210));
-            int legendWidth = 190;
-            int groupWidth = size + 20 + legendWidth;
-            int groupX = Math.max(8, (getWidth() - groupWidth) / 2);
-            int x = groupX, y = Math.max(6, (getHeight() - size) / 2);
+            // The table beside this component owns the legend; center the pie
+            // in the remaining chart space without drawing duplicate labels.
+            int size = Math.min(getHeight() - 18, Math.min(getWidth() - 16, 210));
+            int x = Math.max(8, (getWidth() - size) / 2);
+            int y = Math.max(6, (getHeight() - size) / 2);
             int start = 90;
             int remaining = 360;
             int[] sliceAngles = new int[values.size()];
@@ -857,29 +928,14 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
                 start += sliceAngles[idx++];
             }
 
-            int legendX = x + size + 20;
-            int legendY = Math.max(20, y + 18);
-            idx = 0;
-            for (Map.Entry<String, Integer> entry : values.entrySet()) {
-                int value = Math.max(0, entry.getValue());
-                g.setColor(chartColor(idx));
-                g.fillRoundRect(legendX, legendY - 10, 10, 10, 3, 3);
-                g.setColor(TEXT);
-                int percentage = (int) Math.round(value * 100.0 / total);
-                String text = entry.getKey() + " (" + value + ", " + percentage + "%)";
-                g.drawString(text, legendX + 16, legendY);
-                legendY += 24;
-                idx++;
-            }
             g.dispose();
         }
 
+        /** Golden-ratio hue steps give every newly added category a distinct slice color. */
         private static Color chartColor(int index) {
-            return switch (index % 3) {
-                case 0 -> new Color(37, 99, 235);
-                case 1 -> new Color(16, 185, 129);
-                default -> new Color(245, 158, 11);
-            };
+            if (index == 0) return Color.decode("#2563EB");
+            float hue = (float) ((0.44 + index * 0.61803398875) % 1.0);
+            return Color.getHSBColor(hue, 0.72f, 0.92f);
         }
     }
 
@@ -897,27 +953,45 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
             setupGraphics(g);
             if (values.isEmpty()) { drawNoData(g); g.dispose(); return; }
 
-            // Show all categories, ordered by count, without hiding data.
+            // Show the highest-frequency categories as vertical bars.  This keeps
+            // the chart readable in the compact Home panel while retaining the
+            // same primary-blue visual language as the rest of the dashboard.
             java.util.List<Map.Entry<String, Integer>> entries = new java.util.ArrayList<>(values.entrySet());
             entries.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
             int maxBars = Math.min(entries.size(), 8);
-            int left = 8, right = 8, top = 6;
-            int rowH = Math.max(18, (getHeight() - top - 8) / maxBars);
+            int left = 12, right = 12, top = 18, bottom = 38;
+            int plotWidth = getWidth() - left - right;
+            int plotHeight = getHeight() - top - bottom;
+            if (plotWidth <= 20 || plotHeight <= 20) { g.dispose(); return; }
             int max = entries.stream().limit(maxBars).mapToInt(Map.Entry::getValue).max().orElse(1);
+
+            // Light horizontal grid lines replace the previous hard-edged rows.
+            g.setColor(GRID);
+            for (int i = 0; i <= 4; i++) {
+                int y = top + plotHeight - (plotHeight * i / 4);
+                g.drawLine(left, y, left + plotWidth, y);
+            }
+
+            int slotWidth = Math.max(1, plotWidth / maxBars);
+            // Cap bars at 15% of the plot width for clean spacing.
+            int maximumBarWidth = Math.max(1, (int) (plotWidth * 0.15));
+            int barWidth = Math.max(1, Math.min((int) (slotWidth * 0.62), maximumBarWidth));
             for (int i = 0; i < maxBars; i++) {
                 Map.Entry<String, Integer> e = entries.get(i);
-                int y = top + i * rowH;
                 String label = e.getKey();
-                if (label.length() > 18) label = label.substring(0, 17) + "…";
-                g.setColor(MUTED);
-                g.drawString(label, left, y + 12);
-                int bx = left + 105;
-                int bw = Math.max(2, getWidth() - bx - right - 28);
-                int bar = (int) Math.round(e.getValue() / (double) max * bw);
+                if (label.length() > 10) label = label.substring(0, 9) + "…";
+                int barHeight = (int) Math.round(e.getValue() / (double) max * Math.max(1, plotHeight - 14));
+                int x = left + i * slotWidth + (slotWidth - barWidth) / 2;
+                int y = top + plotHeight - barHeight;
                 g.setColor(BLUE);
-                g.fillRoundRect(bx, y + 3, bar, Math.max(10, rowH - 8), 6, 6);
+                g.fillRoundRect(x, y, barWidth, barHeight, 7, 7);
                 g.setColor(TEXT);
-                g.drawString(Integer.toString(e.getValue()), bx + bar + 6, y + 13);
+                String count = Integer.toString(e.getValue());
+                int countX = x + (barWidth - g.getFontMetrics().stringWidth(count)) / 2;
+                g.drawString(count, countX, Math.max(top + 11, y - 5));
+                int labelX = left + i * slotWidth + (slotWidth - g.getFontMetrics().stringWidth(label)) / 2;
+                g.setColor(MUTED);
+                g.drawString(label, labelX, top + plotHeight + 17);
             }
             g.dispose();
         }
@@ -930,10 +1004,21 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
         ECheckin.addActionListener(e -> submitExpressCheckin());
         jButton1.addActionListener(e -> submitPopupCheckin());
         popupEmergencyBTN.addActionListener(e -> showEmergencyPrompt(selectedStudent));
-        expressEmergencyBTN.addActionListener(e -> showEmergencyPrompt(selectedStudent));
+        expressEmergencyBTN.addActionListener(e -> handleHomeEmergencyAction());
+        checkInPanelEmergencyBTN.addActionListener(e -> handleCheckInPanelEmergencyAction());
         expressDispositionBTN.addActionListener(e -> sendExpressStudentHomeOrBack());
         archiveVisitBTN.addActionListener(e -> archiveSelectedRecentVisit());
         exportReportBTN.addActionListener(e -> exportRoleScopedReport());
+        EmergencyBTN.setVisible(true);
+        EmergencyBTN.setBackground(Color.decode("#DC2626"));
+        EmergencyBTN.setForeground(Color.WHITE);
+        EmergencyBTN.setFont(new Font("Yu Gothic UI", Font.BOLD, 14));
+        EmergencyBTN.setFocusPainted(false);
+        checkInPanelEmergencyBTN.setBackground(Color.decode("#DC2626"));
+        checkInPanelEmergencyBTN.setForeground(Color.WHITE);
+        checkInPanelEmergencyBTN.setFont(new Font("Yu Gothic UI", Font.BOLD, 14));
+        checkInPanelEmergencyBTN.setBorderPainted(false);
+        checkInPanelEmergencyBTN.setFocusPainted(false);
         ReasonTable.setModel(createCheckInTableModel());
         ReasonTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         jTable1.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
@@ -988,7 +1073,7 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
         c.gridx = 0; c.gridy++; c.gridwidth = 1; c.fill = java.awt.GridBagConstraints.NONE; jPanel8.add(jLabel18, c);
         c.gridx = 1; c.gridwidth = 2; c.fill = java.awt.GridBagConstraints.HORIZONTAL; jPanel8.add(TempField, c);
         c.gridx = 0; c.gridy++; c.gridwidth = 1; c.fill = java.awt.GridBagConstraints.NONE; jPanel8.add(jLabel17, c);
-        c.gridx = 1; c.gridwidth = 2; c.fill = java.awt.GridBagConstraints.HORIZONTAL; jPanel8.add(MedicineField, c);
+        c.gridx = 1; c.gridwidth = 2; c.fill = java.awt.GridBagConstraints.HORIZONTAL; jPanel8.add(expressMedicineComboBox, c);
         c.gridx = 0; c.gridy++; c.gridwidth = 1; c.fill = java.awt.GridBagConstraints.HORIZONTAL; jPanel8.add(ECheckin, c);
         c.gridx = 1; jPanel8.add(expressEmergencyBTN, c);
         c.gridx = 2; jPanel8.add(expressDispositionBTN, c);
@@ -1028,17 +1113,20 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
     StudentCheckinLabel.setForeground(TEXT_DARK);
     StudentCheckinLabel.setText("Student Check-in");
 
-    for (javax.swing.JLabel label : new javax.swing.JLabel[]{jLabel7, jLabel8, LRNLabel, jLabel9, jLabel29, jLabel11}) {
+    for (javax.swing.JLabel label : new javax.swing.JLabel[]{jLabel7, jLabel8, LRNLabel, jLabel9, jLabel29, jLabel11, jLabel30}) {
         label.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 13));
         label.setForeground(Color.decode("#475569"));
     }
 
     jLabel10.setText("Reason");
     jLabel12.setText("Medicine");
+    jLabel30.setText("Temperature");
     jLabel10.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 12));
     jLabel12.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 12));
+    jLabel30.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 12));
     jLabel10.setForeground(TEXT_DARK);
     jLabel12.setForeground(TEXT_DARK);
+    jLabel30.setForeground(TEXT_DARK);
 
     jButton1.setText("Complete Check-in");
     jButton1.setBackground(ACCENT_BLUE);
@@ -1046,6 +1134,13 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
     jButton1.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 14));
     jButton1.setBorderPainted(false);
     jButton1.setFocusPainted(false);
+
+    popupEmergencyBTN.setText("Emergency");
+    popupEmergencyBTN.setBackground(Color.decode("#DC2626"));
+    popupEmergencyBTN.setForeground(Color.WHITE);
+    popupEmergencyBTN.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 14));
+    popupEmergencyBTN.setBorderPainted(false);
+    popupEmergencyBTN.setFocusPainted(false);
 
     CancelCheckinBTN.setText("Cancel");
     CancelCheckinBTN.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 13));
@@ -1071,10 +1166,19 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
     c.gridx = 1; c.weightx = 1; c.fill = java.awt.GridBagConstraints.HORIZONTAL;
     c.insets = new java.awt.Insets(20, 0, 6, 0); CheckInPopup.add(jTextField1, c);
 
-    c.gridy = ++row; c.gridx = 0; c.weightx = 0; c.insets = new java.awt.Insets(6, 0, 20, 12);
+    c.gridy = ++row; c.gridx = 0; c.weightx = 0; c.insets = new java.awt.Insets(6, 0, 6, 12);
+    CheckInPopup.add(jLabel30, c);
+    c.gridx = 1; c.weightx = 1; c.insets = new java.awt.Insets(6, 0, 6, 0);
+    CheckInPopup.add(jTextField2, c);
+
+    c.gridy = ++row; c.gridx = 0; c.weightx = 0; c.insets = new java.awt.Insets(6, 0, 12, 12);
     CheckInPopup.add(jLabel12, c);
-    c.gridx = 1; c.weightx = 1; c.insets = new java.awt.Insets(6, 0, 20, 0);
+    c.gridx = 1; c.weightx = 1; c.insets = new java.awt.Insets(6, 0, 12, 0);
     CheckInPopup.add(jComboBox1, c);
+
+    c.gridy = ++row; c.gridx = 0; c.gridwidth = 2; c.weightx = 1;
+    c.fill = java.awt.GridBagConstraints.HORIZONTAL; c.insets = new java.awt.Insets(2, 0, 6, 0);
+    CheckInPopup.add(popupEmergencyBTN, c);
 
     c.gridy = ++row; c.gridx = 0; c.gridwidth = 1; c.weightx = 0.5;
     c.insets = new java.awt.Insets(8, 0, 0, 8); CheckInPopup.add(CancelCheckinBTN, c);
@@ -1082,14 +1186,14 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
     CheckInPopup.add(jButton1, c);
 
     // Set bounds WITHOUT re-adding to content pane
-    CheckInPopup.setBounds(500, 150, 540, 520);
+    CheckInPopup.setBounds(500, 120, 540, 600);
     CheckInPopup.setVisible(false);
 }
 
 
     /** Positions the panel in the center of the check-in workspace. */
    private void centerCheckinPopup() {
-     int width = 540, height = 560;
+     int width = 540, height = 600;
     int panelWidth = CheckInPanel1.getWidth() > 0 ? CheckInPanel1.getWidth()
             : getContentPane().getWidth();
     int panelHeight = CheckInPanel1.getHeight() > 0 ? CheckInPanel1.getHeight()
@@ -1132,15 +1236,15 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
 
     /** Suggests an in-stock medicine based on the purpose saved in Inventory. */
     private void recommendMedicineFromReason() {
-        if (!MedicineField.getText().trim().isEmpty()) return;
+        if (expressMedicineComboBox.getSelectedIndex() > 0) return;
         final String reason = ReasonField.getText();
         if (reason == null || reason.isBlank()) return;
 
         DatabaseExecutor.run(() -> new MedicineData().loadAll(), medicines -> {
-            if (!MedicineField.getText().trim().isEmpty()
+            if (expressMedicineComboBox.getSelectedIndex() > 0
                     || !reason.equals(ReasonField.getText())) return;
             String suggested = findMedicineForReason(reason, medicines);
-            if (suggested != null) MedicineField.setText(suggested);
+            selectMedicine(expressMedicineComboBox, suggested);
         }, ex -> {
             // Inventory lookup failure must not break the check-in form.
         });
@@ -1200,11 +1304,18 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
 
     private void loadMedicineChoices() {
         DatabaseExecutor.run(() -> new MedicineData().loadAll(), medicines -> {
-            javax.swing.DefaultComboBoxModel<String> model =
-                    new javax.swing.DefaultComboBoxModel<>();
-            model.addElement("None");
-            for (Medicine medicine : medicines) model.addElement(medicine.getname());
-            jComboBox1.setModel(model);
+            javax.swing.DefaultComboBoxModel<String> popupModel = new javax.swing.DefaultComboBoxModel<>();
+            javax.swing.DefaultComboBoxModel<String> expressModel = new javax.swing.DefaultComboBoxModel<>();
+            popupModel.addElement("None");
+            expressModel.addElement("None");
+            for (Medicine medicine : medicines) {
+                if (medicine.getquantity() > 0 && !medicine.isExpired()) {
+                    popupModel.addElement(medicine.getname());
+                    expressModel.addElement(medicine.getname());
+                }
+            }
+            jComboBox1.setModel(popupModel);
+            expressMedicineComboBox.setModel(expressModel);
         }, ex -> JOptionPane.showMessageDialog(this,
                 "Unable to load medicines: " + ex.getMessage(), "Medicine Load Error",
                 JOptionPane.ERROR_MESSAGE));
@@ -1230,6 +1341,16 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
         }, ex -> {
             // Inventory lookup failure must not break check-in.
         });
+    }
+
+    private static void selectMedicine(javax.swing.JComboBox<String> comboBox, String medicine) {
+        if (medicine == null) return;
+        for (int i = 0; i < comboBox.getItemCount(); i++) {
+            if (medicine.equalsIgnoreCase(String.valueOf(comboBox.getItemAt(i)))) {
+                comboBox.setSelectedIndex(i);
+                return;
+            }
+        }
     }
 
     private void selectStudentFromChooser() {
@@ -1325,7 +1446,9 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
         }
         String temperature = validateTemperature(TempField.getText().trim());
         if (temperature == null) return;
-        submitCheckin(selectedStudent, ReasonField.getText().trim(), MedicineField.getText().trim(), temperature);
+        Object item = expressMedicineComboBox.getSelectedItem();
+        String medicine = item == null ? "None" : item.toString();
+        submitCheckin(selectedStudent, ReasonField.getText().trim(), medicine, temperature);
     }
 
     private void submitPopupCheckin() {
@@ -1366,6 +1489,58 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
         }
     }
 
+    /** Uses the selected recent visit first; an LRN entered in the Home form is the fallback. */
+    private void handleHomeEmergencyAction() {
+        int viewRow = jTable1.getSelectedRow();
+        if (viewRow >= 0) {
+            int modelRow = jTable1.convertRowIndexToModel(viewRow);
+            if (modelRow >= 0 && modelRow < recentVisits.size()) {
+                CheckinSystem visit = recentVisits.get(modelRow);
+                StudentDetails student = new StudentDetails(visit.getName(), visit.getGradeSection(), visit.getLrn(),
+                        "", "", visit.getGuardianName(), visit.getGuardianPhoneNums());
+                showEmergencyPromptForActiveVisit(student, expressEmergencyBTN);
+                return;
+            }
+        }
+
+        String lrn = LrnField.getText().trim();
+        if (lrn.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Search and select a student first.",
+                    "Student Required", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        findStudent(lrn, student -> {
+            if (student == null) {
+                JOptionPane.showMessageDialog(this, "Search and select a student first.",
+                        "Student Required", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            selectedStudent = student;
+            showEmergencyPromptForActiveVisit(student, expressEmergencyBTN);
+        });
+    }
+
+    /** Creates an emergency visit from the student selected in the Check-In panel. */
+    private void handleCheckInPanelEmergencyAction() {
+        int selectedRow = ReasonTable.getSelectedRow();
+        if (selectedRow < 0) {
+            JOptionPane.showMessageDialog(this, "Please select a student from the table first.",
+                    "Emergency Check-In", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        int modelRow = ReasonTable.convertRowIndexToModel(selectedRow);
+        String lrn = String.valueOf(ReasonTable.getModel().getValueAt(modelRow, 2));
+        findStudent(lrn, student -> {
+            if (student == null) {
+                JOptionPane.showMessageDialog(this, "The selected student is no longer active.",
+                        "Student Not Found", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            selectedStudent = student;
+            showEmergencyPrompt(student);
+        });
+    }
+
     private void submitEmergencyCheckin(StudentDetails student, EmergencyRecord emergency) {
         String actor = loggedInAccount == null ? "Unknown" : loggedInAccount.GetName();
         ECheckin.setEnabled(false);
@@ -1377,7 +1552,7 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
             ECheckin.setEnabled(true); jButton1.setEnabled(true);
             popupEmergencyBTN.setEnabled(true); expressEmergencyBTN.setEnabled(true);
             refreshRecentVisits(); refreshStatistics(); closeCheckinPopup();
-            ReasonField.setText(""); MedicineField.setText(""); TempField.setText("");
+            ReasonField.setText(""); expressMedicineComboBox.setSelectedIndex(0); TempField.setText("");
             JOptionPane.showMessageDialog(this, "Emergency check-in recorded for " + student.name() + ".",
                     "Emergency Recorded", JOptionPane.WARNING_MESSAGE);
         }, ex -> {
@@ -1390,21 +1565,19 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
     }
 
     private void sendExpressStudentHomeOrBack() {
-        if (selectedStudent == null || !selectedStudent.lrn().equals(LrnField.getText().trim())) {
-            JOptionPane.showMessageDialog(this, "Search and select a student first.",
-                    "Student Required", JOptionPane.WARNING_MESSAGE);
+        CheckinSystem visit = selectedRecentVisitForDisposition();
+        if (visit == null) {
             return;
         }
         Object[] choices = {"Send Home", "Send Back to Class", "Cancel"};
-        int choice = JOptionPane.showOptionDialog(this, "Choose an action for " + selectedStudent.name() + ".",
+        int choice = JOptionPane.showOptionDialog(this, "Choose an action for " + visit.getName() + ".",
                 "Clinic Visit Action", JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
                 null, choices, choices[0]);
         if (choice != 0 && choice != 1) return;
         String actor = loggedInAccount == null ? "Unknown" : loggedInAccount.GetName();
         expressDispositionBTN.setEnabled(false);
-        StudentDetails student = selectedStudent;
-        DatabaseExecutor.run(() -> choice == 0 ? new VisitData().markSentHome(student.lrn(), actor)
-                        : new VisitData().markSentBack(student.lrn(), actor), updated -> {
+        DatabaseExecutor.run(() -> choice == 0 ? new VisitData().markSentHome(visit.getLrn(), actor)
+                        : new VisitData().markSentBack(visit.getLrn(), actor), updated -> {
             expressDispositionBTN.setEnabled(true);
             if (!updated) {
                 JOptionPane.showMessageDialog(this, "This student does not have an active clinic visit.",
@@ -1456,8 +1629,9 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
             refreshStatistics();
             closeCheckinPopup();
             ReasonField.setText("");
-            MedicineField.setText("");
+            expressMedicineComboBox.setSelectedIndex(0);
             TempField.setText("");
+            loadMedicineChoices();
             JOptionPane.showMessageDialog(this,
                     result.medicineDeducted() || "None".equalsIgnoreCase(medicineName)
                             ? "Student checked in successfully."
@@ -1584,6 +1758,7 @@ private static final class RoundedBorder extends javax.swing.border.AbstractBord
     private void chooseAndExportRoleScopedReport(LocalDate today) {
         javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
         chooser.setDialogTitle("Export Clinic Report");
+        chooser.setSelectedFile(new java.io.File("Clinic_Report_" + today + ".xlsx"));
         if (chooser.showSaveDialog(this) != javax.swing.JFileChooser.APPROVE_OPTION) return;
         java.io.File destination = chooser.getSelectedFile();
         if (!destination.getName().toLowerCase(Locale.ROOT).endsWith(".xlsx")) {
@@ -1992,11 +2167,13 @@ NOT modify this code. The content of this method is always
                     .addComponent(jScrollPane2))
                 .addContainerGap())
             .addGroup(CheckInPanel1Layout.createSequentialGroup()
-                .addGap(456, 456, 456)
+                .addGap(360, 360, 360)
                 .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 194, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(checkInPanelEmergencyBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 174, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(SentHomeBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 174, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(653, Short.MAX_VALUE))
+                .addContainerGap(559, Short.MAX_VALUE))
         );
         CheckInPanel1Layout.setVerticalGroup(
             CheckInPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -2010,6 +2187,7 @@ NOT modify this code. The content of this method is always
                 .addGap(18, 18, 18)
                 .addGroup(CheckInPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(CheckInBTN, javax.swing.GroupLayout.DEFAULT_SIZE, 42, Short.MAX_VALUE)
+                    .addComponent(checkInPanelEmergencyBTN, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(SentHomeBTN, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
@@ -2038,7 +2216,7 @@ NOT modify this code. The content of this method is always
         );
 
         jLabel6.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel6.setText("Number of Student with Special Needs ");
+        jLabel6.setText("Number of Student who has Health Conditions");
 
         javax.swing.GroupLayout jPanel5Layout = new javax.swing.GroupLayout(jPanel5);
         jPanel5.setLayout(jPanel5Layout);
@@ -2098,7 +2276,7 @@ NOT modify this code. The content of this method is always
         );
 
         jLabel24.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel24.setText("Total of Student Sent home/ Referred to Hospital");
+        jLabel24.setText("Total of Student Sent home / Back to the Classroom");
 
         javax.swing.GroupLayout jPanel13Layout = new javax.swing.GroupLayout(jPanel13);
         jPanel13.setLayout(jPanel13Layout);
@@ -2185,7 +2363,7 @@ NOT modify this code. The content of this method is always
         );
 
         jLabel27.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
-        jLabel27.setText("EMERGENCY & REFERRAL INCIDENT LOG");
+        jLabel27.setText("Emergency Logs");
 
         javax.swing.GroupLayout StatisticPanelLayout = new javax.swing.GroupLayout(StatisticPanel);
         StatisticPanel.setLayout(StatisticPanelLayout);
@@ -2382,7 +2560,7 @@ NOT modify this code. The content of this method is always
                     .addComponent(jLabel17)
                     .addComponent(MedicineField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(ECheckin))
-                .addContainerGap(119, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         jLabel19.setFont(new java.awt.Font("Dialog", 1, 12)); // NOI18N
@@ -2565,27 +2743,15 @@ NOT modify this code. The content of this method is always
     }
 
     private void EmergencyBTNActionPerformed(java.awt.event.ActionEvent evt) {
-        int selectedRow = ReasonTable.getSelectedRow();
-        if (selectedRow < 0) {
-            JOptionPane.showMessageDialog(this, "Please select a student from the table first.",
-                    "Emergency Check-In", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        int modelRow = ReasonTable.convertRowIndexToModel(selectedRow);
-        String lrn = String.valueOf(ReasonTable.getModel().getValueAt(modelRow, 2));
-        findStudent(lrn, student -> {
-            if (!lrn.equals(currentSelectedChooserLrn())) return;
-            if (student == null) {
-                JOptionPane.showMessageDialog(this, "The selected student is no longer active.",
-                        "Student Not Found", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-            selectedStudent = student;
-            showEmergencyPromptForActiveVisit(student);
-        });
+        handleCheckInPanelEmergencyAction();
     }
 
     private void showEmergencyPromptForActiveVisit(StudentDetails student) {
+        showEmergencyPromptForActiveVisit(student, EmergencyBTN);
+    }
+
+    /** Adds the emergency marker and audit entry to the currently active visit. */
+    private void showEmergencyPromptForActiveVisit(StudentDetails student, javax.swing.JButton trigger) {
         javax.swing.JComboBox<EmergencyType> category = new javax.swing.JComboBox<>(EmergencyType.values());
         javax.swing.JTextArea details = new javax.swing.JTextArea(5, 28);
         details.setLineWrap(true);
@@ -2598,9 +2764,9 @@ NOT modify this code. The content of this method is always
             EmergencyRecord emergency = new EmergencyRecord(student.lrn(),
                     (EmergencyType) category.getSelectedItem(), details.getText(), java.time.LocalDateTime.now());
             String actor = loggedInAccount == null ? "Unknown" : loggedInAccount.GetName();
-            EmergencyBTN.setEnabled(false);
+            trigger.setEnabled(false);
             DatabaseExecutor.run(() -> new VisitData().recordEmergencyForActiveVisit(emergency, actor), updated -> {
-                EmergencyBTN.setEnabled(true);
+                trigger.setEnabled(true);
                 if (!updated) {
                     JOptionPane.showMessageDialog(this, "The selected student no longer has an active clinic visit.",
                             "Emergency Check-In", JOptionPane.WARNING_MESSAGE);
@@ -2611,7 +2777,7 @@ NOT modify this code. The content of this method is always
                 JOptionPane.showMessageDialog(this, "Emergency record added for " + student.name() + ".",
                         "Emergency Recorded", JOptionPane.WARNING_MESSAGE);
             }, ex -> {
-                EmergencyBTN.setEnabled(true);
+                trigger.setEnabled(true);
                 JOptionPane.showMessageDialog(this, "Unable to record the emergency: " + ex.getMessage(),
                         "Emergency Check-In Error", JOptionPane.ERROR_MESSAGE);
             });
@@ -2662,19 +2828,8 @@ private void updateActiveButton(javax.swing.JButton btn) {
 }
 
     private void SentHomeBTNActionPerformed(java.awt.event.ActionEvent evt) {
-        int selectedRow = ReasonTable.getSelectedRow();
-        if (selectedRow < 0) {
-            JOptionPane.showMessageDialog(this,
-                    "Select a checked-in student first.",
-                    "Student Required", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        String lrn = currentSelectedChooserLrn();
-        if (lrn == null || lrn.isBlank()) {
-            JOptionPane.showMessageDialog(this,
-                    "The selected student could not be identified.",
-                    "Student Required", JOptionPane.WARNING_MESSAGE);
+        CheckinSystem visit = selectedRecentVisitForDisposition();
+        if (visit == null) {
             return;
         }
 
@@ -2694,8 +2849,8 @@ private void updateActiveButton(javax.swing.JButton btn) {
         String actor = loggedInAccount == null ? "Unknown" : loggedInAccount.GetName();
         DatabaseExecutor.run(
                 () -> choice == 0
-                        ? new VisitData().markSentHome(lrn, actor)
-                        : new VisitData().markSentBack(lrn, actor),
+                        ? new VisitData().markSentHome(visit.getLrn(), actor)
+                        : new VisitData().markSentBack(visit.getLrn(), actor),
                 updated -> {
                     if (!updated) {
                         JOptionPane.showMessageDialog(this,
@@ -2712,6 +2867,32 @@ private void updateActiveButton(javax.swing.JButton btn) {
                 ex -> JOptionPane.showMessageDialog(this,
                         "Unable to update the clinic visit: " + ex.getMessage(),
                         "Visit Update Error", JOptionPane.ERROR_MESSAGE));
+    }
+
+    /** Returns the active visit selected directly in the Recent Clinic Visits table. */
+    private CheckinSystem selectedRecentVisitForDisposition() {
+        int viewRow = jTable1.getSelectedRow();
+        if (viewRow < 0) {
+            JOptionPane.showMessageDialog(this,
+                    "Please select a visit record from the table first.",
+                    "Selection Required", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+        int modelRow = jTable1.convertRowIndexToModel(viewRow);
+        if (modelRow < 0 || modelRow >= recentVisits.size()) {
+            JOptionPane.showMessageDialog(this,
+                    "The selected visit is no longer available. Refresh the table and try again.",
+                    "Visit Not Found", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+        CheckinSystem visit = recentVisits.get(modelRow);
+        if (!"In Clinic".equalsIgnoreCase(visit.getStatus())) {
+            JOptionPane.showMessageDialog(this,
+                    "Select a visit whose status is In Clinic before changing its disposition.",
+                    "Active Visit Required", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+        return visit;
     }
 
     private void StatisticBTNActionPerformed(java.awt.event.ActionEvent evt) {

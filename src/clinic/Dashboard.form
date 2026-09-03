@@ -659,7 +659,7 @@
             <Component class="javax.swing.JLabel" name="jLabel6">
               <Properties>
                 <Property name="horizontalAlignment" type="int" value="0"/>
-                <Property name="text" type="java.lang.String" value="Number of Student with Special Needs "/>
+                <Property name="text" type="java.lang.String" value="Number of Student who has Health Conditions"/>
               </Properties>
             </Component>
           </SubComponents>
@@ -752,7 +752,7 @@
             <Component class="javax.swing.JLabel" name="jLabel24">
               <Properties>
                 <Property name="horizontalAlignment" type="int" value="0"/>
-                <Property name="text" type="java.lang.String" value="Total of Student Sent home/ Referred to Hospital"/>
+                <Property name="text" type="java.lang.String" value="Total of Student Sent home / Back to the Classroom"/>
               </Properties>
             </Component>
           </SubComponents>
@@ -879,7 +879,7 @@
             <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
               <Font name="Dialog" size="14" style="1"/>
             </Property>
-            <Property name="text" type="java.lang.String" value="EMERGENCY &amp; REFERRAL INCIDENT LOG"/>
+            <Property name="text" type="java.lang.String" value="Emergency Only"/>
           </Properties>
         </Component>
       </SubComponents>
@@ -1183,7 +1183,7 @@
                           <Component id="MedicineField" alignment="3" min="-2" max="-2" attributes="0"/>
                           <Component id="ECheckin" alignment="3" min="-2" max="-2" attributes="0"/>
                       </Group>
-                      <EmptySpace pref="119" max="32767" attributes="0"/>
+                      <EmptySpace max="32767" attributes="0"/>
                   </Group>
               </Group>
             </DimensionLayout>

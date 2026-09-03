@@ -11,6 +11,9 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.time.LocalDateTime;
@@ -232,7 +235,7 @@ public class ReportExporter {
             
             String[] inventoryHeaders = {"Date/Time", "Action / Activity", "Details", "Performed By"};
             String[] stockHeaders = {"Medicine Name", "Current Quantity", "Expiration Date", "Status",
-                    "Given Out (This Date)", "Returned (Edited Visits)"};
+                    "Given Out (This Date)"};
             int columnCount = checkinHeaders.length; // widest section - drives auto-sizing below
 
             int rowIndex = 0;
@@ -368,18 +371,6 @@ public class ReportExporter {
             //     (raw USE_MEDICINE total minus raw RESTOCK_MEDICINE total, floored at 0),
             //     so it always matches the medicine's actual current assignment across
             //     today's visits, no matter how many times a visit was edited.
-            //   - "Returned (Edited Visits)": the RAW cumulative RESTOCK_MEDICINE total for
-            //     this date - intentionally NOT netted against uses. Netting it would hide
-            //     real single-edit returns (e.g. a visit's medicine entirely swapped from
-            //     Biogesic to Paracetamol shows Biogesic's raw use and raw restock as equal,
-            //     and netting silently turns both into 0 - which loses the very information
-            //     this column exists to show). Trade-off: if the SAME visit is edited more
-            //     than once with the SAME medicine/quantity re-saved, each edit still logs
-            //     its own restock+use pair, so this raw total can look larger than the
-            //     current net Given Out figure. That is expected, not a bug - it is an
-            //     accurate count of restock activity, not a "current outstanding" number.
-            //     The full chronological detail is always visible above in
-            //     ACTIVITIES / AUDIT LOG for anyone who wants to see why.
             Row stockSectionRow = sheet.createRow(rowIndex++);
             Cell stockSectionCell = stockSectionRow.createCell(0);
             stockSectionCell.setCellValue("STOCK OVERVIEW");
@@ -408,18 +399,6 @@ public class ReportExporter {
                 // matches the medicine's actual current assignment across today's visits,
                 // no matter how many times a visit was edited.
                 //
-                // "Returned" is a RAW cumulative count of every RESTOCK_MEDICINE event for
-                // this medicine today - intentionally NOT netted against uses. Netting it
-                // would hide real single-edit returns (e.g. a visit's medicine entirely
-                // swapped from Biogesic to Paracetamol shows Biogesic's raw use and raw
-                // restock as equal, and netting silently turns both into 0 - which loses
-                // the very information this column exists to show). The trade-off: if the
-                // SAME visit is edited more than once with the SAME medicine/quantity
-                // re-saved, each edit still logs its own restock+use pair, so this raw
-                // total can look larger than the current net Given Out figure. That is
-                // expected, not a bug - it is an accurate count of restock activity, not a
-                // "current outstanding" number. The full chronological detail is always
-                // visible above in ACTIVITIES / AUDIT LOG for anyone who wants to see why.
                 int netGivenOutToday = Math.max(0, rawGivenOutToday - rawReturnedToday);
 
                 Row row = sheet.createRow(rowIndex++);
@@ -444,9 +423,6 @@ public class ReportExporter {
                 givenOutCell.setCellValue(netGivenOutToday);
                 if (rowStyle != null) givenOutCell.setCellStyle(rowStyle);
 
-                Cell returnedCell = row.createCell(5);
-                returnedCell.setCellValue(rawReturnedToday);
-                if (rowStyle != null) returnedCell.setCellStyle(rowStyle);
             }
             if (inventory.isEmpty()) {
                 sheet.createRow(rowIndex++).createCell(0).setCellValue("No medicines in inventory.");
@@ -454,77 +430,87 @@ public class ReportExporter {
 
             rowIndex++; // blank spacer row between sections
 
-            // --- Section 4: Statistics ---
-            // Reuses AdminPanel.computeWeeklyStats() — the exact same computation that
-            // drives the on-screen statistics cards — for the Monday-Friday week that
-            // CONTAINS the selected report date (not just the single selected day).
+            // --- Section 4: Statistics (data tables matching the dashboard) ---
             Row statsSectionRow = sheet.createRow(rowIndex++);
             Cell statsSectionCell = statsSectionRow.createCell(0);
             statsSectionCell.setCellValue("STATISTICS");
             statsSectionCell.setCellStyle(sectionStyle);
 
-            ArrayList<CheckinSystem> allVisits = visitData.loadAll(); // includes archived, same as AdminPanel
+            ArrayList<CheckinSystem> allVisits = visitData.loadAll(); // includes archived
             AdminPanel.WeeklyStats stats = AdminPanel.computeWeeklyStats(allVisits, date);
 
-            DateTimeFormatter periodFormat = DateTimeFormatter.ofPattern("MMMM d, yyyy");
+            Row weeklySection = sheet.createRow(rowIndex++);
+            weeklySection.createCell(0).setCellValue("WEEKLY CHECK-INS BREAKDOWN");
+            weeklySection.getCell(0).setCellStyle(sectionStyle);
+            String[] weeklyHeaders = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Total"};
+            Row weeklyHeader = sheet.createRow(rowIndex++);
+            for (int col = 0; col < weeklyHeaders.length; col++) {
+                weeklyHeader.createCell(col).setCellValue(weeklyHeaders[col]);
+                weeklyHeader.getCell(col).setCellStyle(headerStyle);
+            }
+            int[] weeklyCounts = {stats.monday(), stats.tuesday(), stats.wednesday(), stats.thursday(), stats.friday(),
+                    stats.weeklyCheckins()};
+            Row weeklyValues = sheet.createRow(rowIndex++);
+            for (int col = 0; col < weeklyCounts.length; col++) {
+                weeklyValues.createCell(col).setCellValue(weeklyCounts[col]);
+                weeklyValues.getCell(col).setCellStyle(statValueCenterStyle);
+            }
 
-            Row periodRow = sheet.createRow(rowIndex++);
-            Cell periodLabelCell = periodRow.createCell(0);
-            periodLabelCell.setCellValue("Reporting Period");
-            periodLabelCell.setCellStyle(statLabelStyle);
+            rowIndex++;
+            int monthlyMedicineUsed = medicineUsedThisMonth(allVisits, LocalDate.now());
+            Row medicineSection = sheet.createRow(rowIndex++);
+            medicineSection.createCell(0).setCellValue("TOTAL MEDICINE USED (MONTHLY)");
+            medicineSection.getCell(0).setCellStyle(sectionStyle);
+            Row medicineRow = sheet.createRow(rowIndex++);
+            medicineRow.createCell(0).setCellValue("Total Medicine Used This Month");
+            medicineRow.getCell(0).setCellStyle(statLabelStyle);
+            medicineRow.createCell(1).setCellValue(monthlyMedicineUsed);
+            medicineRow.getCell(1).setCellStyle(statValueStyle);
 
-            Cell periodValueCell = periodRow.createCell(1);
-            periodValueCell.setCellValue(
-                    stats.mondayOfWeek().format(periodFormat) + " - " + stats.fridayOfWeek().format(periodFormat));
-            periodValueCell.setCellStyle(statValueStyle);
-
-            rowIndex++; // blank spacer row
-
-            Object[][] statRows = {
-                {"Weekly Check-ins", stats.weeklyCheckins()},
-                {"Currently in Clinic", stats.inClinic()},
-                {"Sent Back", stats.sentBack()},
-                {"Sent Home", stats.sentHome()},
-                {"Frequently Used Medicine", stats.topMedicine()},
-                {"Common Reason", stats.topReason()}
-            };
-            for (Object[] pair : statRows) {
+            rowIndex++;
+            Row healthSection = sheet.createRow(rowIndex++);
+            healthSection.createCell(0).setCellValue("HEALTH CONDITIONS & ALLERGIES");
+            healthSection.getCell(0).setCellStyle(sectionStyle);
+            String[] healthHeaders = {"Condition / Allergy", "Student Count", "Percentage"};
+            Row healthHeader = sheet.createRow(rowIndex++);
+            for (int col = 0; col < healthHeaders.length; col++) {
+                healthHeader.createCell(col).setCellValue(healthHeaders[col]);
+                healthHeader.getCell(col).setCellStyle(headerStyle);
+            }
+            Map<String, Integer> healthCounts = loadHealthConditionCounts();
+            int healthTotal = healthCounts.values().stream().mapToInt(Integer::intValue).sum();
+            for (Map.Entry<String, Integer> entry : healthCounts.entrySet()) {
                 Row row = sheet.createRow(rowIndex++);
-
-                Cell labelCell = row.createCell(0);
-                labelCell.setCellValue((String) pair[0]);
-                labelCell.setCellStyle(statLabelStyle);
-
-                Cell valueCell = row.createCell(1);
-                if (pair[1] instanceof Integer count) {
-                    valueCell.setCellValue(count);
-                } else {
-                    valueCell.setCellValue((String) pair[1]);
-                }
-                valueCell.setCellStyle(statValueStyle);
+                row.createCell(0).setCellValue(entry.getKey());
+                row.createCell(1).setCellValue(entry.getValue());
+                row.createCell(2).setCellValue(String.format(Locale.ROOT, "%.1f%%",
+                        healthTotal == 0 ? 0.0 : entry.getValue() * 100.0 / healthTotal));
+            }
+            if (healthCounts.isEmpty()) {
+                sheet.createRow(rowIndex++).createCell(0).setCellValue("No health conditions or allergies recorded.");
             }
 
-            rowIndex++; // blank spacer row
-
-            Row dailySectionRow = sheet.createRow(rowIndex++);
-            Cell dailySectionCell = dailySectionRow.createCell(0);
-            dailySectionCell.setCellValue("DAILY CHECK-INS");
-            dailySectionCell.setCellStyle(sectionStyle);
-
-            String[] dailyHeaders = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday"};
-            Row dailyHeaderRow = sheet.createRow(rowIndex++);
-            for (int col = 0; col < dailyHeaders.length; col++) {
-                Cell cell = dailyHeaderRow.createCell(col);
-                cell.setCellValue(dailyHeaders[col]);
-                cell.setCellStyle(headerStyle);
+            rowIndex++;
+            Row emergencySection = sheet.createRow(rowIndex++);
+            emergencySection.createCell(0).setCellValue("EMERGENCY ONLY");
+            emergencySection.getCell(0).setCellStyle(sectionStyle);
+            String[] emergencyHeaders = {"Date", "Name", "Reason"};
+            Row emergencyHeader = sheet.createRow(rowIndex++);
+            for (int col = 0; col < emergencyHeaders.length; col++) {
+                emergencyHeader.createCell(col).setCellValue(emergencyHeaders[col]);
+                emergencyHeader.getCell(col).setCellStyle(headerStyle);
             }
-
-            int[] dailyCounts = {stats.monday(), stats.tuesday(), stats.wednesday(), stats.thursday(), stats.friday()};
-            Row dailyValueRow = sheet.createRow(rowIndex++);
-            for (int col = 0; col < dailyCounts.length; col++) {
-                Cell cell = dailyValueRow.createCell(col);
-                cell.setCellValue(dailyCounts[col]);
-                cell.setCellStyle(statValueCenterStyle);
+            int emergencyCount = 0;
+            for (CheckinSystem visit : allVisits) {
+                if (!safe(visit.getReason()).toUpperCase(Locale.ROOT).contains("EMERGENCY")) continue;
+                Row row = sheet.createRow(rowIndex++);
+                row.createCell(0).setCellValue(safe(visit.getCheckInTime()));
+                row.createCell(1).setCellValue(safe(visit.getName()));
+                row.createCell(2).setCellValue(safe(visit.getReason()));
+                emergencyCount++;
+            }
+            if (emergencyCount == 0) {
+                sheet.createRow(rowIndex++).createCell(0).setCellValue("No emergency records.");
             }
 
             // --- Auto-size every column, AFTER all headers and data have been written ---
@@ -713,6 +699,54 @@ public class ReportExporter {
     /** Returns an empty string instead of null, for safe writing into Excel cells. */
     private String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    /** Returns the total quantity dispensed in the supplied calendar month. */
+    private int medicineUsedThisMonth(ArrayList<CheckinSystem> visits, LocalDate month) {
+        DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a");
+        int total = 0;
+        for (CheckinSystem visit : visits) {
+            String medicine = safe(visit.getMedUsed());
+            if (medicine.isBlank() || "none".equalsIgnoreCase(medicine)) continue;
+            try {
+                LocalDate visitDate = LocalDateTime.parse(visit.getCheckInTime(), format).toLocalDate();
+                if (visitDate.getYear() == month.getYear() && visitDate.getMonth() == month.getMonth()) {
+                    total += Math.max(0, visit.getmedsQty());
+                }
+            } catch (DateTimeParseException ignored) {
+                // A legacy malformed timestamp cannot be assigned to a month reliably.
+            }
+        }
+        return total;
+    }
+
+    /** Loads individual, non-empty health-condition and allergy categories for the statistics table. */
+    private Map<String, Integer> loadHealthConditionCounts() throws SQLException {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        String sql = "SELECT health_conditions, allergy FROM STUDENTS WHERE status = 'ACTIVE' "
+                + "AND ((health_conditions IS NOT NULL AND TRIM(health_conditions) <> '' "
+                + "AND UPPER(TRIM(health_conditions)) <> 'NONE') "
+                + "OR (allergy IS NOT NULL AND TRIM(allergy) <> '' "
+                + "AND UPPER(TRIM(allergy)) <> 'NONE'))";
+        try (java.sql.Connection conn = DatabaseManager.getConnection();
+                java.sql.PreparedStatement ps = conn.prepareStatement(sql);
+                java.sql.ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                addHealthCategories(counts, rs.getString("health_conditions"));
+                addHealthCategories(counts, rs.getString("allergy"));
+            }
+        }
+        return counts;
+    }
+
+    private static void addHealthCategories(Map<String, Integer> counts, String rawValue) {
+        if (rawValue == null || rawValue.isBlank()) return;
+        for (String value : rawValue.split(",")) {
+            String category = value.trim();
+            if (!category.isEmpty() && !"NONE".equalsIgnoreCase(category)) {
+                counts.merge(category, 1, Integer::sum);
+            }
+        }
     }
     
        /**

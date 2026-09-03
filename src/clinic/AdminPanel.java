@@ -51,6 +51,7 @@ public class AdminPanel extends javax.swing.JFrame {
         configureStudentManagement();
         configureInventoryControls();
         configureRoleBasedAccess();
+        applyModernAdminTheme();
         addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent event) {
@@ -58,6 +59,101 @@ public class AdminPanel extends javax.swing.JFrame {
             }
         });
         setLocationRelativeTo(null);
+    }
+
+    /** Styles only the administrative workspace; navigation actions/listeners remain untouched. */
+    private void applyModernAdminTheme() {
+        Color workspace = Color.decode("#F8F9FA");
+        Color white = Color.WHITE;
+        Color border = Color.decode("#E2E8F0");
+        jPanel1.setBackground(workspace);
+
+        for (javax.swing.JComponent card : new javax.swing.JComponent[]{
+                jPanel4, jPanel5, jPanel6, jPanel7, AccountManagementPanel}) {
+            card.setBackground(white);
+            card.setBorder(new AdminRoundedBorder(border, 12));
+        }
+        for (javax.swing.JScrollPane pane : new javax.swing.JScrollPane[]{
+                jScrollPane1, jScrollPane2, jScrollPane3, jScrollPane4}) {
+            pane.setBackground(white);
+            pane.getViewport().setBackground(white);
+            pane.setBorder(new AdminRoundedBorder(border, 12));
+        }
+
+        styleAdminTable(stockTable);
+        styleAdminTable(ReasonTable);
+        styleAdminTable(ACTTable);
+
+        for (javax.swing.JButton button : new javax.swing.JButton[]{
+                jButton8, jButton2, jButton3, RestockBTN, RestockBTN1, AddMedicineBTN,
+                CAdminBTN, CUserBTN, ResetPassword}) {
+            styleAdminButton(button, Color.decode("#2563EB"));
+        }
+        for (javax.swing.JButton button : new javax.swing.JButton[]{
+                jButton6, DeleteInventoryBTN, AccDeleteBTN}) {
+            styleAdminButton(button, Color.decode("#DC2626"));
+        }
+        styleAdminButton(jButton4, Color.decode("#1E293B"));
+    }
+
+    private static void styleAdminButton(javax.swing.JButton button, Color background) {
+        button.setBackground(background);
+        button.setForeground(Color.WHITE);
+        button.setFont(button.getFont().deriveFont(java.awt.Font.BOLD, 13f));
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.putClientProperty(FlatClientProperties.STYLE, "arc: 10");
+    }
+
+    private static void styleAdminTable(javax.swing.JTable table) {
+        Color headerBackground = Color.decode("#1E293B");
+        table.setRowHeight(38);
+        table.setShowVerticalLines(false);
+        table.setShowHorizontalLines(true);
+        table.setGridColor(Color.decode("#F1F5F9"));
+        table.setIntercellSpacing(new java.awt.Dimension(0, 1));
+        table.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 13));
+        javax.swing.table.JTableHeader header = table.getTableHeader();
+        header.setBackground(headerBackground);
+        header.setForeground(Color.WHITE);
+        header.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 13));
+        header.setPreferredSize(new java.awt.Dimension(header.getPreferredSize().width, 40));
+        header.setDefaultRenderer(new javax.swing.table.DefaultTableCellRenderer() {
+            @Override public java.awt.Component getTableCellRendererComponent(javax.swing.JTable source,
+                    Object value, boolean selected, boolean focused, int row, int column) {
+                super.getTableCellRendererComponent(source, value, selected, focused, row, column);
+                setOpaque(true);
+                setBackground(headerBackground);
+                setForeground(Color.WHITE);
+                setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 13));
+                setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 12, 0, 12));
+                return this;
+            }
+        });
+    }
+
+    private static final class AdminRoundedBorder extends javax.swing.border.AbstractBorder {
+        private final Color color;
+        private final int arc;
+
+        AdminRoundedBorder(Color color, int arc) {
+            this.color = color;
+            this.arc = arc;
+        }
+
+        @Override public java.awt.Insets getBorderInsets(java.awt.Component component) {
+            return new java.awt.Insets(1, 1, 1, 1);
+        }
+
+        @Override public void paintBorder(java.awt.Component component, java.awt.Graphics graphics,
+                int x, int y, int width, int height) {
+            java.awt.Graphics2D g = (java.awt.Graphics2D) graphics.create();
+            g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                    java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+            g.setColor(color);
+            g.drawRoundRect(x, y, width - 1, height - 1, arc, arc);
+            g.dispose();
+        }
     }
 
     /* Existing NetBeans mapping: jTextField1=search; jTextField2=name;
@@ -1710,7 +1806,7 @@ private void refreshAccountTable() {
 
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle("Save activity and clinic report");
-        chooser.setSelectedFile(new java.io.File("clinic-report-"
+        chooser.setSelectedFile(new java.io.File("Clinic_Report_"
                 + LocalDate.now() + ".xlsx"));
         chooser.setFileFilter(new FileNameExtensionFilter("Excel workbook (*.xlsx)", "xlsx"));
         if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return;
