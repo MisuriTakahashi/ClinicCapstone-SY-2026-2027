@@ -32,7 +32,7 @@ public class NameInputFilter extends DocumentFilter {
        }
 
        private boolean isValidNameText(String text) {
-           return text.matches("[\\p{L} .'-]*");
+           return text != null && text.matches("[a-zA-Z\\s\\-']*");
        }
        
        

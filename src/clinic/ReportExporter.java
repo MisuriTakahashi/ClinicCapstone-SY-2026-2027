@@ -53,6 +53,18 @@ public class ReportExporter {
 
     /** Writes the combined Check-in Logs + Inventory/Medicine Logs + Stock Overview + Statistics report as a real .xlsx workbook. */
    public boolean writeDailyReport(LocalDate date, File destination, String performedBy) throws SQLException, IOException {
+        return writeReport(date, destination, performedBy, true);
+    }
+
+    /**
+     * Exports the report scope allowed for the requesting role. Normal users
+     * receive only check-in logs; administrators receive the existing full report.
+     */
+    public boolean writeReport(LocalDate date, File destination, String performedBy,
+            boolean includeAdminSections) throws SQLException, IOException {
+        if (!includeAdminSections) {
+            return writeCheckinReport(date, destination, performedBy);
+        }
         String iso = date.toString();
         ArrayList<CheckinSystem> visits = visitData.getVisitsByDate(iso);
 
@@ -561,7 +573,7 @@ public class ReportExporter {
         return !visitData.getVisitsByDate(date.toString()).isEmpty();
     }
 
-    public void writeCheckinReport(LocalDate date, File destination, String performedBy) throws SQLException, IOException {
+    public boolean writeCheckinReport(LocalDate date, File destination, String performedBy) throws SQLException, IOException {
         String iso = date.toString();
 
         ArrayList<CheckinSystem> visits = visitData.getVisitsByDate(iso);
@@ -690,8 +702,10 @@ public class ReportExporter {
                 String details = "Exported check-in log report for " + iso
                         + " to: " + destination.getAbsolutePath();
                 ActivityLogData.log("EXPORT_REPORT", details, performedBy);
+                return true;
             } catch (SQLException logEx) {
                 System.err.println("Could not record EXPORT_REPORT activity log: " + logEx.getMessage());
+                return false;
             }
         }
     }

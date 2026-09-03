@@ -56,6 +56,9 @@ public class VisitData {
 
     void checkIn(Connection conn, String name, String gradeSection, String lrn, String reason, String medUsed,
                  int medsQty, String guardianName, String guardianPhone, String temperature) throws SQLException {
+        if (isCurrentlyCheckedIn(conn, lrn)) {
+            throw new SQLException("This student is already checked into the clinic.", "23505");
+        }
         String now = LocalDateTime.now().format(TIME_FORMAT);
         String sql = "INSERT INTO VISITS(name, grade_section, lrn, reason, med_used, meds_qty, "
                 + "check_in_time, status, guardian_name, guardian_phone, temperature) VALUES(?,?,?,?,?,?,?,?,?,?,?)";
@@ -65,6 +68,69 @@ public class VisitData {
             ps.setString(7, now); ps.setString(8, "In Clinic"); ps.setString(9, guardianName);
             ps.setString(10, guardianPhone); ps.setString(11, temperature == null ? "" : temperature);
             ps.executeUpdate();
+        }
+    }
+
+    private boolean isCurrentlyCheckedIn(Connection conn, String lrn) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT 1 FROM VISITS WHERE lrn = ? AND status = 'In Clinic' AND archived = FALSE")) {
+            ps.setString(1, lrn);
+            try (ResultSet rs = ps.executeQuery()) { return rs.next(); }
+        }
+    }
+
+    /** Saves an emergency as an active visit and an explicit structured audit payload. */
+    public CheckInResult checkInEmergency(String name, String gradeSection, EmergencyRecord emergency,
+            String guardianName, String guardianPhone, String performedBy) throws SQLException {
+        try (Connection conn = DatabaseManager.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                String reason = "EMERGENCY | " + emergency.emergencyType().getLabel()
+                        + " | " + emergency.description();
+                checkIn(conn, name, gradeSection, emergency.studentId(), reason, "None", 0,
+                        guardianName, guardianPhone, "");
+                ActivityLogData.log(conn, "EMERGENCY", "studentId=" + emergency.studentId()
+                        + "; category=" + emergency.emergencyType().name()
+                        + "; details=" + emergency.description()
+                        + "; timestamp=" + emergency.timestamp(), performedBy);
+                conn.commit();
+                return new CheckInResult(true, true);
+            } catch (SQLException | RuntimeException ex) {
+                conn.rollback();
+                throw ex;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    /** Attaches an emergency payload to an already-active visit without creating a duplicate visit. */
+    public boolean recordEmergencyForActiveVisit(EmergencyRecord emergency, String performedBy) throws SQLException {
+        String marker = " | EMERGENCY: " + emergency.emergencyType().getLabel() + " - "
+                + emergency.description();
+        String update = "UPDATE VISITS SET reason = CONCAT(COALESCE(reason, ''), ?) WHERE id = "
+                + "(SELECT id FROM VISITS WHERE lrn = ? AND status = 'In Clinic' AND archived = FALSE "
+                + "ORDER BY id ASC LIMIT 1)";
+        try (Connection conn = DatabaseManager.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement ps = conn.prepareStatement(update)) {
+                ps.setString(1, marker);
+                ps.setString(2, emergency.studentId());
+                boolean updated = ps.executeUpdate() > 0;
+                if (updated) {
+                    ActivityLogData.log(conn, "EMERGENCY", "studentId=" + emergency.studentId()
+                            + "; category=" + emergency.emergencyType().name()
+                            + "; details=" + emergency.description()
+                            + "; timestamp=" + emergency.timestamp(), performedBy);
+                }
+                conn.commit();
+                return updated;
+            } catch (SQLException | RuntimeException ex) {
+                conn.rollback();
+                throw ex;
+            } finally {
+                conn.setAutoCommit(true);
+            }
         }
     }
  
@@ -269,6 +335,31 @@ private static String buildCheckInLogDetails(
             return ps.executeUpdate(); // returns how many rows were archived
         }
 }
+
+    /** Archives exactly one selected visit without deleting its audit history. */
+    public boolean archiveVisit(String lrn, String checkInTime, String performedBy) throws SQLException {
+        String sql = "UPDATE VISITS SET archived = TRUE WHERE id = (SELECT id FROM VISITS "
+                + "WHERE lrn = ? AND check_in_time = ? AND archived = FALSE ORDER BY id ASC LIMIT 1)";
+        try (Connection conn = DatabaseManager.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, lrn);
+                ps.setString(2, checkInTime);
+                boolean updated = ps.executeUpdate() > 0;
+                if (updated) {
+                    ActivityLogData.log(conn, "ARCHIVE_VISIT", "Archived clinic visit for LRN: "
+                            + lrn + " (check-in: " + checkInTime + ").", performedBy);
+                }
+                conn.commit();
+                return updated;
+            } catch (SQLException | RuntimeException ex) {
+                conn.rollback();
+                throw ex;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
     
     /** Same as loadAll(), but excludes archived visits — used for the "current" check-in view. */
     public ArrayList<CheckinSystem> loadActive() throws SQLException {

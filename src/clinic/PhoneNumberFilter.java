@@ -15,7 +15,7 @@ import javax.swing.text.DocumentFilter;
  */
 public class PhoneNumberFilter extends DocumentFilter {
 
-    private static final int MAX_DIGITS = 11;
+    private static final int MAX_LENGTH = 11; // 09 followed by 9 digits
 
     @Override
     public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr)
@@ -34,19 +34,11 @@ public class PhoneNumberFilter extends DocumentFilter {
 
         if (text == null) text = "";
 
-        // Strip non-digits instead of rejecting the whole paste — keeps
-        // pasting "0912-345-6789" or "0912 345 6789" from feeling broken.
-        String digitsOnly = text.replaceAll("\\D", "");
-
-        int currentLength = fb.getDocument().getLength();
-        int roomLeft = MAX_DIGITS - (currentLength - length);
-
-        if (roomLeft <= 0) return; // already at the limit
-
-        if (digitsOnly.length() > roomLeft) {
-            digitsOnly = digitsOnly.substring(0, roomLeft);
+        String current = fb.getDocument().getText(0, fb.getDocument().getLength());
+        String candidate = current.substring(0, offset) + text + current.substring(offset + length);
+        // Permit partial editing, but only numeric characters in an 11-digit field.
+        if (candidate.length() <= MAX_LENGTH && candidate.matches("^\\d*$")) {
+            super.replace(fb, offset, length, text, attrs);
         }
-
-        super.replace(fb, offset, length, digitsOnly, attrs);
     }
 }

@@ -64,6 +64,7 @@ public class AdminPanel extends javax.swing.JFrame {
        jTextField3=grade/section; jTextField4=LRN; jTextField5=allergy;
        jTextField6=health condition; jTextField7=parent; jTextField8=phone. */
     private void configureStudentManagement() {
+        installStudentInputConstraints();
         clearStudentForm();
         ReasonTable.setRowHeight(30);
         ReasonTable.setShowVerticalLines(false);
@@ -91,6 +92,46 @@ public class AdminPanel extends javax.swing.JFrame {
             @Override public void changedUpdate(DocumentEvent e) { filterStudents(); }
         });
         loadStudents();
+    }
+
+    /** Restrict typing/pasting; readStudentForm remains the authoritative validation. */
+    private void installStudentInputConstraints() {
+        setFilter(NameField, new NameInputFilter());
+        setFilter(AdviserField, new NameInputFilter());
+        setFilter(ParentField, new RegexInputFilter("[a-zA-Z\\s]", 255));
+        setFilter(LrnField, new RegexInputFilter("\\d", 12));
+        setFilter(GradeSectionField, new RegexInputFilter("[a-zA-Z0-9\\s\\-]", 100));
+        setFilter(AllergyField, new RegexInputFilter("[a-zA-Z\\s,\\-]", 500));
+        setFilter(HealthConditionField, new RegexInputFilter("[a-zA-Z0-9\\s,.()\\-]", 1000));
+        setFilter(PhoneField, new PhoneNumberFilter());
+    }
+
+    private static void setFilter(javax.swing.JTextField field, javax.swing.text.DocumentFilter filter) {
+        ((javax.swing.text.AbstractDocument) field.getDocument()).setDocumentFilter(filter);
+    }
+
+    private static final class RegexInputFilter extends javax.swing.text.DocumentFilter {
+        private final String permittedCharacter;
+        private final int maxLength;
+
+        RegexInputFilter(String permittedCharacter, int maxLength) {
+            this.permittedCharacter = permittedCharacter;
+            this.maxLength = maxLength;
+        }
+
+        @Override public void insertString(FilterBypass fb, int offset, String text,
+                javax.swing.text.AttributeSet attrs) throws javax.swing.text.BadLocationException {
+            replace(fb, offset, 0, text, attrs);
+        }
+
+        @Override public void replace(FilterBypass fb, int offset, int length, String text,
+                javax.swing.text.AttributeSet attrs) throws javax.swing.text.BadLocationException {
+            String replacement = text == null ? "" : text;
+            String current = fb.getDocument().getText(0, fb.getDocument().getLength());
+            String candidate = current.substring(0, offset) + replacement + current.substring(offset + length);
+            if (candidate.length() <= maxLength && candidate.matches("(?:" + permittedCharacter + ")*"))
+                super.replace(fb, offset, length, replacement, attrs);
+        }
     }
 
     /** Restores explicit colours/text after FlatLaf has initialized the form. */
@@ -334,8 +375,8 @@ public class AdminPanel extends javax.swing.JFrame {
                 "Add Medicine", JOptionPane.QUESTION_MESSAGE);
         if (name == null) return;
         name = name.trim();
-        if (name.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "A medicine name is required.",
+        if (!ValidationUtils.isValidMedicineText(name)) {
+            JOptionPane.showMessageDialog(this, "Enter a valid medicine name (letters first; limited standard punctuation only).",
                     "Invalid Details", JOptionPane.WARNING_MESSAGE);
             return;
         }
@@ -345,8 +386,8 @@ public class AdminPanel extends javax.swing.JFrame {
                 "Add Medicine", JOptionPane.QUESTION_MESSAGE);
         if (purpose == null) return;
         purpose = purpose.trim();
-        if (purpose.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "A medicine purpose is required so the system can make suggestions.",
+        if (!ValidationUtils.isValidMedicineText(purpose)) {
+            JOptionPane.showMessageDialog(this, "Enter a valid medicine purpose using letters, numbers, and standard punctuation.",
                     "Purpose Required", JOptionPane.WARNING_MESSAGE);
             return;
         }
@@ -472,8 +513,8 @@ public class AdminPanel extends javax.swing.JFrame {
                     "What is this medicine for? (Example: fever / lagnat):", medicine.getPurpose());
             if (purpose == null) return;
             purpose = purpose.trim();
-            if (purpose.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "A medicine purpose is required.",
+            if (!ValidationUtils.isValidMedicineText(newName) || !ValidationUtils.isValidMedicineText(purpose)) {
+                JOptionPane.showMessageDialog(this, "Enter a valid medicine name and purpose using letters, numbers, and standard punctuation.",
                         "Purpose Required", JOptionPane.WARNING_MESSAGE);
                 return;
             }
@@ -486,7 +527,7 @@ public class AdminPanel extends javax.swing.JFrame {
             final int quantity;
             try {
                 quantity = Integer.parseInt(rawQuantity.trim());
-                if (quantity < 0 || newName.trim().isEmpty()) throw new NumberFormatException();
+                if (quantity < 0) throw new NumberFormatException();
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "Provide a product name and a non-negative whole quantity.",
                         "Invalid Details", JOptionPane.WARNING_MESSAGE);
@@ -549,7 +590,24 @@ public class AdminPanel extends javax.swing.JFrame {
         if (form.name().isEmpty() || form.gradeSection().isEmpty() || form.lrn().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Name, Grade & Section, and LRN are required.", "Validation Error", JOptionPane.WARNING_MESSAGE); return null;
         }
+        String error = validationError(form);
+        if (error != null) {
+            JOptionPane.showMessageDialog(this, error, "Validation Error", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
         return form;
+    }
+
+    private static String validationError(StudentForm form) {
+        if (!ValidationUtils.isValidName(form.name())) return "Student name may contain letters, spaces, hyphens, and apostrophes only.";
+        if (!ValidationUtils.isValidGradeSection(form.gradeSection())) return "Grade & Section may contain letters, numbers, spaces, and hyphens only.";
+        if (!ValidationUtils.isValidLRN(form.lrn())) return "LRN must contain exactly 12 digits.";
+        if (!form.teacher().isBlank() && !ValidationUtils.isValidName(form.teacher())) return "Teacher / adviser name may contain letters, spaces, hyphens, and apostrophes only.";
+        if (!form.allergy().isBlank() && !ValidationUtils.isValidAllergy(form.allergy())) return "Allergies may contain letters, spaces, commas, and hyphens only.";
+        if (!form.healthConditions().isBlank() && !ValidationUtils.isValidHealthCondition(form.healthConditions())) return "Health condition contains unsupported characters.";
+        if (!form.parentName().isBlank() && !ValidationUtils.isValidGuardianName(form.parentName())) return "Parent / guardian name may contain letters and spaces only.";
+        if (!form.phoneNumber().isBlank() && !ValidationUtils.isValidPhoneNumber(form.phoneNumber())) return "Phone number must contain 11 digits beginning with 09 (example: 09175550123).";
+        return null;
     }
     private void addStudent() {
         if (!requireHeadAdmin("manage student records")) return;
@@ -641,7 +699,7 @@ public class AdminPanel extends javax.swing.JFrame {
                 for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
                     Row row = sheet.getRow(rowIndex);
                     StudentForm form = rowToStudent(row, formatter, columns);
-                    if (form == null) { invalid++; continue; }
+                    if (form == null || validationError(form) != null) { invalid++; continue; }
                     duplicateCheck.setString(1, form.lrn());
                     try (ResultSet result = duplicateCheck.executeQuery()) {
                         if (result.next()) { duplicates++; continue; }
@@ -658,39 +716,30 @@ public class AdminPanel extends javax.swing.JFrame {
     }
     private void showInvalidStudentImportFile() {
         JOptionPane.showMessageDialog(this,
-                "Invalid Excel File Format!\nPlease upload a valid Student Information Excel file with LRN, Name, Grade & Section headers.",
+                "Invalid Excel File Format!\nPlease use these headers in columns A-H: LRN, Name, Grade & Section, Teacher/Adviser, Allergy, Health Condition, Parent/Guardian Name, Phone Number.",
                 "Import Error - Invalid File", JOptionPane.ERROR_MESSAGE);
     }
     private StudentImportColumns validateStudentImportHeader(Row header, DataFormatter formatter) {
         if (header == null) return null;
-        Map<String, Integer> indexes = new HashMap<>();
-        boolean hasVisitLogHeader = false;
-        for (int column = 0; column < header.getLastCellNum(); column++) {
-            String value = cell(header, column, formatter).toLowerCase(java.util.Locale.ROOT);
-            if (value.isEmpty()) continue;
-            if (value.equals("medicine used") || value.equals("reason") || value.equals("status") || value.equals("medicine quantity")) hasVisitLogHeader = true;
-            indexes.putIfAbsent(value, column);
+        String[] expectedHeaders = {
+            "lrn", "name", "grade & section", "teacher/adviser", "allergy",
+            "health condition", "parent/guardian name", "phone number"
+        };
+        for (int column = 0; column < expectedHeaders.length; column++) {
+            String actualHeader = cell(header, column, formatter).toLowerCase(java.util.Locale.ROOT);
+            if (!expectedHeaders[column].equals(actualHeader)) return null;
         }
-        if (hasVisitLogHeader) return null;
-        int lrn = headerIndex(indexes, "lrn", "student lrn");
-        int name = headerIndex(indexes, "name", "student name");
-        int grade = headerIndex(indexes, "grade", "grade & section", "section");
-        if (lrn < 0 || name < 0 || grade < 0) return null;
-        return new StudentImportColumns(name, grade, lrn,
-                headerIndex(indexes, "teacher", "adviser", "teacher/adviser", "teacher / adviser"),
-                headerIndex(indexes, "allergy", "allergies"),
-                headerIndex(indexes, "health condition", "health conditions"),
-                headerIndex(indexes, "parent/guardian name", "parent name", "guardian name"),
-                headerIndex(indexes, "phone number", "phone", "contact number"));
+        // The spreadsheet layout is fixed: A through H map directly to these fields.
+        return new StudentImportColumns(1, 2, 0, 3, 4, 5, 6, 7);
     }
-    private int headerIndex(Map<String, Integer> indexes, String... names) { for (String name : names) { Integer index = indexes.get(name); if (index != null) return index; } return -1; }
     private StudentForm rowToStudent(Row row, DataFormatter formatter, StudentImportColumns columns) {
         if (row == null) return null;
         String name = cell(row, columns.name(), formatter), grade = cell(row, columns.grade(), formatter), lrn = cell(row, columns.lrn(), formatter);
         if (name.isEmpty() && grade.isEmpty() && lrn.isEmpty()) return null;
         // LRN is mandatory; incomplete student rows are intentionally skipped.
         if (lrn.isEmpty() || name.isEmpty() || grade.isEmpty()) return null;
-        return new StudentForm(name, grade, lrn, cell(row, columns.teacher(), formatter), cell(row, columns.allergy(), formatter), cell(row, columns.healthConditions(), formatter), cell(row, columns.parentName(), formatter), cell(row, columns.phoneNumber(), formatter));
+        StudentForm form = new StudentForm(name, grade, lrn, cell(row, columns.teacher(), formatter), cell(row, columns.allergy(), formatter), cell(row, columns.healthConditions(), formatter), cell(row, columns.parentName(), formatter), cell(row, columns.phoneNumber(), formatter));
+        return validationError(form) == null ? form : null;
     }
     private String cell(Row row, int index, DataFormatter formatter) { if (row == null || index < 0) return ""; Cell cell = row.getCell(index, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL); return cell == null ? "" : formatter.formatCellValue(cell).trim(); }
     private void showDatabaseError(String action, SQLException ex) { JOptionPane.showMessageDialog(this, "Error " + action + ": " + ex.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE); }
@@ -940,8 +989,8 @@ public class AdminPanel extends javax.swing.JFrame {
         javax.swing.GroupLayout jPanel5Layout = new javax.swing.GroupLayout(jPanel5);
         jPanel5.setLayout(jPanel5Layout);
         jPanel5Layout.setHorizontalGroup(
-            jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel5Layout.createSequentialGroup()
+            jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+            .addGroup(jPanel5Layout.createSequentialGroup()
                 .addContainerGap(407, Short.MAX_VALUE)
                 .addComponent(jLabel2)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -950,16 +999,16 @@ public class AdminPanel extends javax.swing.JFrame {
                 .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
             .addGroup(jPanel5Layout.createSequentialGroup()
-                .addGap(92, 92, 92)
+                .addGap(80, 80, 80)
                 .addComponent(jButton8)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 116, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jButton3)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jButton6, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jButton6, javax.swing.GroupLayout.PREFERRED_SIZE, 132, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
             .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addGroup(jPanel5Layout.createSequentialGroup()
@@ -1586,8 +1635,8 @@ private void refreshAccountTable() {
         ExportBTN.setEnabled(false);
         DatabaseExecutor.run(() -> {
             ReportExporter exporter = new ReportExporter(new MedicineData());
-            boolean auditLogged = exporter.writeDailyReport(LocalDate.now(), reportFile,
-                    loggedInAccount.GetName());
+            boolean auditLogged = exporter.writeReport(LocalDate.now(), reportFile,
+                    loggedInAccount.GetName(), true);
             return new ExportOutcome(reportFile, auditLogged);
         }, outcome -> {
             ExportBTN.setEnabled(true);

@@ -43,11 +43,17 @@ public class Dashboard extends javax.swing.JFrame {
     private javax.swing.JLabel homeLowStockValue;
     private SymptomChartPanel homeSymptomChart;
     private WeeklyBarChartPanel weeklyBarChart;
-    private StatusPieChartPanel statusPieChart;
+    private HealthConditionsPieChartPanel healthConditionsPieChart;
     private javax.swing.JLabel statisticSpecialNeedsValue;
     private javax.swing.JLabel statisticAllergyValue;
     private javax.swing.JLabel statisticMedicineValue;
     private javax.swing.JLabel statisticSentHomeValue;
+    private final javax.swing.JButton popupEmergencyBTN = new javax.swing.JButton("Emergency");
+    private final javax.swing.JButton expressEmergencyBTN = new javax.swing.JButton("Emergency");
+    private final javax.swing.JButton expressDispositionBTN = new javax.swing.JButton("Send Home / Back");
+    private final javax.swing.JButton archiveVisitBTN = new javax.swing.JButton("Archive Selected");
+    private final javax.swing.JButton exportReportBTN = new javax.swing.JButton("Export Report");
+    private java.util.List<CheckinSystem> recentVisits = java.util.List.of();
 
     public Dashboard(AccountSystem account) {
         loggedInAccount = account;
@@ -224,6 +230,7 @@ public class Dashboard extends javax.swing.JFrame {
     private void configureStatistics() {
         setupHomeStatistics();
         setupStatisticCards();
+        configureIncidentLogTable();
         setupStatisticCharts();
 
         // The generated form already contains the titles. The values are kept
@@ -296,9 +303,10 @@ public class Dashboard extends javax.swing.JFrame {
 
     private void setupStatisticCharts() {
         weeklyBarChart = new WeeklyBarChartPanel();
-        statusPieChart = new StatusPieChartPanel();
+        healthConditionsPieChart = new HealthConditionsPieChartPanel();
+        jLabel28.setText("Health Conditions & Allergies");
         installChartInExistingPanel(jPanel4, weeklyBarChart, jLabel22, 8);
-        installChartInExistingPanel(jPanel14, statusPieChart, jLabel28, 8);
+        installChartInExistingPanel(jPanel14, healthConditionsPieChart, jLabel28, 8);
     }
 
     private void refreshStatistics() {
@@ -310,7 +318,7 @@ public class Dashboard extends javax.swing.JFrame {
 
             if (homeSymptomChart != null) homeSymptomChart.setData(stats.weeklySymptoms);
             if (weeklyBarChart != null) weeklyBarChart.setData(stats.weekdayCounts);
-            if (statusPieChart != null) statusPieChart.setData(stats.statusCounts);
+            if (healthConditionsPieChart != null) healthConditionsPieChart.setData(stats.healthConditionCounts);
 
             updateStatisticCards(stats);
             loadEmergencyIncidentLog();
@@ -321,59 +329,89 @@ public class Dashboard extends javax.swing.JFrame {
     }
 
     private void setupStatisticCards() {
-        statisticSpecialNeedsValue = createStatisticCardValue(jPanel5, jLabel6);
-        statisticAllergyValue = createStatisticCardValue(jPanel6, jLabel21);
-        statisticMedicineValue = createStatisticCardValue(jPanel7, jLabel23);
-        statisticSentHomeValue = createStatisticCardValue(jPanel13, jLabel24);
+        statisticSpecialNeedsValue = createStatisticCardValue(jPanel5, jLabel6,
+                "Number of Student with Special Needs");
+        statisticAllergyValue = createStatisticCardValue(jPanel6, jLabel21,
+                "Number of Student with Allergy");
+        statisticMedicineValue = createStatisticCardValue(jPanel7, jLabel23,
+                "Total Medicine Used this Month");
+        statisticSentHomeValue = createStatisticCardValue(jPanel13, jLabel24,
+                "Total of Student Sent home / Referred to Hospital");
     }
 
-    private javax.swing.JLabel createStatisticCardValue(javax.swing.JPanel card, javax.swing.JLabel legacyLabel) {
-        // The NetBeans form gives the original labels a 15px height. That is
-        // enough for the old one-line captions, but not for the new two-line
-        // statistic text, which caused the top of the text to be clipped.
-        // Keep the original component for the form/layout and place a visual
-        // value label over it without changing the card's size or appearance.
+    private javax.swing.JLabel createStatisticCardValue(javax.swing.JPanel card,
+            javax.swing.JLabel legacyLabel, String titleText) {
+        // The form-generated title labels are only 15px tall. Replace their
+        // visual role with independently positioned title/value labels so a
+        // wrapped title cannot clip the metric in compact card sizes.
         legacyLabel.setVisible(false);
-
+        card.setMinimumSize(new java.awt.Dimension(245, 112));
+        card.setPreferredSize(new java.awt.Dimension(245, 112));
         javax.swing.JLabel value = new javax.swing.JLabel("0", javax.swing.SwingConstants.CENTER);
-        value.setFont(legacyLabel.getFont());
-        value.setForeground(legacyLabel.getForeground());
+        value.setFont(new Font("Yu Gothic UI", Font.BOLD, 32));
         value.setOpaque(false);
+        javax.swing.JLabel title = new javax.swing.JLabel("<html><div style='width:220px;'>"
+                + escapeHtml(titleText) + "</div></html>", javax.swing.SwingConstants.LEFT);
+        title.setFont(new Font("Yu Gothic UI", Font.BOLD, 12));
+        title.setVerticalAlignment(javax.swing.SwingConstants.TOP);
+        title.setOpaque(false);
+        java.awt.Color background = card.getBackground() == null
+                ? UIManager.getColor("Panel.background") : card.getBackground();
+        if (background == null) background = java.awt.Color.WHITE;
+        int brightness = (background.getRed() * 299 + background.getGreen() * 587
+                + background.getBlue() * 114) / 1000;
+        java.awt.Color foreground = brightness < 145 ? java.awt.Color.WHITE : new java.awt.Color(31, 41, 55);
+        title.setForeground(foreground);
+        value.setForeground(foreground);
         card.setLayout(null);
+        card.add(title);
         card.add(value);
+        card.setComponentZOrder(title, 0);
         card.setComponentZOrder(value, 0);
-        positionStatisticCardValue(card, value);
+        positionStatisticCardValue(card, title, value);
         card.addComponentListener(new java.awt.event.ComponentAdapter() {
             @Override public void componentResized(java.awt.event.ComponentEvent e) {
-                positionStatisticCardValue(card, value);
+                positionStatisticCardValue(card, title, value);
             }
         });
         return value;
     }
 
-    private void positionStatisticCardValue(javax.swing.JPanel card, javax.swing.JLabel value) {
-        int width = Math.max(80, card.getWidth() - 20);
-        int height = Math.max(55, Math.min(82, card.getHeight() - 20));
-        int x = Math.max(0, (card.getWidth() - width) / 2);
-        int y = Math.max(10, (card.getHeight() - height) / 2);
-        value.setBounds(x, y, width, height);
+    private void positionStatisticCardValue(javax.swing.JPanel card, javax.swing.JLabel title,
+            javax.swing.JLabel value) {
+        int width = Math.max(80, card.getWidth() - 24);
+        title.setBounds(12, 10, width, 36);
+        int valueY = 47;
+        value.setBounds(12, valueY, width, Math.max(46, card.getHeight() - valueY - 10));
     }
 
     private void updateStatisticCards(DashboardStatistics stats) {
-        setStatisticCardText(statisticSpecialNeedsValue, "Number of Student with Special Needs", stats.specialNeeds);
-        setStatisticCardText(statisticAllergyValue, "Number of Student with Allergy", stats.allergies);
-        setStatisticCardText(statisticMedicineValue, "Total Medicine Used this Month", stats.medicineUsedThisMonth);
-        setStatisticCardText(statisticSentHomeValue, "Total of Student Sent home/ Referred to Hospital", stats.sentHomeOrBack);
+        setStatisticCardText(statisticSpecialNeedsValue, stats.specialNeeds);
+        setStatisticCardText(statisticAllergyValue, stats.allergies);
+        setStatisticCardText(statisticMedicineValue, stats.medicineUsedThisMonth);
+        setStatisticCardText(statisticSentHomeValue, stats.sentHomeOrBack);
     }
 
-    private void setStatisticCardText(javax.swing.JLabel label, String title, int value) {
+    private void setStatisticCardText(javax.swing.JLabel label, int value) {
         if (label == null) {
             return;
         }
-        label.setText("<html><div style='text-align:center; line-height:1.15;'>"
-                + escapeHtml(title) + "<br><b><font size='6'>" + value + "</font></b></div></html>");
+        label.setText(Integer.toString(value));
         label.setVerticalAlignment(javax.swing.SwingConstants.CENTER);
         label.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+    }
+
+    private void configureIncidentLogTable() {
+        jTable2.getColumnModel().getColumn(0).setHeaderValue("Date");
+        jTable2.getTableHeader().repaint();
+        javax.swing.table.DefaultTableCellRenderer left = new javax.swing.table.DefaultTableCellRenderer();
+        left.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        javax.swing.table.DefaultTableCellRenderer center = new javax.swing.table.DefaultTableCellRenderer();
+        center.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        jTable2.getColumnModel().getColumn(0).setCellRenderer(left);
+        jTable2.getColumnModel().getColumn(1).setCellRenderer(left);
+        jTable2.getColumnModel().getColumn(2).setCellRenderer(left);
+        jTable2.getColumnModel().getColumn(3).setCellRenderer(center);
     }
 
     private static DashboardStatistics loadDashboardStatistics() throws java.sql.SQLException {
@@ -391,10 +429,7 @@ public class Dashboard extends javax.swing.JFrame {
         int medicineUsedThisMonth = 0;
         int sentHomeOrBack = 0;
         Map<String, Integer> symptoms = new LinkedHashMap<>();
-        Map<String, Integer> statuses = new LinkedHashMap<>();
-        statuses.put("In Clinic", 0);
-        statuses.put("Sent Home", 0);
-        statuses.put("Sent Back", 0);
+        Map<String, Integer> healthConditions = new LinkedHashMap<>();
 
         try (Connection conn = DatabaseManager.getConnection()) {
             // VISITS stores check_in_time as yyyy-MM-dd hh:mm a. Prefix matching
@@ -419,7 +454,6 @@ public class Dashboard extends javax.swing.JFrame {
                     if (date != null) {
                         if (date.equals(today)) totalToday++;
                         if (date.isEqual(monday) || (date.isAfter(monday) && date.isBefore(friday.plusDays(1)))) {
-                            weekdays[date.getDayOfWeek().getValue() - 1]++;
                             if (!reason.isBlank()) {
                                 String normalized = reason.trim();
                                 symptoms.merge(normalized, 1, Integer::sum);
@@ -433,7 +467,18 @@ public class Dashboard extends javax.swing.JFrame {
 
                     if ("In Clinic".equalsIgnoreCase(status)) activeVisits++;
                     if ("Sent Home".equalsIgnoreCase(status) || "Sent Back".equalsIgnoreCase(status)) sentHomeOrBack++;
-                    if (statuses.containsKey(status)) statuses.put(status, statuses.get(status) + 1);
+                }
+            }
+
+            // The weekly chart represents every check-in logged this work week,
+            // including visits later archived from the active-visit table.
+            try (PreparedStatement ps = conn.prepareStatement("SELECT check_in_time FROM VISITS");
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    LocalDate date = parseVisitDate(rs.getString("check_in_time"));
+                    if (date != null && !date.isBefore(monday) && !date.isAfter(friday)) {
+                        weekdays[date.getDayOfWeek().getValue() - 1]++;
+                    }
                 }
             }
 
@@ -452,6 +497,17 @@ public class Dashboard extends javax.swing.JFrame {
             }
 
             try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT health_conditions, allergy FROM STUDENTS WHERE status = 'ACTIVE' "
+                    + "AND ((health_conditions IS NOT NULL AND TRIM(health_conditions) <> '') "
+                    + "OR (allergy IS NOT NULL AND TRIM(allergy) <> ''))");
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    addHealthConditionCounts(healthConditions, rs.getString("health_conditions"));
+                    addHealthConditionCounts(healthConditions, rs.getString("allergy"));
+                }
+            }
+
+            try (PreparedStatement ps = conn.prepareStatement(
                     "SELECT COUNT(*) FROM MEDICINES WHERE quantity <= 10");
                  ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) lowStock = rs.getInt(1);
@@ -461,7 +517,16 @@ public class Dashboard extends javax.swing.JFrame {
 
         return new DashboardStatistics(totalToday, activeVisits, highTemps, lowStock,
                 specialNeeds, allergies, medicineUsedThisMonth, sentHomeOrBack,
-                weekdays, symptoms, statuses);
+                weekdays, symptoms, healthConditions);
+    }
+
+    /** Adds comma-separated health conditions/allergies as individual chart categories. */
+    private static void addHealthConditionCounts(Map<String, Integer> counts, String rawValue) {
+        if (rawValue == null || rawValue.isBlank()) return;
+        for (String value : rawValue.split(",")) {
+            String condition = value.trim();
+            if (!condition.isEmpty()) counts.merge(condition, 1, Integer::sum);
+        }
     }
 
     private static boolean columnExists(Connection conn, String table, String column)
@@ -514,7 +579,7 @@ public class Dashboard extends javax.swing.JFrame {
             int totalToday, int activeVisits, int highTemps, int lowStock,
             int specialNeeds, int allergies, int medicineUsedThisMonth, int sentHomeOrBack,
             int[] weekdayCounts, Map<String, Integer> weeklySymptoms,
-            Map<String, Integer> statusCounts) {}
+            Map<String, Integer> healthConditionCounts) {}
 
     private abstract static class BaseChartPanel extends javax.swing.JPanel {
         protected static final Color TEXT = new Color(15, 23, 42);
@@ -585,7 +650,7 @@ public class Dashboard extends javax.swing.JFrame {
         }
     }
 
-    private static final class StatusPieChartPanel extends BaseChartPanel {
+    private static final class HealthConditionsPieChartPanel extends BaseChartPanel {
         private Map<String, Integer> values = new LinkedHashMap<>();
 
         void setData(Map<String, Integer> data) {
@@ -632,7 +697,8 @@ public class Dashboard extends javax.swing.JFrame {
                 g.setColor(chartColor(idx));
                 g.fillRoundRect(legendX, legendY - 10, 10, 10, 3, 3);
                 g.setColor(TEXT);
-                String text = entry.getKey() + " (" + value + ")";
+                int percentage = (int) Math.round(value * 100.0 / total);
+                String text = entry.getKey() + " (" + value + ", " + percentage + "%)";
                 g.drawString(text, legendX + 16, legendY);
                 legendY += 24;
                 idx++;
@@ -690,11 +756,19 @@ public class Dashboard extends javax.swing.JFrame {
     }
 
     private void configureClinicWorkflow() {
+        installExpressActionButtons();
         jButton2.addActionListener(e -> findExpressStudent());
         LrnField.addActionListener(e -> findExpressStudent());
         ECheckin.addActionListener(e -> submitExpressCheckin());
         jButton1.addActionListener(e -> submitPopupCheckin());
+        popupEmergencyBTN.addActionListener(e -> showEmergencyPrompt(selectedStudent));
+        expressEmergencyBTN.addActionListener(e -> showEmergencyPrompt(selectedStudent));
+        expressDispositionBTN.addActionListener(e -> sendExpressStudentHomeOrBack());
+        archiveVisitBTN.addActionListener(e -> archiveSelectedRecentVisit());
+        exportReportBTN.addActionListener(e -> exportRoleScopedReport());
+        ReasonTable.setModel(createCheckInTableModel());
         ReasonTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        jTable1.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         ReasonTable.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) selectStudentFromChooser();
         });
@@ -717,6 +791,43 @@ public class Dashboard extends javax.swing.JFrame {
         loadStudentChooser("");
         loadMedicineChoices();
         refreshRecentVisits();
+    }
+
+    /** Keeps the Check-In view limited to the five student-identification fields. */
+    private static DefaultTableModel createCheckInTableModel() {
+        return new DefaultTableModel(new Object[]{"Name", "Grade & Section", "LRN",
+            "Parent/Guardian Name", "Phone Number"}, 0) {
+            @Override public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+    }
+
+    /** Adds the express actions without relying on generated form coordinates. */
+    private void installExpressActionButtons() {
+        jPanel8.removeAll();
+        jPanel8.setLayout(new java.awt.GridBagLayout());
+        java.awt.GridBagConstraints c = new java.awt.GridBagConstraints();
+        c.insets = new java.awt.Insets(4, 8, 4, 8);
+        c.anchor = java.awt.GridBagConstraints.WEST;
+        c.gridx = 0; c.gridy = 0; jPanel8.add(jLabel14, c);
+        c.gridx = 1; c.fill = java.awt.GridBagConstraints.HORIZONTAL; c.weightx = 1; jPanel8.add(LrnField, c);
+        c.gridx = 2; c.weightx = 0; jPanel8.add(jButton2, c);
+        c.gridx = 0; c.gridy++; c.fill = java.awt.GridBagConstraints.NONE; jPanel8.add(jLabel15, c);
+        c.gridx = 1; c.gridwidth = 2; c.fill = java.awt.GridBagConstraints.HORIZONTAL; jPanel8.add(NameField, c);
+        c.gridx = 0; c.gridy++; c.gridwidth = 1; c.fill = java.awt.GridBagConstraints.NONE; jPanel8.add(jLabel16, c);
+        c.gridx = 1; c.gridwidth = 2; c.fill = java.awt.GridBagConstraints.HORIZONTAL; jPanel8.add(ReasonField, c);
+        c.gridx = 0; c.gridy++; c.gridwidth = 1; c.fill = java.awt.GridBagConstraints.NONE; jPanel8.add(jLabel18, c);
+        c.gridx = 1; c.gridwidth = 2; c.fill = java.awt.GridBagConstraints.HORIZONTAL; jPanel8.add(TempField, c);
+        c.gridx = 0; c.gridy++; c.gridwidth = 1; c.fill = java.awt.GridBagConstraints.NONE; jPanel8.add(jLabel17, c);
+        c.gridx = 1; c.gridwidth = 2; c.fill = java.awt.GridBagConstraints.HORIZONTAL; jPanel8.add(MedicineField, c);
+        c.gridx = 0; c.gridy++; c.gridwidth = 1; c.fill = java.awt.GridBagConstraints.HORIZONTAL; jPanel8.add(ECheckin, c);
+        c.gridx = 1; jPanel8.add(expressEmergencyBTN, c);
+        c.gridx = 2; jPanel8.add(expressDispositionBTN, c);
+        c.gridx = 0; c.gridy++; jPanel8.add(archiveVisitBTN, c);
+        c.gridx = 1; c.gridwidth = 2; jPanel8.add(exportReportBTN, c);
+        jPanel8.revalidate();
+        jPanel8.repaint();
     }
     private class DimmingOverlay extends javax.swing.JPanel {
     public DimmingOverlay() {
@@ -750,7 +861,7 @@ public class Dashboard extends javax.swing.JFrame {
     StudentCheckinLabel.setText("Student Check-in");
 
     for (javax.swing.JLabel label : new javax.swing.JLabel[]{jLabel7, jLabel8,
-            LRNLabel, jLabel9, jLabel29, jLabel11}) {
+             LRNLabel, jLabel9, jLabel29, jLabel11, jLabel30}) {
         label.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 13));
         label.setForeground(new java.awt.Color(71, 85, 105));
     }
@@ -769,6 +880,11 @@ public class Dashboard extends javax.swing.JFrame {
     jButton1.setBorderPainted(false);
     jButton1.setFocusPainted(false);
 
+    popupEmergencyBTN.setBackground(new java.awt.Color(185, 28, 28));
+    popupEmergencyBTN.setForeground(java.awt.Color.WHITE);
+    popupEmergencyBTN.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.BOLD, 13));
+    popupEmergencyBTN.setBorderPainted(false);
+
     CancelCheckinBTN.setText("Cancel");
     CancelCheckinBTN.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 13));
     CancelCheckinBTN.setForeground(new java.awt.Color(100, 116, 139));
@@ -784,7 +900,7 @@ public class Dashboard extends javax.swing.JFrame {
 
     int row = 1;
     for (javax.swing.JLabel label : new javax.swing.JLabel[]{jLabel7, jLabel8,
-            LRNLabel, jLabel9, jLabel29, jLabel11}) {
+             LRNLabel, jLabel9, jLabel29, jLabel11}) {
         c.gridy = row++; c.insets = new java.awt.Insets(4, 0, 4, 0);
         CheckInPopup.add(label, c);
     }
@@ -799,20 +915,27 @@ public class Dashboard extends javax.swing.JFrame {
     c.gridx = 1; c.weightx = 1; c.insets = new java.awt.Insets(6, 0, 16, 0);
     CheckInPopup.add(jComboBox1, c);
 
+    c.gridy = ++row; c.gridx = 0; c.weightx = 0; c.insets = new java.awt.Insets(6, 0, 16, 12);
+    CheckInPopup.add(jLabel30, c);
+    c.gridx = 1; c.weightx = 1; c.insets = new java.awt.Insets(6, 0, 16, 0);
+    CheckInPopup.add(jTextField2, c);
+
     c.gridy = ++row; c.gridx = 0; c.gridwidth = 1; c.weightx = 0.5;
     c.insets = new java.awt.Insets(8, 0, 0, 8); CheckInPopup.add(CancelCheckinBTN, c);
-    c.gridx = 1; c.weightx = 0.5; c.insets = new java.awt.Insets(8, 8, 0, 0);
+    c.gridx = 1; c.weightx = 0.5; c.insets = new java.awt.Insets(8, 4, 0, 4);
+    CheckInPopup.add(popupEmergencyBTN, c);
+    c.gridx = 2; c.weightx = 0.5; c.insets = new java.awt.Insets(8, 8, 0, 0);
     CheckInPopup.add(jButton1, c);
 
     // Set bounds WITHOUT re-adding to content pane
-    CheckInPopup.setBounds(500, 190, 540, 480);
+    CheckInPopup.setBounds(500, 150, 540, 560);
     CheckInPopup.setVisible(false);
 }
 
 
     /** Positions the panel in the center of the check-in workspace. */
    private void centerCheckinPopup() {
-    int width = 540, height = 480;
+     int width = 540, height = 560;
     int panelWidth = CheckInPanel1.getWidth() > 0 ? CheckInPanel1.getWidth()
             : getContentPane().getWidth();
     int panelHeight = CheckInPanel1.getHeight() > 0 ? CheckInPanel1.getHeight()
@@ -845,6 +968,7 @@ public class Dashboard extends javax.swing.JFrame {
     CheckInPopup.setVisible(false);
     dimmingOverlay.setVisible(false);
     jTextField1.setText("");
+    jTextField2.setText("");
     if (jComboBox1.getItemCount() > 0) jComboBox1.setSelectedIndex(0);
     selectedStudent = null;
 
@@ -1058,7 +1182,84 @@ public class Dashboard extends javax.swing.JFrame {
         }
         Object item = jComboBox1.getSelectedItem();
         String medicine = item == null ? "None" : item.toString();
-        submitCheckin(selectedStudent, jTextField1.getText().trim(), medicine, "");
+        String temperature = validateTemperature(jTextField2.getText().trim());
+        if (temperature == null) return;
+        submitCheckin(selectedStudent, jTextField1.getText().trim(), medicine, temperature);
+    }
+
+    /** Collects the category and narrative required for an emergency payload. */
+    private void showEmergencyPrompt(StudentDetails student) {
+        if (student == null) {
+            JOptionPane.showMessageDialog(this, "Search and select a student first.",
+                    "Student Required", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        javax.swing.JComboBox<EmergencyType> category = new javax.swing.JComboBox<>(EmergencyType.values());
+        javax.swing.JTextArea details = new javax.swing.JTextArea(5, 28);
+        details.setLineWrap(true);
+        details.setWrapStyleWord(true);
+        Object[] message = {"Emergency category / severity:", category,
+                "Specific incident details:", new javax.swing.JScrollPane(details)};
+        if (JOptionPane.showConfirmDialog(this, message, "Emergency Check-in",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.ERROR_MESSAGE) != JOptionPane.OK_OPTION) return;
+        try {
+            EmergencyRecord emergency = new EmergencyRecord(student.lrn(),
+                    (EmergencyType) category.getSelectedItem(), details.getText(), java.time.LocalDateTime.now());
+            submitEmergencyCheckin(student, emergency);
+        } catch (IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Emergency Details Required",
+                    JOptionPane.WARNING_MESSAGE);
+        }
+    }
+
+    private void submitEmergencyCheckin(StudentDetails student, EmergencyRecord emergency) {
+        String actor = loggedInAccount == null ? "Unknown" : loggedInAccount.GetName();
+        ECheckin.setEnabled(false);
+        jButton1.setEnabled(false);
+        popupEmergencyBTN.setEnabled(false);
+        expressEmergencyBTN.setEnabled(false);
+        DatabaseExecutor.run(() -> new VisitData().checkInEmergency(student.name(), student.gradeSection(),
+                emergency, student.parentName(), student.phoneNumber(), actor), result -> {
+            ECheckin.setEnabled(true); jButton1.setEnabled(true);
+            popupEmergencyBTN.setEnabled(true); expressEmergencyBTN.setEnabled(true);
+            refreshRecentVisits(); refreshStatistics(); closeCheckinPopup();
+            ReasonField.setText(""); MedicineField.setText(""); TempField.setText("");
+            JOptionPane.showMessageDialog(this, "Emergency check-in recorded for " + student.name() + ".",
+                    "Emergency Recorded", JOptionPane.WARNING_MESSAGE);
+        }, ex -> {
+            ECheckin.setEnabled(true); jButton1.setEnabled(true);
+            popupEmergencyBTN.setEnabled(true); expressEmergencyBTN.setEnabled(true);
+            String message = "23505".equals(ex instanceof java.sql.SQLException sql ? sql.getSQLState() : null)
+                    ? student.name() + " is already checked in." : "Unable to record the emergency: " + ex.getMessage();
+            JOptionPane.showMessageDialog(this, message, "Emergency Check-in Error", JOptionPane.ERROR_MESSAGE);
+        });
+    }
+
+    private void sendExpressStudentHomeOrBack() {
+        if (selectedStudent == null || !selectedStudent.lrn().equals(LrnField.getText().trim())) {
+            JOptionPane.showMessageDialog(this, "Search and select a student first.",
+                    "Student Required", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        Object[] choices = {"Send Home", "Send Back to Class", "Cancel"};
+        int choice = JOptionPane.showOptionDialog(this, "Choose an action for " + selectedStudent.name() + ".",
+                "Clinic Visit Action", JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
+                null, choices, choices[0]);
+        if (choice != 0 && choice != 1) return;
+        String actor = loggedInAccount == null ? "Unknown" : loggedInAccount.GetName();
+        expressDispositionBTN.setEnabled(false);
+        StudentDetails student = selectedStudent;
+        DatabaseExecutor.run(() -> choice == 0 ? new VisitData().markSentHome(student.lrn(), actor)
+                        : new VisitData().markSentBack(student.lrn(), actor), updated -> {
+            expressDispositionBTN.setEnabled(true);
+            if (!updated) {
+                JOptionPane.showMessageDialog(this, "This student does not have an active clinic visit.",
+                        "Visit Not Found", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            refreshRecentVisits(); refreshStatistics();
+        }, ex -> { expressDispositionBTN.setEnabled(true); JOptionPane.showMessageDialog(this,
+                "Unable to update the visit: " + ex.getMessage(), "Visit Action Error", JOptionPane.ERROR_MESSAGE); });
     }
 
     private void submitCheckin(StudentDetails student, String reason, String medicine) {
@@ -1155,6 +1356,7 @@ public class Dashboard extends javax.swing.JFrame {
 
     private void refreshRecentVisits() {
         DatabaseExecutor.run(() -> new VisitData().loadActive(), visits -> {
+            recentVisits = java.util.List.copyOf(visits);
             DefaultTableModel model = (DefaultTableModel) jTable1.getModel();
             model.setRowCount(0);
             for (CheckinSystem visit : visits) {
@@ -1165,6 +1367,86 @@ public class Dashboard extends javax.swing.JFrame {
         }, ex -> JOptionPane.showMessageDialog(this,
                 "Unable to load recent clinic visits: " + ex.getMessage(), "Visit Load Error",
                 JOptionPane.ERROR_MESSAGE));
+    }
+
+    /** Archives the one recent visit selected in the single-selection table. */
+    private void archiveSelectedRecentVisit() {
+        int row = jTable1.getSelectedRow();
+        if (row < 0 || row >= recentVisits.size()) {
+            JOptionPane.showMessageDialog(this, "Select one recent clinic visit to archive.",
+                    "Visit Required", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        CheckinSystem visit = recentVisits.get(row);
+        if (JOptionPane.showConfirmDialog(this, "Archive the visit for " + visit.getName()
+                + "? It will be removed from the active/recent list but retained in reports.",
+                "Archive Visit", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE)
+                != JOptionPane.YES_OPTION) return;
+        archiveVisitBTN.setEnabled(false);
+        String actor = loggedInAccount == null ? "Unknown" : loggedInAccount.GetName();
+        DatabaseExecutor.run(() -> new VisitData().archiveVisit(visit.getLrn(), visit.getCheckInTime(), actor), archived -> {
+            archiveVisitBTN.setEnabled(true);
+            if (!archived) {
+                JOptionPane.showMessageDialog(this, "The selected visit was already archived or changed.",
+                        "Archive Unavailable", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            refreshRecentVisits();
+            refreshStatistics();
+        }, ex -> {
+            archiveVisitBTN.setEnabled(true);
+            JOptionPane.showMessageDialog(this, "Unable to archive the visit: " + ex.getMessage(),
+                    "Archive Error", JOptionPane.ERROR_MESSAGE);
+        });
+    }
+
+    private void exportRoleScopedReport() {
+        LocalDate today = LocalDate.now();
+        exportReportBTN.setEnabled(false);
+        // Query the persisted check-in log rather than the visible table: a visit
+        // archived earlier today is still a valid historical check-in for export.
+        DatabaseExecutor.run(() -> new ReportExporter(new MedicineData()).hasCheckinRecordsForDate(today),
+                hasCheckins -> {
+            exportReportBTN.setEnabled(true);
+            if (!hasCheckins) {
+                JOptionPane.showMessageDialog(this,
+                        "There are no students checked in today. Cannot generate a report.",
+                        "Export Report", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            chooseAndExportRoleScopedReport(today);
+        }, ex -> {
+            exportReportBTN.setEnabled(true);
+            JOptionPane.showMessageDialog(this, "Unable to verify today's check-ins: " + ex.getMessage(),
+                    "Export Report", JOptionPane.ERROR_MESSAGE);
+        });
+    }
+
+    private void chooseAndExportRoleScopedReport(LocalDate today) {
+        javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
+        chooser.setDialogTitle("Export Clinic Report");
+        if (chooser.showSaveDialog(this) != javax.swing.JFileChooser.APPROVE_OPTION) return;
+        java.io.File destination = chooser.getSelectedFile();
+        if (!destination.getName().toLowerCase(Locale.ROOT).endsWith(".xlsx")) {
+            destination = new java.io.File(destination.getAbsolutePath() + ".xlsx");
+        }
+        AccountSystem sessionAccount = UserSession.getCurrentUser();
+        boolean fullAdminReport = sessionAccount != null && sessionAccount.isAdmin();
+        String actor = loggedInAccount == null ? "Unknown" : loggedInAccount.GetName();
+        java.io.File reportFile = destination;
+        exportReportBTN.setEnabled(false);
+        DatabaseExecutor.run(() -> new ReportExporter(new MedicineData()).writeReport(
+                today, reportFile, actor, fullAdminReport), auditLogged -> {
+            exportReportBTN.setEnabled(true);
+            String scope = fullAdminReport ? "full clinic report" : "check-in logs report";
+            JOptionPane.showMessageDialog(this, "Exported " + scope + " to:\n"
+                    + reportFile.getAbsolutePath() + (auditLogged ? "" : "\nThe export audit entry could not be saved."),
+                    "Export Complete", JOptionPane.INFORMATION_MESSAGE);
+        }, ex -> {
+            exportReportBTN.setEnabled(true);
+            JOptionPane.showMessageDialog(this, "Unable to export report: " + ex.getMessage(),
+                    "Export Error", JOptionPane.ERROR_MESSAGE);
+        });
     }
 
     private void findStudent(String lrn, java.util.function.Consumer<StudentDetails> onSuccess) {
@@ -1185,11 +1467,7 @@ public class Dashboard extends javax.swing.JFrame {
         }
     }
 
-    /**
-     * Loads only students who currently have an active clinic visit.
-     * The Check In page is a live clinic-visit list, not a copy of Student Management.
-     * Search filters this active-visit list by name, section, or LRN.
-     */
+    /** Loads every active registered student for the Check-In chooser. */
     private static java.util.ArrayList<StudentDetails> findStudents(String search) throws java.sql.SQLException {
         java.util.ArrayList<StudentDetails> students = new java.util.ArrayList<>();
         String sql =
@@ -1197,8 +1475,6 @@ public class Dashboard extends javax.swing.JFrame {
                 + "s.parent_name, s.phone_number "
                 + "FROM STUDENTS s "
                 + "WHERE s.status = 'ACTIVE' "
-                + "AND EXISTS (SELECT 1 FROM VISITS v "
-                + "WHERE v.lrn = s.lrn AND v.status = 'In Clinic' AND v.archived = FALSE) "
                 + "AND (UPPER(s.name) LIKE ? OR UPPER(s.grade_section) LIKE ? OR UPPER(s.lrn) LIKE ?) "
                 + "ORDER BY s.name, s.lrn";
         String filter = "%" + (search == null ? "" : search.trim().toUpperCase()) + "%";
@@ -1253,8 +1529,11 @@ NOT modify this code. The content of this method is always
         jLabel11 = new javax.swing.JLabel();
         jTextField1 = new javax.swing.JTextField();
         jLabel29 = new javax.swing.JLabel();
+        jLabel30 = new javax.swing.JLabel();
+        jTextField2 = new javax.swing.JTextField();
         CheckInPanel1 = new javax.swing.JPanel();
         CheckInBTN = new javax.swing.JButton();
+        EmergencyBTN = new javax.swing.JButton();
         SentHomeBTN = new javax.swing.JButton();
         SearchField = new javax.swing.JTextField();
         SearchLabel = new javax.swing.JLabel();
@@ -1419,6 +1698,10 @@ NOT modify this code. The content of this method is always
         jLabel29.setForeground(new java.awt.Color(0, 0, 0));
         jLabel29.setText("Health Condition:");
 
+        jLabel30.setFont(new java.awt.Font("Yu Gothic UI", 1, 13)); // NOI18N
+        jLabel30.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel30.setText("Temperature");
+
         javax.swing.GroupLayout CheckInPopupLayout = new javax.swing.GroupLayout(CheckInPopup);
         CheckInPopup.setLayout(CheckInPopupLayout);
         CheckInPopupLayout.setHorizontalGroup(
@@ -1438,17 +1721,19 @@ NOT modify this code. The content of this method is always
                             .addGroup(CheckInPopupLayout.createSequentialGroup()
                                 .addGroup(CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addComponent(jLabel12)
-                                    .addComponent(jLabel10))
+                                    .addComponent(jLabel10)
+                                    .addComponent(jLabel30))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addGroup(CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                                     .addComponent(jComboBox1, 0, 274, Short.MAX_VALUE)
-                                    .addComponent(jTextField1)))
+                                    .addComponent(jTextField1)
+                                    .addComponent(jTextField2)))
                             .addComponent(jLabel8)
                             .addComponent(LRNLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addComponent(jLabel9)
                             .addComponent(jLabel29)
                             .addComponent(jLabel11))))
-                .addContainerGap(43, Short.MAX_VALUE))
+                .addContainerGap(25, Short.MAX_VALUE))
         );
         CheckInPopupLayout.setVerticalGroup(
             CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1467,11 +1752,15 @@ NOT modify this code. The content of this method is always
                 .addComponent(jLabel29)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jLabel11)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGap(26, 26, 26)
                 .addGroup(CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel10, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGroup(CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel30, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(CheckInPopupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel12))
@@ -1480,7 +1769,7 @@ NOT modify this code. The content of this method is always
                 .addGap(28, 28, 28))
         );
 
-        getContentPane().add(CheckInPopup, new org.netbeans.lib.awtextra.AbsoluteConstraints(520, 290, 420, 360));
+        getContentPane().add(CheckInPopup, new org.netbeans.lib.awtextra.AbsoluteConstraints(520, 240, 420, 410));
 
         CheckInPanel1.setBackground(new java.awt.Color(226, 226, 226));
         CheckInPanel1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
@@ -1490,6 +1779,12 @@ NOT modify this code. The content of this method is always
         CheckInBTN.setForeground(new java.awt.Color(255, 255, 255));
         CheckInBTN.setText("Check In");
         CheckInBTN.addActionListener(this::CheckInBTNActionPerformed);
+
+        EmergencyBTN.setBackground(new java.awt.Color(185, 28, 28));
+        EmergencyBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
+        EmergencyBTN.setForeground(new java.awt.Color(255, 255, 255));
+        EmergencyBTN.setText("Emergency");
+        EmergencyBTN.addActionListener(this::EmergencyBTNActionPerformed);
 
         SentHomeBTN.setBackground(new java.awt.Color(0, 102, 204));
         SentHomeBTN.setFont(new java.awt.Font("Yu Gothic UI", 1, 14)); // NOI18N
@@ -1553,10 +1848,12 @@ NOT modify this code. The content of this method is always
                 .addContainerGap())
             .addGroup(CheckInPanel1Layout.createSequentialGroup()
                 .addGap(456, 456, 456)
-                .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 194, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(CheckInBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 174, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(EmergencyBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 174, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(SentHomeBTN, javax.swing.GroupLayout.PREFERRED_SIZE, 174, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(653, Short.MAX_VALUE))
+                .addContainerGap(465, Short.MAX_VALUE))
         );
         CheckInPanel1Layout.setVerticalGroup(
             CheckInPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1570,6 +1867,7 @@ NOT modify this code. The content of this method is always
                 .addGap(18, 18, 18)
                 .addGroup(CheckInPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(CheckInBTN, javax.swing.GroupLayout.DEFAULT_SIZE, 42, Short.MAX_VALUE)
+                    .addComponent(EmergencyBTN, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(SentHomeBTN, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
@@ -1819,8 +2117,25 @@ NOT modify this code. The content of this method is always
             new String [] {
                 "Time", "Name", "Section", "Temp", "Symptoms", "Medicine", "Status"
             }
-        ));
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false, false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
         jScrollPane3.setViewportView(jTable1);
+        if (jTable1.getColumnModel().getColumnCount() > 0) {
+            jTable1.getColumnModel().getColumn(0).setResizable(false);
+            jTable1.getColumnModel().getColumn(1).setResizable(false);
+            jTable1.getColumnModel().getColumn(2).setResizable(false);
+            jTable1.getColumnModel().getColumn(3).setResizable(false);
+            jTable1.getColumnModel().getColumn(4).setResizable(false);
+            jTable1.getColumnModel().getColumn(5).setResizable(false);
+            jTable1.getColumnModel().getColumn(6).setResizable(false);
+        }
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
@@ -2112,6 +2427,63 @@ NOT modify this code. The content of this method is always
         openCheckinForSelection();
     }
 
+    private void EmergencyBTNActionPerformed(java.awt.event.ActionEvent evt) {
+        int selectedRow = ReasonTable.getSelectedRow();
+        if (selectedRow < 0) {
+            JOptionPane.showMessageDialog(this, "Please select a student from the table first.",
+                    "Emergency Check-In", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        int modelRow = ReasonTable.convertRowIndexToModel(selectedRow);
+        String lrn = String.valueOf(ReasonTable.getModel().getValueAt(modelRow, 2));
+        findStudent(lrn, student -> {
+            if (!lrn.equals(currentSelectedChooserLrn())) return;
+            if (student == null) {
+                JOptionPane.showMessageDialog(this, "The selected student is no longer active.",
+                        "Student Not Found", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            selectedStudent = student;
+            showEmergencyPromptForActiveVisit(student);
+        });
+    }
+
+    private void showEmergencyPromptForActiveVisit(StudentDetails student) {
+        javax.swing.JComboBox<EmergencyType> category = new javax.swing.JComboBox<>(EmergencyType.values());
+        javax.swing.JTextArea details = new javax.swing.JTextArea(5, 28);
+        details.setLineWrap(true);
+        details.setWrapStyleWord(true);
+        Object[] message = {"Emergency category / severity:", category,
+                "Specific incident details:", new javax.swing.JScrollPane(details)};
+        if (JOptionPane.showConfirmDialog(this, message, "Emergency Check-in",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.ERROR_MESSAGE) != JOptionPane.OK_OPTION) return;
+        try {
+            EmergencyRecord emergency = new EmergencyRecord(student.lrn(),
+                    (EmergencyType) category.getSelectedItem(), details.getText(), java.time.LocalDateTime.now());
+            String actor = loggedInAccount == null ? "Unknown" : loggedInAccount.GetName();
+            EmergencyBTN.setEnabled(false);
+            DatabaseExecutor.run(() -> new VisitData().recordEmergencyForActiveVisit(emergency, actor), updated -> {
+                EmergencyBTN.setEnabled(true);
+                if (!updated) {
+                    JOptionPane.showMessageDialog(this, "The selected student no longer has an active clinic visit.",
+                            "Emergency Check-In", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                refreshRecentVisits();
+                refreshStatistics();
+                JOptionPane.showMessageDialog(this, "Emergency record added for " + student.name() + ".",
+                        "Emergency Recorded", JOptionPane.WARNING_MESSAGE);
+            }, ex -> {
+                EmergencyBTN.setEnabled(true);
+                JOptionPane.showMessageDialog(this, "Unable to record the emergency: " + ex.getMessage(),
+                        "Emergency Check-In Error", JOptionPane.ERROR_MESSAGE);
+            });
+        } catch (IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Emergency Details Required",
+                    JOptionPane.WARNING_MESSAGE);
+        }
+    }
+
     private void LogoutActionPerformed(java.awt.event.ActionEvent evt) {
         if (loggedInAccount != null) {
             try {
@@ -2229,6 +2601,7 @@ private void updateActiveButton(javax.swing.JButton btn) {
     private javax.swing.JButton CheckInBTN;
     private javax.swing.JPanel CheckInPanel1;
     private javax.swing.JPanel CheckInPopup;
+    private javax.swing.JButton EmergencyBTN;
     private javax.swing.JButton CheckinBTN;
     private javax.swing.JLabel DateTimeLabel;
     private javax.swing.JButton ECheckin;
@@ -2276,6 +2649,7 @@ private void updateActiveButton(javax.swing.JButton btn) {
     private javax.swing.JLabel jLabel28;
     private javax.swing.JLabel jLabel29;
     private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel30;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
@@ -2302,5 +2676,6 @@ private void updateActiveButton(javax.swing.JButton btn) {
     private javax.swing.JTable jTable1;
     private javax.swing.JTable jTable2;
     private javax.swing.JTextField jTextField1;
+    private javax.swing.JTextField jTextField2;
     // End of variables declaration//GEN-END:variables
 }
